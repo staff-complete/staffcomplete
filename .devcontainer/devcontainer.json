@@ -49,7 +49,6 @@
         }
       },
       "extensions": [
-        "anthropic.claude-code",
         "bradlc.vscode-tailwindcss",
         "codacy-app.codacy",
         "oxc.oxc-vscode",
