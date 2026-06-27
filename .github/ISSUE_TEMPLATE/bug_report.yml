@@ -59,7 +59,6 @@ body:
         - api
         - db
         - config
-        - unknown
     validations:
       required: true
 

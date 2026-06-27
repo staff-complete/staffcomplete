@@ -1,5 +1,48 @@
-# Ignore vscode AI rules
-.github/instructions/codacy.instructions.md
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Package managers
+.pnpm-store/
+.pnpm-debug.log*
+
+# Turborepo
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Test coverage
+coverage/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Kamal
+.kamal/
 
 # Misc
-.DS_Store
+*.local
+
+# AI-injected editor instructions (not for source control)
+.github/instructions/codacy.instructions.md

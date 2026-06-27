@@ -64,6 +64,6 @@
   ],
   "remoteUser": "dev",
   "remoteEnv": {
-    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN_STAFFCOMPLETE}"
   }
 }

@@ -25,6 +25,7 @@
     "staffcomplete",
     "turborepo",
     "unvalidated",
-    "vitest"
+    "vitest",
+    "wagoid"
   ]
 }

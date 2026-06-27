@@ -1,0 +1,23 @@
+{
+  "name": "staffcomplete",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "lint": "oxlint .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "cspell": "cspell \"**\""
+  },
+  "devDependencies": {
+    "turbo": "^2.10.0"
+  }
+}

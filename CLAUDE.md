@@ -101,7 +101,7 @@ Project-specific skills are in `.claude/skills/`. Use them for common tasks:
 | `start-issue` | Pick up a GitHub issue: create branch, assign yourself, mark in progress |
 | `new-adr` | Create a new ADR with correct numbering and update the index |
 | `new-feature` | Set up a feature branch with correct naming and reminders |
-| `ci-check` | Run lint, typecheck, and tests locally before pushing |
+| `ci-check` | Run spell check, lint, format, typecheck, and tests locally before pushing |
 | `new-integration` | Scaffold a new external integration module |
 | `new-workflow` | Scaffold a new lifecycle workflow |
 | `new-lifecycle-event` | Add a new lifecycle event type across all touch points |
@@ -142,7 +142,7 @@ Architectural decisions are documented in `docs/decisions/`. Before proposing ch
 ## Code Quality
 
 - **oxlint** — linting; run `pnpm lint` to check
-- **oxfmt** — formatting; run `pnpm format` to check
+- **oxfmt** — formatting; run `pnpm format:check` to check
 - **vue-tsc** — type checking for `apps/web`
 - **tsc** — type checking for `apps/api` and `packages/shared`
 - All checks must pass before merging; Codacy and CodeQL run automatically on PRs
@@ -177,6 +177,8 @@ All commit messages must follow [Conventional Commits](https://www.conventionalc
 - `onboarding`, `offboarding`, `role-change`
 - `access`, `integrations`, `workflows`
 - `auth`, `api`, `db`, `config`
+
+> Note: lifecycle event enum values use `snake_case` (e.g. `role_change`) in code, but commit scopes use `kebab-case` (e.g. `role-change`) per Conventional Commits convention.
 
 **Examples:**
 ```

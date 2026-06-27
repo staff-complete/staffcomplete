@@ -22,8 +22,9 @@ Closes #
 
 ## Checklist
 
+- [ ] `pnpm cspell` passes
 - [ ] `pnpm lint` passes
-- [ ] `pnpm format` passes
+- [ ] `pnpm format:check` passes
 - [ ] `pnpm typecheck` passes
 - [ ] `pnpm test` passes
 - [ ] Commit messages follow Conventional Commits
