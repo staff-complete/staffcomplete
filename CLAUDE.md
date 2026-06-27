@@ -32,6 +32,16 @@ The system ensures that employee state changes are consistently reflected across
 
 ---
 
+## Architecture Decision Records (ADRs)
+
+Architectural decisions are documented in `docs/decisions/`. Before proposing changes to the architecture, integrations, or core domain model, read the relevant ADRs to understand prior context and constraints.
+
+- ADRs are immutable — never edit a past decision; create a new one that supersedes it
+- Template: `docs/decisions/0000-adr-template.md`
+- When a decision you make would be worth recording, suggest creating an ADR
+
+---
+
 ## Commit Message Convention
 
 All commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
