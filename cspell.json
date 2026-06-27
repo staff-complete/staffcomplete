@@ -1,12 +1,16 @@
 {
   "version": "0.2",
   "words": [
+    "Betterstack",
     "bisectable",
     "bradlc",
     "codacy",
     "commitlint",
     "consolas",
+    "DMARC",
+    "Glitchtip",
     "gpgsign",
+    "Kamal",
     "lcov",
     "lintstagedrc",
     "molyuk",
@@ -18,6 +22,7 @@
     "shadcn",
     "staffcomplete",
     "turborepo",
+    "unvalidated",
     "vitest"
   ]
 }

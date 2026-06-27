@@ -4,26 +4,77 @@ A SaaS platform for automating the full employee lifecycle across company system
 
 ---
 
-## 🚀 What this project does
+## What this project does
 
 This system helps companies automatically manage:
 
 - Employee onboarding
 - Role and permission changes
 - Offboarding and access removal
-- Cross-system provisioning (Google, Slack, GitHub, etc.)
+- Cross-system provisioning (Google Workspace, Slack, GitHub, etc.)
 
 It ensures that employee lifecycle changes are consistently applied across all connected tools.
 
 ---
 
-## 🧠 Core idea
+## Core idea
 
 > Every employee state change should automatically reflect across all company systems — safely, consistently, and auditable.
 
 ---
 
-## ⚙️ Key Features
+## Tech Stack
+
+| Layer | Choice |
+|---|---|
+| Monorepo | pnpm workspaces + Turborepo |
+| Frontend | Vue 3 + Vite + Tailwind + Pinia + TanStack Query + Vue Router |
+| UI components | Shadcn/vue |
+| Backend | Hono + tRPC + Zod |
+| Database | PostgreSQL + Drizzle |
+| Job queue | pg-boss |
+| Auth | Better Auth |
+| Deployment | Docker + Kamal + Hetzner |
+| CI/CD | GitHub Actions |
+
+See [docs/decisions/](docs/decisions/README.md) for the full architecture rationale.
+
+---
+
+## Project Structure
+
+```
+apps/
+  web/          # Vue 3 frontend (SPA)
+  api/          # Hono backend
+packages/
+  shared/       # Zod schemas and shared types
+docs/
+  decisions/    # Architecture Decision Records (ADRs)
+```
+
+---
+
+## Prerequisites
+
+- [Docker](https://www.docker.com/) — for the devcontainer
+- [VS Code](https://code.visualstudio.com/) + [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+All other tools (Node.js, pnpm, etc.) are provided inside the devcontainer.
+
+---
+
+## Local Development
+
+1. Clone the repository
+2. Open in VS Code — it will prompt to reopen in the devcontainer
+3. The devcontainer runs `pnpm install` automatically on creation
+4. Start the API: `pnpm --filter api dev`
+5. Start the frontend: `pnpm --filter web dev`
+
+---
+
+## Key Features
 
 ### Onboarding Automation
 - Create accounts in company tools
@@ -42,39 +93,18 @@ It ensures that employee lifecycle changes are consistently applied across all c
 
 ---
 
-## 🏗️ System Design Principles
+## Design Principles
 
 - Event-driven architecture
 - Integration-first approach
 - Secure-by-default operations
 - Full audit logging of lifecycle events
 - Idempotent workflows (safe retries)
+- Multi-tenant with PostgreSQL Row-Level Security
 
 ---
 
-## 🔌 Integrations
-
-Typical supported systems:
-
-- Google Workspace
-- Slack
-- GitHub
-- AWS / cloud infrastructure
-- Internal company tools
-
----
-
-## 📦 Core Concepts
-
-- Employee
-- Lifecycle Event
-- Workflow
-- Integration
-- Access Policy
-
----
-
-## 🔐 Security Philosophy
+## Security
 
 - Least privilege access model
 - Automatic revocation on offboarding
@@ -83,40 +113,10 @@ Typical supported systems:
 
 ---
 
-## 🧪 Reliability
+## Contributing
 
-- Workflows are retry-safe
-- Failures are tracked and recoverable
-- Offboarding flows are designed to be fail-safe by default
-
----
-
-## 📖 Development Philosophy
-
-This system is built around one core idea:
-
-> Managing people in software systems should be deterministic, auditable, and automatic.
-
----
-
-## 🧭 Naming Convention
-
-- Employee = a person in the system
-- Lifecycle Event = state change (not just action)
-- Workflow = automated process triggered by events
-
----
-
-## 📌 Status
-
-Early-stage architecture / product definition phase.
-
----
-
-## 🤝 Contributing
-
-Focus on:
-
-- lifecycle correctness
-- integration reliability
-- security-first design
+- Read [CLAUDE.md](CLAUDE.md) for AI agent guidance and coding conventions
+- Read [docs/decisions/](docs/decisions/README.md) before proposing architectural changes
+- All commits must follow [Conventional Commits](https://www.conventionalcommits.org/)
+- All commits must be GPG signed
+- Work in feature branches — rebase onto `main`, open a PR, no direct pushes
