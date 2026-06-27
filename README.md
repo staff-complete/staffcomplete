@@ -1,5 +1,7 @@
 # Staff Lifecycle Automation Platform
 
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/ca00fbb9714f490483fdf1363f8fd8d1)](https://app.codacy.com/gh/staff-complete/staffcomplete/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
 A SaaS platform for automating the full employee lifecycle across company systems — from onboarding to offboarding and everything in between.
 
 ---
