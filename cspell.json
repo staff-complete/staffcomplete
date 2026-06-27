@@ -20,6 +20,7 @@
     "nodesource",
     "ohmyzsh",
     "oxfmt",
+    "oxfmtignore",
     "oxlint",
     "pnpm",
     "shadcn",
