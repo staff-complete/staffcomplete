@@ -17,6 +17,7 @@ All observability tooling is self-hosted on Hetzner alongside the application �
 - **Grafana Faro** — frontend error tracking and performance monitoring; integrates natively with the existing Grafana stack
 
 Alternatives rejected:
+
 - Betterstack/Axiom — hosted, data leaves infrastructure
 - Sentry (self-hosted) — too resource-heavy (4GB+ RAM)
 - Glitchtip — less mature

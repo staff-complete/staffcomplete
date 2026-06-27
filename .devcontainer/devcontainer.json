@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-"workspaceFolder": "/workspaces/staffcomplete",
+  "workspaceFolder": "/workspaces/staffcomplete",
   "postCreateCommand": "pnpm install",
   "customizations": {
     "vscode": {

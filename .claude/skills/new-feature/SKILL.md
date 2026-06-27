@@ -18,12 +18,12 @@ Set up a new feature branch following the project's git strategy.
 
 ## Branch naming
 
-| Type | Pattern | Example |
-|---|---|---|
-| Feature | `feat/description` | `feat/google-workspace-integration` |
-| Bug fix | `fix/description` | `fix/offboarding-rls-policy` |
-| Chore | `chore/description` | `chore/bump-drizzle` |
-| Docs | `docs/description` | `docs/add-auth-adr` |
+| Type    | Pattern             | Example                             |
+| ------- | ------------------- | ----------------------------------- |
+| Feature | `feat/description`  | `feat/google-workspace-integration` |
+| Bug fix | `fix/description`   | `fix/offboarding-rls-policy`        |
+| Chore   | `chore/description` | `chore/bump-drizzle`                |
+| Docs    | `docs/description`  | `docs/add-auth-adr`                 |
 
 ## Scopes for commit messages
 

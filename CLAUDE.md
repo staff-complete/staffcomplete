@@ -18,37 +18,37 @@ The system ensures that employee state changes are consistently reflected across
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Monorepo | pnpm workspaces + Turborepo |
-| Frontend | Vue 3 + Vite + Tailwind + Pinia + TanStack Query + Vue Router |
-| UI components | Shadcn/vue |
-| Backend | Hono + zod-validator + zod-openapi |
-| API layer | tRPC |
-| Validation | Zod |
-| Database | PostgreSQL + Drizzle + drizzle-kit |
-| Job queue | pg-boss (abstracted behind interface) |
-| Auth | Better Auth |
-| Email | Resend |
-| Date/time | date-fns |
-| Logging | Pino + Loki + Grafana |
-| Error tracking | Grafana Faro |
-| Testing | Vitest (unit tests only, no E2E) |
-| Linting | oxlint |
-| Formatting | oxfmt |
-| Spell checking | cspell |
-| Type checking | vue-tsc + tsc |
-| Code quality | Codacy |
-| Security scanning | CodeQL |
-| Environment | dotenv |
-| Containerization | Docker (multi-stage build) |
-| Container registry | GHCR |
-| VPS | Hetzner |
-| Reverse proxy | Traefik |
-| Deployment | Kamal |
-| CI/CD | GitHub Actions |
-| Commit validation | commitlint + husky |
-| Releases | Semantic Release |
+| Layer              | Choice                                                        |
+| ------------------ | ------------------------------------------------------------- |
+| Monorepo           | pnpm workspaces + Turborepo                                   |
+| Frontend           | Vue 3 + Vite + Tailwind + Pinia + TanStack Query + Vue Router |
+| UI components      | Shadcn/vue                                                    |
+| Backend            | Hono + zod-validator + zod-openapi                            |
+| API layer          | tRPC                                                          |
+| Validation         | Zod                                                           |
+| Database           | PostgreSQL + Drizzle + drizzle-kit                            |
+| Job queue          | pg-boss (abstracted behind interface)                         |
+| Auth               | Better Auth                                                   |
+| Email              | Resend                                                        |
+| Date/time          | date-fns                                                      |
+| Logging            | Pino + Loki + Grafana                                         |
+| Error tracking     | Grafana Faro                                                  |
+| Testing            | Vitest (unit tests only, no E2E)                              |
+| Linting            | oxlint                                                        |
+| Formatting         | oxfmt                                                         |
+| Spell checking     | cspell                                                        |
+| Type checking      | vue-tsc + tsc                                                 |
+| Code quality       | Codacy                                                        |
+| Security scanning  | CodeQL                                                        |
+| Environment        | dotenv                                                        |
+| Containerization   | Docker (multi-stage build)                                    |
+| Container registry | GHCR                                                          |
+| VPS                | Hetzner                                                       |
+| Reverse proxy      | Traefik                                                       |
+| Deployment         | Kamal                                                         |
+| CI/CD              | GitHub Actions                                                |
+| Commit validation  | commitlint + husky                                            |
+| Releases           | Semantic Release                                              |
 
 ---
 
@@ -69,11 +69,13 @@ docs/
 ## Core Domain Model
 
 ### Employee Lifecycle Events
+
 - `onboarding`
 - `role_change`
 - `offboarding`
 
 ### System Concepts
+
 - Employee
 - Access Control
 - Integrations (external SaaS tools)
@@ -96,18 +98,18 @@ The platform is multi-tenant using PostgreSQL Row-Level Security (RLS).
 
 Project-specific skills are in `.claude/skills/`. Use them for common tasks:
 
-| Skill | Purpose |
-|---|---|
-| `start-issue` | Pick up a GitHub issue: create branch, assign yourself, mark in progress |
-| `new-adr` | Create a new ADR with correct numbering and update the index |
-| `new-feature` | Set up a feature branch with correct naming and reminders |
-| `ci-check` | Run spell check, lint, format, typecheck, and tests locally before pushing |
-| `new-integration` | Scaffold a new external integration module |
-| `new-workflow` | Scaffold a new lifecycle workflow |
-| `new-lifecycle-event` | Add a new lifecycle event type across all touch points |
-| `new-migration` | Generate a Drizzle migration with multi-tenancy checks |
-| `release-check` | Verify the branch is ready to merge and open a PR |
-| `security-check` | Review changed code for credentials, tenant isolation, and auth gaps |
+| Skill                 | Purpose                                                                    |
+| --------------------- | -------------------------------------------------------------------------- |
+| `start-issue`         | Pick up a GitHub issue: create branch, assign yourself, mark in progress   |
+| `new-adr`             | Create a new ADR with correct numbering and update the index               |
+| `new-feature`         | Set up a feature branch with correct naming and reminders                  |
+| `ci-check`            | Run spell check, lint, format, typecheck, and tests locally before pushing |
+| `new-integration`     | Scaffold a new external integration module                                 |
+| `new-workflow`        | Scaffold a new lifecycle workflow                                          |
+| `new-lifecycle-event` | Add a new lifecycle event type across all touch points                     |
+| `new-migration`       | Generate a Drizzle migration with multi-tenancy checks                     |
+| `release-check`       | Verify the branch is ready to merge and open a PR                          |
+| `security-check`      | Review changed code for credentials, tenant isolation, and auth gaps       |
 
 ---
 
@@ -162,6 +164,7 @@ All commit messages must follow [Conventional Commits](https://www.conventionalc
 ```
 
 **Types:**
+
 - `feat` — new feature
 - `fix` — bug fix
 - `refactor` — code change that is neither a fix nor a feature
@@ -174,6 +177,7 @@ All commit messages must follow [Conventional Commits](https://www.conventionalc
 - `revert` — reverts a previous commit
 
 **Scopes** (optional, use the affected domain area):
+
 - `onboarding`, `offboarding`, `role-change`
 - `access`, `integrations`, `workflows`
 - `auth`, `api`, `db`, `config`
@@ -181,6 +185,7 @@ All commit messages must follow [Conventional Commits](https://www.conventionalc
 > Note: lifecycle event enum values use `snake_case` (e.g. `role_change`) in code, but commit scopes use `kebab-case` (e.g. `role-change`) per Conventional Commits convention.
 
 **Examples:**
+
 ```
 feat(onboarding): add Slack workspace provisioning step
 fix(access): correct deprovisioning order for GitHub org removal
@@ -188,6 +193,7 @@ chore(deps): bump @types/node to 20.x
 ```
 
 **Rules:**
+
 - Subject line ≤ 72 characters, lowercase, no trailing period
 - Use imperative mood ("add", not "added" or "adds")
 - Breaking changes: append `!` after the type/scope and add a `BREAKING CHANGE:` footer

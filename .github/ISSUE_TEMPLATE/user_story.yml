@@ -1,6 +1,6 @@
 name: User Story
 description: Describe a new feature or capability from the user's perspective
-labels: ["user-story", "needs-triage"]
+labels: ['user-story', 'needs-triage']
 body:
   - type: markdown
     attributes:

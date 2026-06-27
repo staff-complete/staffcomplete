@@ -1,5 +1,7 @@
 {
   "version": "0.2",
+  "ignorePaths": [".gitignore", "cspell.json", "pnpm-lock.yaml"],
+  "useGitignore": true,
   "words": [
     "Betterstack",
     "bisectable",

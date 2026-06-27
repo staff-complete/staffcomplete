@@ -12,6 +12,7 @@ The platform has a frontend (Vue SPA), a backend (Hono API), and shared code (Zo
 Use a monorepo with pnpm workspaces for package linking and Turborepo for build orchestration, caching, and parallel task execution.
 
 Structure:
+
 ```
 apps/
   web/      # Vue 3 frontend

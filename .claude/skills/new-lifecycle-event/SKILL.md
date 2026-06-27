@@ -16,7 +16,7 @@ export const LifecycleEventType = z.enum([
   'onboarding',
   'role_change',
   'offboarding',
-  '<new_event>',  // add here
+  '<new_event>', // add here
 ])
 ```
 

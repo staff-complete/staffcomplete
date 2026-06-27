@@ -16,6 +16,7 @@ The application must deploy automatically on push to `main`, run in Docker, and 
 - **Kamal** — SSH-based deployment tool; no extra infrastructure, config lives in `config/deploy.yml`; deploys by pulling the new image and doing a zero-downtime container swap
 
 Deploy flow:
+
 1. Push to `main`
 2. GitHub Actions builds image, pushes to GHCR
 3. GitHub Actions runs `kamal deploy` via SSH

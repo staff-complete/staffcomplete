@@ -10,6 +10,9 @@
       "persistent": true
     },
     "test": {},
+    "test:coverage": {
+      "outputs": ["coverage/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build"]
     }

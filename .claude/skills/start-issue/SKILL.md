@@ -7,6 +7,7 @@ Pick up a GitHub issue and get a branch ready to code on.
 1. **Get the issue number** from the user if not provided
 
 2. **Fetch the issue** — run:
+
    ```bash
    gh issue view <number> --json number,title,labels,assignees
    ```
@@ -24,16 +25,19 @@ Pick up a GitHub issue and get a branch ready to code on.
    - Keep it under 60 characters total; truncate the slug if needed
 
 5. **Ensure `main` is up to date**:
+
    ```bash
    git fetch origin main
    ```
 
 6. **Create and switch to the branch**:
+
    ```bash
    git checkout -b <branch-name> origin/main
    ```
 
 7. **Assign the issue to yourself and mark it in progress**:
+
    ```bash
    gh issue edit <number> --add-assignee @me
    gh issue edit <number> --add-label "status: in-progress"
@@ -52,27 +56,27 @@ Pick up a GitHub issue and get a branch ready to code on.
 
 ## Branch naming
 
-| Issue label | Branch prefix | Example |
-|---|---|---|
-| `bug` | `fix/` | `fix/37-correct-offboarding-rls-policy` |
-| `user-story` | `feat/` | `feat/42-add-slack-provisioning-step` |
-| `chore` | `chore/` | `chore/55-bump-drizzle` |
-| `docs` | `docs/` | `docs/61-add-auth-adr` |
+| Issue label  | Branch prefix | Example                                 |
+| ------------ | ------------- | --------------------------------------- |
+| `bug`        | `fix/`        | `fix/37-correct-offboarding-rls-policy` |
+| `user-story` | `feat/`       | `feat/42-add-slack-provisioning-step`   |
+| `chore`      | `chore/`      | `chore/55-bump-drizzle`                 |
+| `docs`       | `docs/`       | `docs/61-add-auth-adr`                  |
 
 ## Commit scopes by domain area
 
-| Issue `area:` label | Commit scope |
-|---|---|
-| `area: onboarding` | `onboarding` |
-| `area: offboarding` | `offboarding` |
-| `area: role-change` | `role-change` |
-| `area: access` | `access` |
+| Issue `area:` label  | Commit scope   |
+| -------------------- | -------------- |
+| `area: onboarding`   | `onboarding`   |
+| `area: offboarding`  | `offboarding`  |
+| `area: role-change`  | `role-change`  |
+| `area: access`       | `access`       |
 | `area: integrations` | `integrations` |
-| `area: workflows` | `workflows` |
-| `area: auth` | `auth` |
-| `area: api` | `api` |
-| `area: db` | `db` |
-| `area: config` | `config` |
+| `area: workflows`    | `workflows`    |
+| `area: auth`         | `auth`         |
+| `area: api`          | `api`          |
+| `area: db`           | `db`           |
+| `area: config`       | `config`       |
 
 ## Notes
 

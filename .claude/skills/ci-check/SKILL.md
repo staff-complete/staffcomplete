@@ -15,6 +15,7 @@ Run the following in order, stopping on first failure:
 ## Report
 
 After all checks:
+
 - List which checks passed and which failed
 - For failures, show the relevant error output
 - Suggest fixes for common issues

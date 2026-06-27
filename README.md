@@ -25,17 +25,17 @@ It ensures that employee lifecycle changes are consistently applied across all c
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Monorepo | pnpm workspaces + Turborepo |
-| Frontend | Vue 3 + Vite + Tailwind + Pinia + TanStack Query + Vue Router |
-| UI components | Shadcn/vue |
-| Backend | Hono + tRPC + Zod |
-| Database | PostgreSQL + Drizzle |
-| Job queue | pg-boss |
-| Auth | Better Auth |
-| Deployment | Docker + Kamal + Hetzner |
-| CI/CD | GitHub Actions |
+| Layer         | Choice                                                        |
+| ------------- | ------------------------------------------------------------- |
+| Monorepo      | pnpm workspaces + Turborepo                                   |
+| Frontend      | Vue 3 + Vite + Tailwind + Pinia + TanStack Query + Vue Router |
+| UI components | Shadcn/vue                                                    |
+| Backend       | Hono + tRPC + Zod                                             |
+| Database      | PostgreSQL + Drizzle                                          |
+| Job queue     | pg-boss                                                       |
+| Auth          | Better Auth                                                   |
+| Deployment    | Docker + Kamal + Hetzner                                      |
+| CI/CD         | GitHub Actions                                                |
 
 See [docs/decisions/](docs/decisions/README.md) for the full architecture rationale.
 
@@ -77,16 +77,19 @@ All other tools (Node.js, pnpm, etc.) are provided inside the devcontainer.
 ## Key Features
 
 ### Onboarding Automation
+
 - Create accounts in company tools
 - Assign roles and permissions
 - Provision access automatically
 
 ### Role Management
+
 - Update permissions across systems
 - Handle team or department changes
 - Maintain sync across integrations
 
 ### Offboarding Automation
+
 - Revoke all system access
 - Disable accounts
 - Ensure secure cleanup of company data access
