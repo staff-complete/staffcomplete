@@ -98,6 +98,7 @@ Project-specific skills are in `.claude/skills/`. Use them for common tasks:
 
 | Skill | Purpose |
 |---|---|
+| `start-issue` | Pick up a GitHub issue: create branch, assign yourself, mark in progress |
 | `new-adr` | Create a new ADR with correct numbering and update the index |
 | `new-feature` | Set up a feature branch with correct naming and reminders |
 | `ci-check` | Run lint, typecheck, and tests locally before pushing |

@@ -1,0 +1,67 @@
+name: User Story
+description: Describe a new feature or capability from the user's perspective
+labels: ["user-story", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write the story from the perspective of the person who needs the capability.
+
+  - type: textarea
+    id: story
+    attributes:
+      label: Story
+      description: The classic format — fill in the blanks.
+      placeholder: |
+        As a [role],
+        I want [capability],
+        so that [benefit / outcome].
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Conditions that must be true for this story to be considered done.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Domain Area
+      options:
+        - onboarding
+        - offboarding
+        - role-change
+        - access
+        - integrations
+        - workflows
+        - auth
+        - api
+        - db
+        - config
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 — critical / blocking
+        - P1 — high
+        - P2 — medium
+        - P3 — low / nice to have
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Background & Context
+      description: Any design decisions, ADRs, or prior discussions relevant to this story.

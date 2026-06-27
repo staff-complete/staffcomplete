@@ -1,0 +1,109 @@
+# Issue types
+- name: bug
+  color: "d73a4a"
+  description: Something is broken
+
+- name: user-story
+  color: "0075ca"
+  description: New feature or capability
+
+- name: chore
+  color: "e4e669"
+  description: Maintenance, tooling, or dependency update
+
+- name: docs
+  color: "0075ca"
+  description: Documentation only
+
+# Triage
+- name: needs-triage
+  color: "ededed"
+  description: Newly filed, not yet reviewed
+
+# Priority
+- name: "P0"
+  color: "b60205"
+  description: Critical / blocking
+
+- name: "P1"
+  color: "e99695"
+  description: High priority
+
+- name: "P2"
+  color: "f9d0c4"
+  description: Medium priority
+
+- name: "P3"
+  color: "fef2c0"
+  description: Low priority / nice to have
+
+# Severity (bugs)
+- name: "severity: critical"
+  color: "b60205"
+  description: Data loss or security issue
+
+- name: "severity: high"
+  color: "e99695"
+  description: Feature completely broken
+
+- name: "severity: medium"
+  color: "f9d0c4"
+  description: Partial breakage, workaround exists
+
+- name: "severity: low"
+  color: "fef2c0"
+  description: Minor or cosmetic issue
+
+# Domain areas
+- name: "area: onboarding"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: offboarding"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: role-change"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: access"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: integrations"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: workflows"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: auth"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: api"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: db"
+  color: "bfd4f2"
+  description: ""
+
+- name: "area: config"
+  color: "bfd4f2"
+  description: ""
+
+# Status
+- name: "status: in-progress"
+  color: "0e8a16"
+  description: Actively being worked on
+
+- name: "status: blocked"
+  color: "e4e669"
+  description: Waiting on something external
+
+- name: "status: wont-fix"
+  color: "ffffff"
+  description: Decided not to address
