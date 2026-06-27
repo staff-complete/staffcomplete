@@ -92,6 +92,24 @@ The platform is multi-tenant using PostgreSQL Row-Level Security (RLS).
 
 ---
 
+## Skills
+
+Project-specific skills are in `.claude/skills/`. Use them for common tasks:
+
+| Skill | Purpose |
+|---|---|
+| `new-adr` | Create a new ADR with correct numbering and update the index |
+| `new-feature` | Set up a feature branch with correct naming and reminders |
+| `ci-check` | Run lint, typecheck, and tests locally before pushing |
+| `new-integration` | Scaffold a new external integration module |
+| `new-workflow` | Scaffold a new lifecycle workflow |
+| `new-lifecycle-event` | Add a new lifecycle event type across all touch points |
+| `new-migration` | Generate a Drizzle migration with multi-tenancy checks |
+| `release-check` | Verify the branch is ready to merge and open a PR |
+| `security-check` | Review changed code for credentials, tenant isolation, and auth gaps |
+
+---
+
 ## Architecture Decision Records (ADRs)
 
 Architectural decisions are documented in `docs/decisions/`. Before proposing changes to the architecture, integrations, or core domain model, read the relevant ADRs to understand prior context and constraints.
