@@ -39,7 +39,7 @@ Thumbs.db
 .idea/
 
 # Kamal
-.kamal/
+.kamal/secrets.*.enc
 
 # Misc
 *.local
