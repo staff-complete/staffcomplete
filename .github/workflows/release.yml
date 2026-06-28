@@ -68,7 +68,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
       - run: ssh-keyscan -H 89.167.28.104 >> ~/.ssh/known_hosts
-      - run: gem install kamal
+      - run: sudo gem install kamal --no-document
       - run: kamal deploy
         env:
           KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
