@@ -39,7 +39,7 @@ jobs:
       - uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-      - run: ssh-keyscan -H 89.167.28.104 >> ~/.ssh/known_hosts
+          known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
       - run: sudo gem install kamal --no-document
       - run: kamal deploy
         env:
