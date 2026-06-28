@@ -8,10 +8,17 @@ servers:
     options:
       add-host: host.docker.internal:host-gateway
 
+builder:
+  arch: amd64
+
 proxy:
   ssl: true
   host: staffcomplete.io
   app_port: 3000
+  healthcheck:
+    path: /health
+    interval: 5
+    timeout: 3
 
 registry:
   server: ghcr.io
@@ -27,16 +34,6 @@ env:
   clear:
     NODE_ENV: production
     PORT: '3000'
-
-healthcheck:
-  path: /health
-  port: 3000
-  max_attempts: 10
-  interval: 5s
-
-hooks:
-  pre-deploy:
-    - node apps/api/dist/migrate.js
 
 accessories:
   db:
