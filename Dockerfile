@@ -15,11 +15,16 @@ RUN pnpm --filter @staffcomplete/shared build && \
     pnpm --filter @staffcomplete/web build && \
     pnpm --filter @staffcomplete/api build
 
+# -- prod-deps: production-only node_modules for the api (no symlinks) --
+FROM builder AS prod-deps
+RUN pnpm deploy --filter @staffcomplete/api --prod /prod
+
 # -- runner: minimal production image --
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+COPY --from=prod-deps /prod/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 # Vue SPA static files — served by the API at runtime
