@@ -1,0 +1,53 @@
+service: staffcomplete
+image: ghcr.io/staff-complete/staffcomplete
+
+servers:
+  web:
+    hosts:
+      - 89.167.28.104
+    options:
+      add-host: host.docker.internal:host-gateway
+
+proxy:
+  ssl: true
+  host: staffcomplete.io
+  app_port: 3000
+
+registry:
+  server: ghcr.io
+  username: staff-complete
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  secret:
+    - DATABASE_URL
+    - AUTH_SECRET
+    - RESEND_API_KEY
+  clear:
+    NODE_ENV: production
+    PORT: '3000'
+
+healthcheck:
+  path: /health
+  port: 3000
+  max_attempts: 10
+  interval: 5s
+
+hooks:
+  pre-deploy:
+    - node apps/api/dist/migrate.js
+
+accessories:
+  db:
+    image: postgres:17-alpine
+    host: 89.167.28.104
+    env:
+      secret:
+        - POSTGRES_PASSWORD
+      clear:
+        POSTGRES_DB: staffcomplete
+        POSTGRES_USER: staffcomplete
+    volumes:
+      - /var/lib/postgresql/data:/var/lib/postgresql/data
+    port: '127.0.0.1:5432:5432'

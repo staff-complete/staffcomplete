@@ -1,0 +1,12 @@
+.git
+.github
+.devcontainer
+.kamal
+node_modules
+**/node_modules
+**/dist
+**/coverage
+.env
+.env.*
+*.log
+.DS_Store
