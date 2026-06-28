@@ -17,7 +17,7 @@ RUN pnpm --filter @staffcomplete/shared build && \
 
 # -- prod-deps: production-only node_modules for the api (no symlinks) --
 FROM builder AS prod-deps
-RUN pnpm deploy --filter @staffcomplete/api --prod /prod
+RUN pnpm deploy --filter @staffcomplete/api --prod --legacy /prod
 
 # -- runner: minimal production image --
 FROM node:24-alpine AS runner
