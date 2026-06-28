@@ -46,3 +46,6 @@ Thumbs.db
 
 # AI-injected editor instructions (not for source control)
 .github/instructions/codacy.instructions.md
+
+# Claude
+.claude/settings.local.json
