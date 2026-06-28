@@ -45,7 +45,7 @@
         "explorer.fileNesting.patterns": {
           "tsconfig.json": "tsconfig.*.json, env.d.ts",
           "vite.config.*": "vitest.config.*",
-          "package.json": "pnpm-lock.yaml, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig, .markdownlint.json"
+          "package.json": "pnpm-lock.yaml, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig, .markdownlint.json, .releaserc.json"
         }
       },
       "extensions": [
