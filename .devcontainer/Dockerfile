@@ -17,7 +17,7 @@ RUN apt-get update \
        > /etc/apt/sources.list.d/github-cli.list \
     && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends \
-       nodejs=24.16.0-1nodesource1 gh \
+       nodejs=24.16.0-1nodesource1 gh ruby-full build-essential ruby-dev \
     && npm install -g pnpm @anthropic-ai/claude-code turbo \
     && turbo telemetry disable \
     && apt-get clean \
@@ -27,4 +27,10 @@ RUN useradd --create-home --user-group --shell /bin/zsh dev
 USER dev
 WORKDIR /home/dev
 
+ENV GEM_HOME="/home/dev/.gems"
+
+# Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
+
+# Ruby tools
+RUN gem install kamal --no-document
