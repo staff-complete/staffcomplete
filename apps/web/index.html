@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -21,217 +21,645 @@
       *::before,
       *::after {
         box-sizing: border-box;
+      }
+
+      body {
         margin: 0;
-        padding: 0;
-      }
-
-      html,
-      body {
-        height: 100%;
         font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-        background: #041f1c;
-        color: #fff;
-        -webkit-font-smoothing: antialiased;
       }
 
-      body {
-        display: flex;
-        flex-direction: column;
-        min-height: 100dvh;
-      }
-
-      /* ── Hero ── */
-      .hero {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 80px 24px 64px;
-        gap: 52px;
-      }
-
-      /* ── Wordmark lockup ── */
-      .lockup {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 28px;
-      }
-
-      .lockup-inner {
-        display: flex;
-        align-items: center;
-        gap: clamp(18px, 4vw, 30px);
-      }
-
-      .wordmark {
-        font-size: clamp(2.6rem, 8vw, 5rem);
-        font-weight: 700;
-        letter-spacing: -0.04em;
-        line-height: 1;
-      }
-
-      .wordmark-staff {
-        color: rgba(255, 255, 255, 0.85);
-        font-weight: 300;
-      }
-
-      .wordmark-complete {
-        color: #2dd4bf;
-        font-weight: 700;
-      }
-
-      .tagline {
-        font-size: clamp(0.6rem, 1.6vw, 0.75rem);
-        font-weight: 600;
-        letter-spacing: 0.24em;
-        text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.3);
-      }
-
-      /* ── Divider ── */
-      .divider {
-        width: 1px;
-        height: 48px;
-        background: linear-gradient(to bottom, transparent, rgba(45, 212, 191, 0.35), transparent);
-      }
-
-      /* ── Coming soon card ── */
-      .card {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 24px;
-        padding: clamp(36px, 6vw, 56px) clamp(32px, 6vw, 64px);
-        max-width: 520px;
-        width: 100%;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-        backdrop-filter: blur(8px);
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        font-size: 0.68rem;
-        font-weight: 600;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: #2dd4bf;
-        background: rgba(45, 212, 191, 0.1);
-        border: 1px solid rgba(45, 212, 191, 0.2);
-        border-radius: 999px;
-        padding: 0.38em 1em;
-      }
-
-      .badge-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #2dd4bf;
-        animation: pulse 2.4s ease-in-out infinite;
-      }
-
-      @keyframes pulse {
-        0%,
+      /* ── Thread icon animation ── */
+      @keyframes threadDraw {
+        0% {
+          stroke-dashoffset: 122;
+        }
+        62% {
+          stroke-dashoffset: 0;
+        }
+        84% {
+          stroke-dashoffset: 0;
+        }
+        97% {
+          stroke-dashoffset: 122;
+        }
         100% {
+          stroke-dashoffset: 122;
+        }
+      }
+      @keyframes nodeStart {
+        0%,
+        3% {
+          opacity: 0;
+          transform: scale(0.1);
+        }
+        13%,
+        82% {
           opacity: 1;
           transform: scale(1);
         }
-        50% {
-          opacity: 0.4;
-          transform: scale(0.75);
+        97%,
+        100% {
+          opacity: 0;
+          transform: scale(0.1);
+        }
+      }
+      @keyframes nodeMid {
+        0%,
+        30% {
+          opacity: 0;
+          transform: scale(0.1);
+        }
+        41%,
+        82% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        97%,
+        100% {
+          opacity: 0;
+          transform: scale(0.1);
+        }
+      }
+      @keyframes nodeEnd {
+        0%,
+        59% {
+          opacity: 0;
+          transform: scale(0.1);
+        }
+        70%,
+        82% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        97%,
+        100% {
+          opacity: 0;
+          transform: scale(0.1);
         }
       }
 
-      .card-heading {
-        font-size: clamp(1.3rem, 3.5vw, 1.65rem);
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        line-height: 1.2;
-        color: #fff;
+      /* ── Page entry ── */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(18px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
-      .card-body {
-        font-size: 0.975rem;
-        font-weight: 400;
-        line-height: 1.7;
-        color: #6b7280;
-        max-width: 380px;
+      /* ── Seconds tick ── */
+      @keyframes tick {
+        0% {
+          opacity: 1;
+        }
+        15% {
+          opacity: 0.6;
+        }
+        30% {
+          opacity: 1;
+        }
       }
 
-      /* ── Footer ── */
-      .footer {
-        padding: 28px 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      .fade-1 {
+        animation: fadeUp 0.8s ease both 0.1s;
       }
-
-      .footer-text {
-        font-size: 0.7rem;
-        font-weight: 600;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.15);
+      .fade-2 {
+        animation: fadeUp 0.8s ease both 0.25s;
+      }
+      .fade-3 {
+        animation: fadeUp 0.8s ease both 0.4s;
+      }
+      .fade-4 {
+        animation: fadeUp 0.8s ease both 0.5s;
+      }
+      .fade-5 {
+        animation: fadeUp 0.8s ease both 0.55s;
+      }
+      .fade-6 {
+        animation: fadeUp 0.8s ease both 0.6s;
+      }
+      .fade-7 {
+        animation: fadeUp 0.8s ease both 0.75s;
+      }
+      .fade-8 {
+        animation: fadeUp 0.8s ease both 0.85s;
       }
     </style>
   </head>
   <body>
-    <main class="hero">
-      <div class="lockup">
-        <div class="lockup-inner">
-          <!-- Thread mark — on dark -->
+    <div
+      style="
+        min-height: 100vh;
+        background: radial-gradient(ellipse 90% 80% at 50% 38%, #082e28 0%, #041f1c 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        padding: 48px 24px;
+      "
+    >
+      <!-- Dot grid -->
+      <div
+        style="
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(rgba(13, 148, 136, 0.08) 1px, transparent 1px);
+          background-size: 44px 44px;
+          pointer-events: none;
+          z-index: 0;
+        "
+      ></div>
+
+      <!-- Watermark Thread icon -->
+      <svg
+        style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -55%);
+          width: 860px;
+          height: 492px;
+          opacity: 0.038;
+          pointer-events: none;
+          flex-shrink: 0;
+        "
+        viewBox="0 0 140 80"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        <path
+          d="M 18,62 C 44,62 44,40 70,40 C 96,40 96,18 122,18"
+          fill="none"
+          stroke="#2DD4BF"
+          stroke-width="4.5"
+          stroke-linecap="round"
+        />
+        <circle cx="18" cy="62" r="11" fill="none" stroke="#2DD4BF" stroke-width="4" />
+        <circle cx="70" cy="40" r="13.5" fill="#2DD4BF" />
+        <circle cx="70" cy="40" r="5.5" fill="#041F1C" />
+        <circle cx="122" cy="18" r="11" fill="none" stroke="#2DD4BF" stroke-width="4" />
+      </svg>
+
+      <!-- Main content -->
+      <div
+        style="
+          position: relative;
+          z-index: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          max-width: 560px;
+          width: 100%;
+        "
+      >
+        <!-- Badge -->
+        <div
+          class="fade-1"
+          style="
+            display: inline-block;
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #0d9488;
+            padding: 6px 18px;
+            border: 1px solid rgba(13, 148, 136, 0.3);
+            border-radius: 100px;
+            margin-bottom: 44px;
+          "
+        >
+          Coming Soon
+        </div>
+
+        <!-- Animated Thread icon -->
+        <div class="fade-2" style="position: relative; margin-bottom: 36px">
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 300px;
+              height: 300px;
+              background: radial-gradient(circle, rgba(13, 148, 136, 0.14) 0%, transparent 65%);
+              pointer-events: none;
+            "
+          ></div>
           <svg
-            width="112"
-            height="64"
+            width="210"
+            height="120"
             viewBox="0 0 140 80"
             xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
+            aria-label="StaffComplete thread mark"
           >
             <path
               d="M 18,62 C 44,62 44,40 70,40 C 96,40 96,18 122,18"
               fill="none"
-              stroke="white"
+              stroke="#0D9488"
               stroke-width="4.5"
               stroke-linecap="round"
+              style="
+                stroke-dasharray: 122;
+                stroke-dashoffset: 122;
+                animation: threadDraw 5s ease-in-out infinite;
+              "
             />
-            <circle cx="18" cy="62" r="11" fill="#041F1C" stroke="white" stroke-width="4.5" />
-            <circle cx="70" cy="40" r="13.5" fill="white" />
-            <circle cx="70" cy="40" r="5.5" fill="#041F1C" />
-            <circle cx="122" cy="18" r="11" fill="#041F1C" stroke="white" stroke-width="4.5" />
+            <circle
+              cx="18"
+              cy="62"
+              r="11"
+              fill="#041F1C"
+              stroke="#0D9488"
+              stroke-width="4.5"
+              style="
+                transform-box: fill-box;
+                transform-origin: center;
+                opacity: 0;
+                animation: nodeStart 5s ease-in-out infinite;
+              "
+            />
+            <circle
+              cx="70"
+              cy="40"
+              r="13.5"
+              fill="#0D9488"
+              style="
+                transform-box: fill-box;
+                transform-origin: center;
+                opacity: 0;
+                animation: nodeMid 5s ease-in-out infinite;
+              "
+            />
+            <circle
+              cx="70"
+              cy="40"
+              r="5.5"
+              fill="#041F1C"
+              style="
+                transform-box: fill-box;
+                transform-origin: center;
+                opacity: 0;
+                animation: nodeMid 5s ease-in-out infinite;
+              "
+            />
+            <circle
+              cx="122"
+              cy="18"
+              r="11"
+              fill="#041F1C"
+              stroke="#0D9488"
+              stroke-width="4.5"
+              style="
+                transform-box: fill-box;
+                transform-origin: center;
+                opacity: 0;
+                animation: nodeEnd 5s ease-in-out infinite;
+              "
+            />
           </svg>
+        </div>
 
-          <div class="wordmark" aria-label="StaffComplete">
-            <span class="wordmark-staff">Staff</span><span class="wordmark-complete">Complete</span>
+        <!-- Wordmark -->
+        <div
+          class="fade-3"
+          style="
+            font-size: 54px;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            font-weight: 700;
+            margin-bottom: 14px;
+          "
+          aria-label="StaffComplete"
+        >
+          <span style="color: rgba(255, 255, 255, 0.82); font-weight: 300">Staff</span
+          ><span style="color: #2dd4bf">Complete</span>
+        </div>
+
+        <!-- Tagline -->
+        <div
+          class="fade-4"
+          style="
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #0d9488;
+            margin-bottom: 36px;
+          "
+        >
+          Full lifecycle, automated
+        </div>
+
+        <!-- Divider -->
+        <div
+          class="fade-5"
+          style="
+            width: 44px;
+            height: 1.5px;
+            background: rgba(13, 148, 136, 0.3);
+            margin-bottom: 28px;
+          "
+          aria-hidden="true"
+        ></div>
+
+        <!-- Description -->
+        <p
+          class="fade-6"
+          style="
+            font-size: 15px;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.4);
+            margin: 0 0 52px;
+            font-weight: 400;
+            max-width: 400px;
+          "
+        >
+          Automate the complete employee lifecycle across all your company systems — from onboarding
+          to offboarding and everything in between.
+        </p>
+
+        <!-- Countdown -->
+        <div
+          class="fade-7"
+          style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 28px"
+          aria-label="Countdown to launch"
+        >
+          <!-- Days -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 9px">
+            <div
+              style="
+                width: 82px;
+                height: 78px;
+                background: #051c18;
+                border: 1px solid rgba(13, 148, 136, 0.18);
+                border-top: 2px solid #0d9488;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <span
+                id="cd-days"
+                style="
+                  font-size: 36px;
+                  font-weight: 700;
+                  color: white;
+                  letter-spacing: -0.05em;
+                  font-variant-numeric: tabular-nums;
+                  line-height: 1;
+                "
+                >--</span
+              >
+            </div>
+            <div
+              style="
+                font-size: 8.5px;
+                font-weight: 700;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: rgba(13, 148, 136, 0.6);
+              "
+            >
+              Days
+            </div>
+          </div>
+
+          <div
+            style="
+              font-size: 30px;
+              font-weight: 300;
+              color: rgba(13, 148, 136, 0.25);
+              padding-top: 18px;
+              line-height: 1;
+              user-select: none;
+            "
+            aria-hidden="true"
+          >
+            :
+          </div>
+
+          <!-- Hours -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 9px">
+            <div
+              style="
+                width: 82px;
+                height: 78px;
+                background: #051c18;
+                border: 1px solid rgba(13, 148, 136, 0.18);
+                border-top: 2px solid #0d9488;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <span
+                id="cd-hours"
+                style="
+                  font-size: 36px;
+                  font-weight: 700;
+                  color: white;
+                  letter-spacing: -0.05em;
+                  font-variant-numeric: tabular-nums;
+                  line-height: 1;
+                "
+                >--</span
+              >
+            </div>
+            <div
+              style="
+                font-size: 8.5px;
+                font-weight: 700;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: rgba(13, 148, 136, 0.6);
+              "
+            >
+              Hours
+            </div>
+          </div>
+
+          <div
+            style="
+              font-size: 30px;
+              font-weight: 300;
+              color: rgba(13, 148, 136, 0.25);
+              padding-top: 18px;
+              line-height: 1;
+              user-select: none;
+            "
+            aria-hidden="true"
+          >
+            :
+          </div>
+
+          <!-- Mins -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 9px">
+            <div
+              style="
+                width: 82px;
+                height: 78px;
+                background: #051c18;
+                border: 1px solid rgba(13, 148, 136, 0.18);
+                border-top: 2px solid #0d9488;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <span
+                id="cd-mins"
+                style="
+                  font-size: 36px;
+                  font-weight: 700;
+                  color: white;
+                  letter-spacing: -0.05em;
+                  font-variant-numeric: tabular-nums;
+                  line-height: 1;
+                "
+                >--</span
+              >
+            </div>
+            <div
+              style="
+                font-size: 8.5px;
+                font-weight: 700;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: rgba(13, 148, 136, 0.6);
+              "
+            >
+              Mins
+            </div>
+          </div>
+
+          <div
+            style="
+              font-size: 30px;
+              font-weight: 300;
+              color: rgba(13, 148, 136, 0.25);
+              padding-top: 18px;
+              line-height: 1;
+              user-select: none;
+            "
+            aria-hidden="true"
+          >
+            :
+          </div>
+
+          <!-- Secs -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 9px">
+            <div
+              style="
+                width: 82px;
+                height: 78px;
+                background: #051c18;
+                border: 1px solid rgba(13, 148, 136, 0.18);
+                border-top: 2px solid #0d9488;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <span
+                id="cd-secs"
+                style="
+                  font-size: 36px;
+                  font-weight: 700;
+                  color: rgba(255, 255, 255, 0.7);
+                  letter-spacing: -0.05em;
+                  font-variant-numeric: tabular-nums;
+                  line-height: 1;
+                  animation: tick 1s linear infinite;
+                "
+                >--</span
+              >
+            </div>
+            <div
+              style="
+                font-size: 8.5px;
+                font-weight: 700;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: rgba(13, 148, 136, 0.6);
+              "
+            >
+              Secs
+            </div>
           </div>
         </div>
 
-        <p class="tagline">Full lifecycle, automated</p>
+        <!-- Launch date -->
+        <div
+          class="fade-8"
+          style="
+            font-size: 12.5px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.22);
+            letter-spacing: 0.03em;
+          "
+        >
+          Launching
+          <span style="color: rgba(255, 255, 255, 0.5); font-weight: 600">August 23, 2026</span>
+        </div>
       </div>
 
-      <div class="divider" aria-hidden="true"></div>
-
-      <div class="card">
-        <span class="badge">
-          <span class="badge-dot" aria-hidden="true"></span>
-          Coming soon
-        </span>
-        <h1 class="card-heading">Employee lifecycle,<br />finally on autopilot</h1>
-        <p class="card-body">
-          From day-one access provisioning to seamless offboarding — StaffComplete orchestrates
-          every step across your HR and IT systems so nothing falls through the cracks.
-        </p>
+      <!-- Footer -->
+      <div
+        style="
+          position: absolute;
+          bottom: 28px;
+          left: 0;
+          right: 0;
+          text-align: center;
+          pointer-events: none;
+        "
+      >
+        <div
+          style="
+            font-size: 10px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.13);
+            letter-spacing: 0.06em;
+          "
+        >
+          © 2026 StaffComplete
+        </div>
       </div>
-    </main>
+    </div>
 
-    <footer class="footer">
-      <p class="footer-text">StaffComplete &nbsp;·&nbsp; 2026</p>
-    </footer>
+    <script>
+      ;(function () {
+        const TARGET = new Date('2026-08-23T00:00:00').getTime()
+        const days = document.getElementById('cd-days')
+        const hours = document.getElementById('cd-hours')
+        const mins = document.getElementById('cd-mins')
+        const secs = document.getElementById('cd-secs')
+
+        function pad(n) {
+          return String(n).padStart(2, '0')
+        }
+
+        function tick() {
+          const diff = Math.max(0, TARGET - Date.now())
+          days.textContent = pad(Math.floor(diff / 86400000))
+          hours.textContent = pad(Math.floor((diff % 86400000) / 3600000))
+          mins.textContent = pad(Math.floor((diff % 3600000) / 60000))
+          secs.textContent = pad(Math.floor((diff % 60000) / 1000))
+        }
+
+        tick()
+        setInterval(tick, 1000)
+      })()
+    </script>
   </body>
 </html>

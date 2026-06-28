@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
@@ -9,4 +10,8 @@ app.get('/health', (c) => c.json({ status: 'ok' }))
 app.use('/*', serveStatic({ root: './public' }))
 app.use('/*', serveStatic({ path: './public/index.html' }))
 
-serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) })
+export { app }
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) })
+}
