@@ -1,9 +1,9 @@
 <script setup lang="ts">
 const stats = [
   { value: '98%', label: 'faster onboarding' },
-  { value: '0', label: 'missed deprovisioning steps' },
-  { value: '40+', label: 'system integrations' },
-  { value: '5 min', label: 'average setup time' },
+  { value: '0', label: 'accounts left open after offboarding' },
+  { value: '30 min', label: 'average setup time' },
+  { value: '0', label: 'IT tickets needed to get started' },
 ]
 </script>
 

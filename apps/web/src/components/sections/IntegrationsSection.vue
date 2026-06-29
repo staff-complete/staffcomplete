@@ -4,14 +4,14 @@ import SectionHeader from '../SectionHeader.vue'
 const integrations = [
   { name: 'Google Workspace', color: '#4285f4' },
   { name: 'Slack', color: '#4a154b' },
-  { name: 'GitHub', color: '#24292e' },
-  { name: 'Okta', color: '#007dc5' },
+  { name: 'BambooHR', color: '#73bf45' },
+  { name: 'HiBob', color: '#ff5c5c' },
+  { name: 'Microsoft 365', color: '#2eb67d' },
   { name: 'Jira', color: '#0052cc' },
   { name: 'Notion', color: '#000000' },
-  { name: 'HubSpot', color: '#f87348' },
-  { name: 'BambooHR', color: '#73bf45' },
-  { name: 'Microsoft 365', color: '#2eb67d' },
-  { name: 'Zendesk', color: '#6762a6' },
+  { name: 'GitHub', color: '#24292e' },
+  { name: 'Personio', color: '#1c3d5a' },
+  { name: 'Linear', color: '#5e6ad2' },
 ]
 </script>
 

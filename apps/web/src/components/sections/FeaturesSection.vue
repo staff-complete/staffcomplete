@@ -17,10 +17,10 @@ const features: Feature[] = [
       'New hire added in your HRIS? Every account, access, and tool gets provisioned before they walk in the door.',
   },
   {
-    emoji: '🔄',
-    title: 'Role & team changes',
+    emoji: '💬',
+    title: 'Alerts that actually land',
     description:
-      'Promotions, transfers, and team moves automatically update permissions across every connected system.',
+      'Task owners get notified wherever they read messages — Slack, email, or WhatsApp. Overdue reminders go out automatically.',
   },
   {
     emoji: '🔒',
@@ -30,21 +30,21 @@ const features: Feature[] = [
   },
   {
     emoji: '📋',
-    title: 'Audit trail',
+    title: 'Full audit trail',
     description:
-      'Every action is logged with timestamps. SOC 2 ready. Perfect for compliance reviews and access audits.',
+      'Every provisioning and offboarding action is logged with who did it and when. Know exactly what happened — no chasing.',
   },
   {
     emoji: '⚡',
-    title: 'No-code workflows',
+    title: 'Nothing falls through',
     description:
-      'Visual workflow builder means HR owns the automation. No engineer required to update onboarding steps.',
+      'For tools without an API, StaffComplete creates a task for the right person with a due date and an overdue alert. Manual steps are tracked too.',
   },
   {
     emoji: '🧩',
-    title: '40+ integrations',
+    title: 'Works with your stack',
     description:
-      'Google Workspace, Slack, GitHub, Okta, Jira, Notion, HubSpot, BambooHR and more — all talking to each other.',
+      'Google Workspace, Slack, BambooHR, HiBob, Jira, Notion and more — connected in minutes, not weeks.',
     dark: true,
     link: '#integrations',
   },

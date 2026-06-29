@@ -12,18 +12,18 @@ const testimonials = [
   },
   {
     quote:
-      'The offboarding piece is what sold us. An employee resigned on a Friday evening and every single account was revoked automatically before 9 AM Monday. Our security team was impressed.',
-    name: 'Marcus Svensson',
-    role: 'IT Director, Nordly (350 employees)',
-    initials: 'MS',
+      'Someone left on a Friday. By Monday morning every account was already closed — Google, Slack, GitHub, everything. I did not have to send a single message to IT. That alone was worth it.',
+    name: 'Tom Reeves',
+    role: 'Head of People, Birchway (48 employees)',
+    initials: 'TR',
     avatarBg: '#0f766e',
   },
   {
     quote:
-      'We scaled from 40 to 200 employees in 18 months. Without StaffComplete, our HR team would have needed to double in size just to keep up with provisioning.',
-    name: 'Julia Lenz',
-    role: 'VP People, Mosswood (200 employees)',
-    initials: 'JL',
+      'We were onboarding with a Google Sheet and a prayer. StaffComplete replaced the whole thing in an afternoon. Our new hires now have their accounts ready before 9 AM on day one.',
+    name: 'Sara Okafor',
+    role: 'HR Manager, Stacklane (65 employees)',
+    initials: 'SO',
     avatarBg: '#134e4a',
   },
 ]

@@ -12,14 +12,14 @@ const steps: Array<{
     number: '01',
     title: 'Connect your stack',
     description:
-      'Link Google Workspace, Slack, GitHub, Okta, Jira and 40+ more in minutes. No custom code required.',
+      'Connect Google Workspace, Slack, and BambooHR in two clicks each. No code, no IT ticket, no waiting.',
     icon: 'connect',
   },
   {
     number: '02',
     title: 'Define your workflows',
     description:
-      'Set rules for each lifecycle event — new hire, role change, leave, offboarding. Use templates or build your own.',
+      'Pick a pre-built template for new hires or leavers, or build your own checklist in minutes. No engineer involved.',
     icon: 'configure',
   },
   {

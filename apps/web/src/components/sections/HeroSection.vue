@@ -33,17 +33,18 @@
           </div>
 
           <h1 class="m-0 text-[56px] font-extrabold leading-[1.06] tracking-[-0.04em] text-white">
-            Every employee,<br />
-            <span class="text-brand-light">every system,</span><br />
-            always in sync.
+            Onboarding your team<br />
+            <span class="text-brand-light">never had to be</span><br />
+            this hard.
           </h1>
 
           <p
             class="m-0 text-[16.5px] leading-[1.75] font-normal max-w-[420px]"
             style="color: rgba(255, 255, 255, 0.5)"
           >
-            Automate the full employee lifecycle across all your company tools — from day-one
-            onboarding to final offboarding. No manual tickets. No missed steps.
+            StaffComplete sets up every new hire across Google, Slack, and the rest of your stack —
+            and locks everything down the moment someone leaves. No spreadsheets. No forgotten
+            steps. No chasing IT.
           </p>
 
           <div class="flex items-center gap-3.5">
@@ -229,6 +230,6 @@ const pills = [
   { name: 'Google Workspace', color: '#4285f4', position: 'top-4 left-2' },
   { name: 'Slack', color: '#4a154b', position: 'top-4 right-2' },
   { name: 'GitHub', color: '#24292e', position: 'bottom-4 right-2' },
-  { name: 'Okta', color: '#007dc5', position: 'bottom-4 left-2' },
+  { name: 'BambooHR', color: '#73bf45', position: 'bottom-4 left-2' },
 ]
 </script>
