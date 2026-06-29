@@ -98,7 +98,19 @@ These are the features where StaffComplete beats every existing option for the 3
 
 **Gap:** Camino is fully Slack-dependent. Companies that use WhatsApp, Teams, or email as their primary comms channel are excluded.
 
-**Win:** Task notifications and overdue alerts go wherever the task owner actually reads messages — Slack DM, email, or WhatsApp. HR sets the preference per person. No one misses their task because they "don't check Slack."
+**Win:** Task notifications and overdue alerts go wherever the task owner actually reads messages — Slack DM, email, or WhatsApp message. HR sets the preference per person. No one misses their task because they "don't check Slack."
+
+**WhatsApp scope clarification:**
+
+The official WhatsApp Cloud API supports sending individual messages (no OBA required) and group management (OBA / green tick required, 8-participant group cap). For v1:
+
+| WhatsApp capability                                 | Approach                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------ |
+| Send task notification or overdue alert to a person | Official API — straightforward, no OBA needed                            |
+| Add new hire to a team WhatsApp group               | Manual task: "Add [Name] to #team-general WhatsApp group" assigned to HR |
+| Remove leaver from all WhatsApp groups              | Manual task with checklist of groups, assigned to HR                     |
+
+Automating group add/remove requires an Official Business Account (Meta review, brand notability gate) and is capped at 8 participants per group — neither constraint is acceptable for a day-one integration. The task fallback covers this gap cleanly: it is tracked, logged, and generates overdue alerts exactly like any automated step.
 
 ### 4. Complements BambooHR instead of replacing it
 
