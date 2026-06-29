@@ -1,1 +1,72 @@
 @import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --color-brand-dark: #041f1c;
+  --color-brand-mid: #082e28;
+  --color-brand-teal: #0d9488;
+  --color-brand-light: #2dd4bf;
+  --color-brand-surface: #eef3f2;
+  --color-brand-border: #d0ede9;
+  --color-brand-border-soft: #c8dcda;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: white;
+    color: #1c1c1e;
+  }
+  a {
+    text-decoration: none;
+  }
+}
+
+@keyframes threadDraw {
+  0% {
+    stroke-dashoffset: 122;
+  }
+  65% {
+    stroke-dashoffset: 0;
+  }
+  85% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 122;
+  }
+}
+
+@keyframes nodeAppear {
+  0%,
+  30% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  44%,
+  85% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@keyframes nodeEnd {
+  0%,
+  62% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  74%,
+  85% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
