@@ -127,20 +127,48 @@ Architectural decisions are documented in `docs/decisions/`. Before proposing ch
 ## Git Strategy
 
 - **Signed commits required** — all commits must be GPG signed
-- **Rebase only** — no merge commits; rebase feature branches onto `main`
-- **Linear history** — enforced on `main` via branch protection
-- **PR required** — no direct pushes to `main`
+- **Rebase only** — no merge commits; rebase feature branches onto `dev`
+- **Linear history** — enforced on both `main` and `dev` via branch protection
+- **PR required** — no direct pushes to `main` or `dev`
 
-### Merging a PR
+### Branch model
+
+```
+feature/* ──► dev ──► main
+               │         │
+               ▼         ▼
+      dev.staffcomplete  staffcomplete.io
+           .io           (+ GitHub Release)
+```
+
+- **Feature branches** target `dev`. All day-to-day development goes here.
+- **`dev`** is the integration branch. Every merge auto-deploys to `dev.staffcomplete.io`.
+- **`main`** is production-only. Only updated by merging `dev` → `main`, which triggers Semantic Release and a production deploy to `staffcomplete.io`.
+- Never merge a feature branch directly into `main`.
+
+### Merging a PR (feature → dev)
 
 The `gh` CLI token in this environment lacks merge permissions. Merge PRs locally:
 
 ```sh
+git checkout dev
+git pull origin dev
+git merge <branch>   # fast-forward only; no merge commits
+git push origin dev
+```
+
+### Releasing to production (dev → main)
+
+When `dev` is stable and ready to ship:
+
+```sh
 git checkout main
 git pull origin main
-git merge <branch>   # fast-forward only; no merge commits
+git merge dev        # fast-forward only; no merge commits
 git push origin main
 ```
+
+This triggers Semantic Release (GitHub release + changelog) and the production Kamal deploy.
 
 ---
 
