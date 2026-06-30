@@ -14,7 +14,7 @@ const features: Feature[] = [
     emoji: '🚀',
     title: 'Instant onboarding',
     description:
-      'New hire added in your HRIS? Every account, access, and tool gets provisioned before they walk in the door.',
+      'HR triggers onboarding in one click. Every account, access, and tool gets set up automatically before day one.',
   },
   {
     emoji: '💬',

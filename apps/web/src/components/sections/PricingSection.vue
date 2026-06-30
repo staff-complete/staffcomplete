@@ -27,7 +27,6 @@ const tiers: PricingTier[] = [
       'Google Workspace + Slack integrations',
       'Onboarding & offboarding workflows',
       'Manual task fallback with due dates',
-      '1 HRIS trigger (BambooHR or HiBob)',
       'Unlimited admin seats',
       'Audit log (90 days)',
       'Email support',
@@ -45,7 +44,7 @@ const tiers: PricingTier[] = [
     features: [
       'Everything in Starter',
       'All integrations (GitHub, Jira, Notion and more)',
-      'All HRIS triggers',
+      'HRIS sync (BambooHR, HiBob and more)',
       'Role & team change workflows',
       'Full audit log + CSV export',
       'Unlimited admin seats',

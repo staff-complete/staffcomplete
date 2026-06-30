@@ -12,7 +12,7 @@ const steps: Array<{
     number: '01',
     title: 'Connect your stack',
     description:
-      'Connect Google Workspace, Slack, and BambooHR in two clicks each. No code, no IT ticket, no waiting.',
+      'Connect Google Workspace and Slack in two clicks each. No code, no IT ticket, no waiting.',
     icon: 'connect',
   },
   {
