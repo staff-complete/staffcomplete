@@ -20,7 +20,7 @@ const tiers: PricingTier[] = [
     tagline: 'Up to 50 employees',
     price: '$99',
     priceNote: '/mo',
-    billingNote: 'Save 2 months billed annually',
+    billingNote: 'Or $990/yr — save 2 months',
     cta: 'Start free trial',
     ctaStyle: 'outline',
     features: [
@@ -38,7 +38,7 @@ const tiers: PricingTier[] = [
     tagline: 'Up to 150 employees',
     price: '$299',
     priceNote: '/mo',
-    billingNote: 'Save 2 months billed annually',
+    billingNote: 'Or $2,990/yr — save 2 months',
     cta: 'Start free trial',
     ctaStyle: 'solid',
     featured: true,

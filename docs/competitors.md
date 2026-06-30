@@ -119,7 +119,7 @@ Generic workflow automation used by technically capable teams to wire together G
 | HRIS-agnostic                 | ✅            | ✅              | ✅         | ❌        | —        |
 | HR-owned, no IT needed        | ✅            | ✅              | ✅         | ✅        | ✅       |
 | Setup under 30 minutes        | ✅            | ✅              | ⚠️         | ❌        | ❌       |
-| Price for 50 employees        | ~$250/mo      | ~$1,000/yr flat | ~$2,000/mo | ~$400/mo  | ~$500/mo |
+| Price for 50 employees        | ~$99/mo       | ~$1,000/yr flat | ~$2,000/mo | ~$400/mo  | ~$500/mo |
 
 Legend: ✅ strong · ⚠️ partial · ❌ absent
 

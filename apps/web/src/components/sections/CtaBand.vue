@@ -15,7 +15,7 @@
         Start automating your lifecycle today
       </h2>
       <p class="m-0 text-base leading-[1.7] max-w-[380px]" style="color: rgba(255, 255, 255, 0.45)">
-        14-day free trial. No credit card required. Up and running in under 10 minutes.
+        14-day free trial. No credit card required. Up and running in under 30 minutes.
       </p>
       <a
         href="#"
