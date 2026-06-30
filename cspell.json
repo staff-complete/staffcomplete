@@ -78,6 +78,8 @@
     "addgroup",
     "adduser",
     "appgroup",
-    "appuser"
+    "appuser",
+    "organisation",
+    "authorised"
   ]
 }
