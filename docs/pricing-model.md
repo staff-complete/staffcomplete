@@ -99,7 +99,7 @@ this month or 8.
 | Tier        | Headcount           | Monthly | Annual (2 months free) |
 | ----------- | ------------------- | ------- | ---------------------- |
 | **Starter** | Up to 50 employees  | $99/mo  | $990/yr                |
-| **Growth**  | Up to 150 employees | $349/mo | $3,490/yr              |
+| **Growth**  | Up to 150 employees | $299/mo | $2,990/yr              |
 | **Custom**  | 150+ employees      | Custom  | Custom                 |
 
 Effective per-employee rate:
@@ -144,8 +144,8 @@ Not recommended as the only option. Annual should be offered as a discount, not 
 
 |                     | Starter                  | Growth               | Custom                |
 | ------------------- | ------------------------ | -------------------- | --------------------- |
-| **Price (monthly)** | $99/mo                   | $349/mo              | Talk to us            |
-| **Price (annual)**  | $990/yr (~$82/mo)        | $3,490/yr (~$290/mo) | Negotiated            |
+| **Price (monthly)** | $99/mo                   | $299/mo              | Talk to us            |
+| **Price (annual)**  | $990/yr (~$82/mo)        | $2,990/yr (~$249/mo) | Negotiated            |
 | **Headcount**       | Up to 50 employees       | Up to 150 employees  | 150+                  |
 | **Integrations**    | Google Workspace + Slack | All integrations     | All + custom          |
 | **Triggers**        | Manual + 1 HRIS          | Manual + all HRIS    | All triggers          |
@@ -155,7 +155,7 @@ Not recommended as the only option. Annual should be offered as a discount, not 
 
 **What changes from the current landing page:**
 
-- Drop per-employee language ($3/$6) → replace with flat monthly ($99/$349)
+- Drop per-employee language ($3/$6) → replace with flat monthly ($99/$299)
 - Starter features: add "1 HRIS integration" (BambooHR or HiBob, one of them)
 - Growth features: add "All HRIS integrations" and "role change workflows"
 - Keep "Most Popular" badge on Growth (the 50–150 segment is the core ICP)
@@ -165,7 +165,7 @@ Not recommended as the only option. Annual should be offered as a discount, not 
 Monthly pricing shown by default. Annual toggle shows:
 
 - "Save 2 months — $1,490/yr" (Starter)
-- "Save 2 months — $3,490/yr" (Growth)
+- "Save 2 months — $2,990/yr" (Growth)
 
 Do not say "16% off" — it sounds small. "2 months free" sounds like real money.
 
@@ -215,7 +215,7 @@ How to contextualise the price on the landing page or in sales conversations:
 | Starter priceNote   | /employee/mo                  | (remove)                                         |
 | Starter billingNote | Billed annually               | Billed monthly · save 2 months annually          |
 | Starter tagline     | For teams up to 50 employees  | Up to 50 employees                               |
-| Growth price        | $6/employee/mo                | $349/mo                                          |
+| Growth price        | $6/employee/mo                | $299/mo                                          |
 | Growth tagline      | For teams of 50–150 employees | Up to 150 employees                              |
 | Heading             | Simple, per-employee pricing  | Simple, predictable pricing                      |
 | Subtext             | No seat licenses…             | One flat fee. No per-hire charges. No surprises. |
