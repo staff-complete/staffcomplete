@@ -226,6 +226,7 @@ How to contextualise the price on the landing page or in sales conversations:
 - Onboarding and offboarding workflows
 - Manual task fallback with due dates
 - 1 HRIS trigger (BambooHR or HiBob)
+- Unlimited admin seats
 - Audit log (90 days)
 - Email support
 
@@ -236,16 +237,16 @@ How to contextualise the price on the landing page or in sales conversations:
 - All integrations (GitHub, Jira, Notion and more)
 - Role and team change workflows
 - Full audit log + CSV export
+- Unlimited admin seats
 - Priority support
 
 ---
 
-## 8. Open questions
+## 8. Decided
 
-- **Free plan?** Camino has no free tier. n8n is the free option. A free tier risks commoditising
-  the product before establishing the brand. Not recommended for v1. Free trial is enough.
-- **Per-seat admin pricing?** Some tools charge per HR admin seat on top of the employee price.
-  Avoid — adds complexity, reduces conversion. Include unlimited HR admin seats.
-- **Overage on headcount?** If a Starter customer grows past 50 employees, auto-upgrade or
-  notify? Recommend: notify at 45 employees, auto-upgrade at 55. Not a hard block.
-- **Non-profit or startup discount?** Possible but defer until after launch. Address via Custom tier.
+- **Free plan:** No free tier in v1. Free trial (14 days) is enough. A free plan risks commoditising
+  the product before the brand is established.
+- **Admin seats:** Unlimited HR admin seats included on all tiers. No per-seat pricing.
+- **Headcount overage:** Not a hard block. Notify at 45 employees (Starter) or 145 employees
+  (Growth); auto-upgrade at 55 / 155. Customer is never locked out mid-month.
+- **Non-profit discount:** Available via Custom tier on request. Not advertised on the pricing page.
