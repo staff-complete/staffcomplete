@@ -29,6 +29,7 @@ The system ensures that employee state changes are consistently reflected across
 | Database           | PostgreSQL + Drizzle + drizzle-kit                            |
 | Job queue          | pg-boss (abstracted behind interface)                         |
 | Auth               | Better Auth                                                   |
+| Payments           | Stripe (subscriptions, webhooks, customer portal)             |
 | Email              | Resend                                                        |
 | Date/time          | date-fns                                                      |
 | Logging            | Pino + Loki + Grafana                                         |
