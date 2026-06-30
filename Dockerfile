@@ -30,5 +30,8 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 # Vue SPA static files — served by the API at runtime
 COPY --from=builder /app/apps/web/dist ./public
 
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
 EXPOSE 3000
 CMD ["node", "apps/api/dist/index.js"]
