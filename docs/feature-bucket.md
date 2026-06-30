@@ -291,6 +291,21 @@ market gaps, and the 30–150 employee segment strategy. Used to inform roadmap 
 
 ---
 
+## Internationalisation and localisation
+
+| Feature                                     | Status      | Competitor coverage    | Notes                                                         |
+| ------------------------------------------- | ----------- | ---------------------- | ------------------------------------------------------------- |
+| i18n framework (vue-i18n)                   | 🟢 MVP      | —                      | Build in from day one — retrofitting is expensive             |
+| English UI                                  | 🟢 MVP      | All                    | Default language                                              |
+| Hebrew UI (RTL layout)                      | 🔵 Post-MVP | —                      | No competitor offers this; strong moat in Israeli SMB market  |
+| Hebrew email notifications                  | 🔵 Post-MVP | —                      | Paired with Hebrew UI                                         |
+| Hebrew pre-built templates                  | 🔵 Post-MVP | —                      | Onboarding and offboarding checklists in Hebrew               |
+| RTL layout support (`dir="rtl"`)            | 🔵 Post-MVP | —                      | Required for Hebrew; CSS/Tailwind pass on all components      |
+| Date and number locale (Hebrew calendar)    | 🟡 Future   | —                      | date-fns has Hebrew locale; edge cases around Jewish holidays |
+| Additional languages (e.g. German, Spanish) | 🟡 Future   | Factorial (multi-lang) | European market expansion                                     |
+
+---
+
 ## Payroll and benefits (out of scope)
 
 | Feature                | Status          | Competitor coverage | Notes                         |
@@ -308,8 +323,8 @@ market gaps, and the 30–150 employee segment strategy. Used to inform roadmap 
 
 | Status          | Count   |
 | --------------- | ------- |
-| 🟢 MVP          | 28      |
-| 🔵 Post-MVP     | 37      |
-| 🟡 Future       | 59      |
+| 🟢 MVP          | 29      |
+| 🔵 Post-MVP     | 42      |
+| 🟡 Future       | 61      |
 | ⚪ Out of scope | 10      |
-| **Total**       | **134** |
+| **Total**       | **142** |
