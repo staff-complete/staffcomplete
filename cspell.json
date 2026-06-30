@@ -80,6 +80,7 @@
     "appgroup",
     "appuser",
     "organisation",
-    "authorised"
+    "authorised",
+    "demi"
   ]
 }
