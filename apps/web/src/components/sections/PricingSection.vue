@@ -17,34 +17,37 @@ interface PricingTier {
 const tiers: PricingTier[] = [
   {
     name: 'Starter',
-    tagline: 'For teams up to 50 employees',
-    price: '$3',
-    priceNote: '/employee/mo',
-    billingNote: 'Billed annually',
+    tagline: 'Up to 50 employees',
+    price: '$149',
+    priceNote: '/mo',
+    billingNote: 'Save 2 months billed annually',
     cta: 'Start free trial',
     ctaStyle: 'outline',
     features: [
-      'Up to 5 integrations',
-      'Onboarding & offboarding',
+      'Google Workspace + Slack integrations',
+      'Onboarding & offboarding workflows',
+      'Manual task fallback with due dates',
+      '1 HRIS trigger (BambooHR or HiBob)',
       'Audit log (90 days)',
       'Email support',
     ],
   },
   {
     name: 'Growth',
-    tagline: 'For teams of 50–150 employees',
-    price: '$6',
-    priceNote: '/employee/mo',
-    billingNote: 'Billed annually',
+    tagline: 'Up to 150 employees',
+    price: '$349',
+    priceNote: '/mo',
+    billingNote: 'Save 2 months billed annually',
     cta: 'Start free trial',
     ctaStyle: 'solid',
     featured: true,
     features: [
-      'Unlimited integrations',
+      'Everything in Starter',
+      'All integrations (GitHub, Jira, Notion and more)',
+      'All HRIS triggers',
       'Role & team change workflows',
-      'Full audit log',
+      'Full audit log + CSV export',
       'Priority support',
-      'Custom workflow templates',
     ],
   },
   {
@@ -72,8 +75,8 @@ const tiers: PricingTier[] = [
     <div class="max-w-[1160px] mx-auto">
       <SectionHeader
         eyebrow="Pricing"
-        heading="Simple, per-employee pricing"
-        subtext="No seat licenses. No surprise fees. Pay for the employees you manage."
+        heading="Simple, predictable pricing"
+        subtext="One flat fee. No per-hire charges. No surprises."
         subtextMaxWidth="380px"
       />
 
