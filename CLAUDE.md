@@ -284,6 +284,35 @@ All user stories, bugs, and spikes are tracked as **GitHub Issues**. No external
 4. Deliver: open a PR referencing the issue (`Closes #n`); merge via the documented PR process
 5. Close: issue closes automatically when the PR merges; add `released` when shipped to production
 
+### Triage criteria
+
+An issue moves from `needs-triage` to `status: ready` when all three are true:
+
+1. Priority label is set (`P0` / `P1` / `P2` / `P3`)
+2. Area label is set (`area: *`)
+3. Acceptance criteria are clear enough to start without further questions
+
+Remove `needs-triage` and add `status: ready` when triaged. For bugs, severity must also be set.
+
+### Project board
+
+Issues are also tracked in the [GitHub Project board](https://github.com/orgs/staff-complete/projects/1). The board is a view on top of repo issues — closing or updating an issue updates the board automatically. No data is duplicated.
+
+The board has a custom **Priority tier** field (P0 / P1 / P2 / P3) and uses the built-in **Status** column (Backlog → Ready → In progress → In review → Done).
+
+**Auto-add**: the project is configured to add new issues automatically. Any issue opened in this repo lands in the board backlog without manual action.
+
+**Status mapping**:
+
+| Board status | Issue label           |
+| ------------ | --------------------- |
+| Backlog      | `needs-triage`        |
+| Ready        | `status: ready`       |
+| In progress  | `status: in-progress` |
+| Done         | (closed by PR merge)  |
+
+Keep the issue label and the board status in sync when picking up or completing work.
+
 ### Branch naming from issues
 
 ```sh
