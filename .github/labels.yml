@@ -7,6 +7,10 @@
   color: '0075ca'
   description: New feature or capability
 
+- name: spike
+  color: 'c5def5'
+  description: Research or investigation task
+
 - name: chore
   color: 'e4e669'
   description: Maintenance, tooling, or dependency update
@@ -95,7 +99,15 @@
   color: 'bfd4f2'
   description: ''
 
+- name: 'area: web'
+  color: 'bfd4f2'
+  description: Frontend / landing page
+
 # Status
+- name: 'status: ready'
+  color: 'c2e0c6'
+  description: Triaged and ready to pick up
+
 - name: 'status: in-progress'
   color: '0e8a16'
   description: Actively being worked on
@@ -107,3 +119,8 @@
 - name: 'status: wont-fix'
   color: 'ffffff'
   description: Decided not to address
+
+# Release
+- name: released
+  color: 'ededed'
+  description: Shipped to production

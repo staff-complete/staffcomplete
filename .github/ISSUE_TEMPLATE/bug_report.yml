@@ -59,6 +59,7 @@ body:
         - api
         - db
         - config
+        - web
     validations:
       required: true
 

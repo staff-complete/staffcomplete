@@ -247,3 +247,45 @@ chore(deps): bump @types/node to 20.x
 - Breaking changes: append `!` after the type/scope and add a `BREAKING CHANGE:` footer
 - **One type per commit** — never combine multiple `type: ...` lines into a single commit message. If changes span multiple concerns, create separate commits.
 - **No AI co-author trailers** — do not add `Co-authored-by: Claude` or any AI attribution to commit messages.
+
+---
+
+## Issue Tracking
+
+All user stories, bugs, and spikes are tracked as **GitHub Issues**. No external tool.
+
+### Issue types
+
+| Type         | Template      | Use for                                                |
+| ------------ | ------------- | ------------------------------------------------------ |
+| `user-story` | User Story    | New capabilities from the HR user's perspective        |
+| `bug`        | Bug Report    | Something broken in production or staging              |
+| `spike`      | Spike         | Time-boxed research with a defined question and output |
+| `chore`      | (plain issue) | Maintenance, refactoring, tooling — no template needed |
+
+### Labels
+
+**Type** — one of: `user-story` · `bug` · `spike` · `chore` · `docs`
+
+**Priority** — one of: `P0` · `P1` · `P2` · `P3`
+
+**Area** — one of: `area: onboarding` · `area: offboarding` · `area: role-change` · `area: access` · `area: integrations` · `area: workflows` · `area: auth` · `area: api` · `area: db` · `area: config` · `area: web`
+
+**Status** — one of: `needs-triage` → `status: ready` → `status: in-progress` → `status: blocked` / `status: wont-fix` / `released`
+
+**Severity** (bugs only) — one of: `severity: critical` · `severity: high` · `severity: medium` · `severity: low`
+
+### Workflow
+
+1. File an issue using the appropriate template
+2. Triage: add priority, area, and severity labels; remove `needs-triage`; add `status: ready`
+3. Pick up: assign to yourself, add `status: in-progress`, create branch with `gh issue develop <n>`
+4. Deliver: open a PR referencing the issue (`Closes #n`); merge via the documented PR process
+5. Close: issue closes automatically when the PR merges; add `released` when shipped to production
+
+### Branch naming from issues
+
+```sh
+gh issue develop <issue-number> --checkout
+# creates and checks out: <number>-short-issue-title
+```

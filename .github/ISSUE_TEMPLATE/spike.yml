@@ -1,0 +1,63 @@
+name: Spike
+description: Time-boxed research or investigation task
+labels: ['spike', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A spike is a time-boxed investigation. Define the question upfront and the output format. When the spike closes, the answer should be documented and linked here.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question to Answer
+      description: The specific thing you need to know by the end of this spike.
+      placeholder: |
+        Can we automate Google Workspace group membership via the Admin SDK without domain-wide delegation?
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected Output
+      description: What will you produce? A decision, a proof of concept, a doc, an ADR?
+      placeholder: |
+        - Decision: yes/no + rationale
+        - Draft ADR if architectural
+    validations:
+      required: true
+
+  - type: input
+    id: timebox
+    attributes:
+      label: Time Box
+      description: Maximum time to spend before stopping and reporting findings.
+      placeholder: '2 hours / 1 day'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Domain Area
+      options:
+        - onboarding
+        - offboarding
+        - role-change
+        - access
+        - integrations
+        - workflows
+        - auth
+        - api
+        - db
+        - config
+        - web
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Background & Context
+      description: Why is this question blocking or important? Link related issues or ADRs.
