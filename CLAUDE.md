@@ -157,6 +157,15 @@ git merge <branch>   # fast-forward only; no merge commits
 git push origin dev
 ```
 
+**Critical rules — the push will be rejected if either is violated:**
+
+1. **Never commit directly to `dev`.** All work must be on a `feature/*` or `fix/*` branch.
+2. **A PR must exist before pushing.** The GitHub ruleset allows fast-forward pushes to `dev`
+   only when the commits being pushed belong to an open PR targeting `dev`. Create the PR with
+   `gh pr create --base dev` before running `git push origin dev`.
+3. **Never disable rulesets** to work around a rejected push — a rejected push means one of the
+   above rules was broken. Fix the process, not the protection.
+
 ### Releasing to production (dev → main)
 
 When `dev` is stable and ready to ship:
