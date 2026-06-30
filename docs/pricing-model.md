@@ -98,13 +98,13 @@ this month or 8.
 
 | Tier        | Headcount           | Monthly | Annual (2 months free) |
 | ----------- | ------------------- | ------- | ---------------------- |
-| **Starter** | Up to 50 employees  | $149/mo | $1,490/yr              |
+| **Starter** | Up to 50 employees  | $99/mo  | $990/yr                |
 | **Growth**  | Up to 150 employees | $349/mo | $3,490/yr              |
 | **Custom**  | 150+ employees      | Custom  | Custom                 |
 
 Effective per-employee rate:
 
-- Starter: $3.0–5.0/emp/mo depending on actual headcount (50-person: $3, 30-person: $5)
+- Starter: $2.0–3.3/emp/mo depending on actual headcount (50-person: $2, 30-person: $3.3)
 - Growth: $2.3–7.0/emp/mo (150-person: $2.3, 50-person: $7)
 
 This model is **defensible to the buyer** ("one flat fee, no surprises"), aligns with the
@@ -144,8 +144,8 @@ Not recommended as the only option. Annual should be offered as a discount, not 
 
 |                     | Starter                  | Growth               | Custom                |
 | ------------------- | ------------------------ | -------------------- | --------------------- |
-| **Price (monthly)** | $149/mo                  | $349/mo              | Talk to us            |
-| **Price (annual)**  | $1,490/yr (~$124/mo)     | $3,490/yr (~$290/mo) | Negotiated            |
+| **Price (monthly)** | $99/mo                   | $349/mo              | Talk to us            |
+| **Price (annual)**  | $990/yr (~$82/mo)        | $3,490/yr (~$290/mo) | Negotiated            |
 | **Headcount**       | Up to 50 employees       | Up to 150 employees  | 150+                  |
 | **Integrations**    | Google Workspace + Slack | All integrations     | All + custom          |
 | **Triggers**        | Manual + 1 HRIS          | Manual + all HRIS    | All triggers          |
@@ -155,7 +155,7 @@ Not recommended as the only option. Annual should be offered as a discount, not 
 
 **What changes from the current landing page:**
 
-- Drop per-employee language ($3/$6) → replace with flat monthly ($149/$349)
+- Drop per-employee language ($3/$6) → replace with flat monthly ($99/$349)
 - Starter features: add "1 HRIS integration" (BambooHR or HiBob, one of them)
 - Growth features: add "All HRIS integrations" and "role change workflows"
 - Keep "Most Popular" badge on Growth (the 50–150 segment is the core ICP)
@@ -194,11 +194,11 @@ How to contextualise the price on the landing page or in sales conversations:
 
 ## 6. Pricing page psychology
 
-- **Lead with the value, not the number.** "Onboard your next hire in 4 minutes" before "$149/mo."
-- **Show the number without /employee.** Flat price ($149) anchors better than $3/emp when the
+- **Lead with the value, not the number.** "Onboard your next hire in 4 minutes" before "$99/mo."
+- **Show the number without /employee.** Flat price ($99) anchors better than $3/emp when the
   buyer might do the wrong math ($3 × 150 = $450 in their head).
 - **Annual as default toggle.** Most SaaS pages default to annual toggle. Effective monthly rate
-  of $124 looks much better than $149.
+  of $82 looks much better than $99.
 - **ROI callout below the tiers.** "The average StaffComplete customer saves 6 hours per hire.
   At your size, that's 90+ hours a year recovered." Makes the cost feel trivial.
 - **No hidden fees.** Explicitly call out: no per-run fees, no integration fees, no overage.
@@ -211,7 +211,7 @@ How to contextualise the price on the landing page or in sales conversations:
 
 | Field               | Current                       | Recommended                                      |
 | ------------------- | ----------------------------- | ------------------------------------------------ |
-| Starter price       | $3/employee/mo                | $149/mo                                          |
+| Starter price       | $3/employee/mo                | $99/mo                                           |
 | Starter priceNote   | /employee/mo                  | (remove)                                         |
 | Starter billingNote | Billed annually               | Billed monthly · save 2 months annually          |
 | Starter tagline     | For teams up to 50 employees  | Up to 50 employees                               |

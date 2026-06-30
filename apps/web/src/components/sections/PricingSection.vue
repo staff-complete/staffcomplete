@@ -18,7 +18,7 @@ const tiers: PricingTier[] = [
   {
     name: 'Starter',
     tagline: 'Up to 50 employees',
-    price: '$149',
+    price: '$99',
     priceNote: '/mo',
     billingNote: 'Save 2 months billed annually',
     cta: 'Start free trial',
