@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces/staffcomplete:cached
+      - ~/.gitconfig:/home/dev/.gitconfig:cached
+      - ~/.ssh:/home/dev/.ssh:cached
+      - ~/.zsh_history:/home/dev/.zsh_history:cached
+      - ~/.claude:/home/dev/.claude:cached
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN_STAFFCOMPLETE}
+    command: sleep infinity
+    network_mode: service:db
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: staffcomplete
+      POSTGRES_PASSWORD: staffcomplete
+      POSTGRES_DB: staffcomplete
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+volumes:
+  postgres-data:
