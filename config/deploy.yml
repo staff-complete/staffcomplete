@@ -32,6 +32,7 @@ registry:
 env:
   secret:
     - DATABASE_URL
+    - APP_DATABASE_URL
     - AUTH_SECRET
     - RESEND_API_KEY
   clear:

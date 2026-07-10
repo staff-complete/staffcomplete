@@ -83,6 +83,8 @@
     "authorised",
     "demi",
     "nosemgrep",
-    "semgrep"
+    "semgrep",
+    "BYPASSRLS",
+    "rolbypassrls"
   ]
 }

@@ -4,7 +4,7 @@ import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { auth, escapeHtml, sendAuthEmail } from '../auth.js'
-import { db } from '../db/index.js'
+import { db, withTenant } from '../db/index.js'
 import { invitation, tenant, user } from '../db/schema.js'
 
 const SEVENTY_TWO_HOURS_IN_MS = 72 * 60 * 60 * 1000
@@ -45,10 +45,16 @@ invitesRouter.get('/', async (c) => {
     return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
   }
 
-  const invites = await db.query.invitation.findMany({
-    where: and(eq(invitation.tenantId, session.user.tenantId), eq(invitation.status, 'pending')),
-    columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
-  })
+  // No explicit tenantId filter: the invitation_tenant_isolation RLS policy
+  // (ADR-0012) already scopes every row to session.user.tenantId via
+  // withTenant's set_config — adding one here would just mask a broken
+  // policy instead of letting it fail loudly.
+  const invites = await withTenant(session.user.tenantId, (tx) =>
+    tx.query.invitation.findMany({
+      where: eq(invitation.status, 'pending'),
+      columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
+    }),
+  )
 
   return c.json({ invites })
 })
@@ -74,21 +80,6 @@ invitesRouter.post('/', zValidator('json', inviteSchema), async (c) => {
     )
   }
 
-  const existingInvite = await db.query.invitation.findFirst({
-    where: and(
-      eq(invitation.email, normalizedEmail),
-      eq(invitation.tenantId, tenantId),
-      eq(invitation.status, 'pending'),
-    ),
-    columns: { id: true },
-  })
-  if (existingInvite) {
-    return c.json(
-      { code: 'INVITE_PENDING', message: 'An invite is already pending for this email.' },
-      409,
-    )
-  }
-
   const tenantRow = await db.query.tenant.findFirst({
     where: eq(tenant.id, tenantId),
     columns: { name: true },
@@ -98,16 +89,37 @@ invitesRouter.post('/', zValidator('json', inviteSchema), async (c) => {
   const token = crypto.randomUUID()
   const expiresAt = new Date(Date.now() + SEVENTY_TWO_HOURS_IN_MS)
 
-  await db.insert(invitation).values({
-    id,
-    tenantId,
-    email: normalizedEmail,
-    role,
-    invitedByUserId: session.user.id,
-    token,
-    status: 'pending',
-    expiresAt,
+  // Check-then-insert runs inside one withTenant transaction so RLS scopes
+  // both statements to this tenant, and a concurrent request can't slip an
+  // insert in between the two (see ADR-0012).
+  const inserted = await withTenant(tenantId, async (tx) => {
+    const existingInvite = await tx.query.invitation.findFirst({
+      where: and(eq(invitation.email, normalizedEmail), eq(invitation.status, 'pending')),
+      columns: { id: true },
+    })
+    if (existingInvite) {
+      return false
+    }
+
+    await tx.insert(invitation).values({
+      id,
+      tenantId,
+      email: normalizedEmail,
+      role,
+      invitedByUserId: session.user.id,
+      token,
+      status: 'pending',
+      expiresAt,
+    })
+    return true
   })
+
+  if (!inserted) {
+    return c.json(
+      { code: 'INVITE_PENDING', message: 'An invite is already pending for this email.' },
+      409,
+    )
+  }
 
   const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
   const acceptUrl = `${appUrl}/accept-invite?token=${token}`
@@ -133,17 +145,13 @@ invitesRouter.delete('/:id', async (c) => {
   }
 
   const id = c.req.param('id')
-  const result = await db
-    .update(invitation)
-    .set({ status: 'revoked' })
-    .where(
-      and(
-        eq(invitation.id, id),
-        eq(invitation.tenantId, session.user.tenantId),
-        eq(invitation.status, 'pending'),
-      ),
-    )
-    .returning({ id: invitation.id })
+  const result = await withTenant(session.user.tenantId, (tx) =>
+    tx
+      .update(invitation)
+      .set({ status: 'revoked' })
+      .where(and(eq(invitation.id, id), eq(invitation.status, 'pending')))
+      .returning({ id: invitation.id }),
+  )
 
   if (result.length === 0) {
     return c.json({ code: 'NOT_FOUND', message: 'Invite not found.' }, 404)

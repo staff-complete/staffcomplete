@@ -15,6 +15,13 @@
       "when": 1783721390310,
       "tag": "0001_add_invitation_table",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783726197582,
+      "tag": "0002_add_invitation_rls",
+      "breakpoints": true
     }
   ]
 }
