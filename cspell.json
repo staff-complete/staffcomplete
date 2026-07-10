@@ -81,6 +81,8 @@
     "appuser",
     "organisation",
     "authorised",
-    "demi"
+    "demi",
+    "nosemgrep",
+    "semgrep"
   ]
 }
