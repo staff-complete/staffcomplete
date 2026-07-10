@@ -4,7 +4,7 @@ import { Resend } from 'resend'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
-const VERIFICATION_EMAIL_FROM = 'StaffComplete <noreply@staffcomplete.io>'
+const VERIFICATION_EMAIL_FROM = 'noreply@staffcomplete.io'
 
 export const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => {
