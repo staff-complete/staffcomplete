@@ -4,6 +4,8 @@ import { Resend } from 'resend'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
+const VERIFICATION_EMAIL_FROM = 'StaffComplete <noreply@staffcomplete.io>'
+
 export const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => {
     switch (char) {
@@ -44,7 +46,7 @@ export const auth = betterAuth({
       const resend = new Resend(process.env.RESEND_API_KEY)
       const safeUrl = url.replace(/&/g, '&amp;')
       await resend.emails.send({
-        from: 'StaffComplete <noreply@staffcomplete.io>', // nosemgrep: mailbox header, not HTML
+        from: VERIFICATION_EMAIL_FROM,
         to: user.email,
         subject: 'Verify your email address',
         html: `
