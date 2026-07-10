@@ -48,12 +48,12 @@
           </p>
 
           <div class="flex items-center gap-3.5">
-            <a
-              href="#pricing"
+            <RouterLink
+              to="/sign-up"
               class="text-sm font-bold text-white bg-brand-teal px-7 py-3.5 rounded-[10px] tracking-[-0.01em]"
             >
               Start free trial
-            </a>
+            </RouterLink>
             <a
               href="#how"
               class="text-sm font-semibold flex items-center gap-1.5"

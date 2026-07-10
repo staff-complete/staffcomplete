@@ -129,14 +129,21 @@ const tiers: PricingTier[] = [
             {{ tier.billingNote }}
           </div>
 
-          <a
-            href="#"
+          <RouterLink
+            v-if="tier.ctaStyle !== 'accent'"
+            to="/sign-up"
             class="block text-center text-sm font-bold px-0 py-[13px] rounded-[10px] mb-8"
             :class="{
               'text-brand-teal bg-brand-surface': tier.ctaStyle === 'outline',
               'text-white bg-brand-teal': tier.ctaStyle === 'solid',
-              'text-brand-dark bg-brand-light': tier.ctaStyle === 'accent',
             }"
+          >
+            {{ tier.cta }}
+          </RouterLink>
+          <a
+            v-else
+            href="#"
+            class="block text-center text-sm font-bold px-0 py-[13px] rounded-[10px] mb-8 text-brand-dark bg-brand-light"
           >
             {{ tier.cta }}
           </a>

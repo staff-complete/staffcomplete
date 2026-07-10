@@ -17,12 +17,12 @@
       <p class="m-0 text-base leading-[1.7] max-w-[380px]" style="color: rgba(255, 255, 255, 0.45)">
         14-day free trial. No credit card required. Up and running in under 30 minutes.
       </p>
-      <a
-        href="#"
+      <RouterLink
+        to="/sign-up"
         class="text-[15px] font-bold text-brand-dark bg-brand-light py-[15px] px-9 rounded-[10px] tracking-[-0.01em]"
       >
         Start free trial →
-      </a>
+      </RouterLink>
     </div>
   </section>
 </template>
