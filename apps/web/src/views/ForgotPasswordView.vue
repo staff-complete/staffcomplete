@@ -1,0 +1,122 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { z } from 'zod'
+import AppLogo from '../components/AppLogo.vue'
+import { authClient } from '../lib/auth-client'
+
+const email = ref('')
+const error = ref('')
+const loading = ref(false)
+const submitted = ref(false)
+
+const schema = z.string().email('Valid email required')
+
+async function submit() {
+  error.value = ''
+
+  const result = schema.safeParse(email.value)
+  if (!result.success) {
+    error.value = result.error.issues[0]?.message ?? 'Valid email required'
+    return
+  }
+
+  loading.value = true
+  try {
+    await authClient.requestPasswordReset({ email: email.value, redirectTo: '/reset-password' })
+    // Always show the same confirmation, regardless of whether the account
+    // exists, so the response gives no signal about account existence.
+    submitted.value = true
+  } catch {
+    submitted.value = true
+  } finally {
+    loading.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="min-h-screen bg-brand-surface flex flex-col items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md">
+      <div class="flex justify-center mb-8">
+        <AppLogo class="h-8" />
+      </div>
+
+      <div v-if="!submitted" class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-brand-dark">Forgot your password?</h1>
+          <p class="text-sm text-gray-500 mt-1">
+            Enter your email and we'll send you a link to reset it.
+          </p>
+        </div>
+
+        <form class="space-y-4" @submit.prevent="submit">
+          <div>
+            <label class="block text-sm font-medium text-brand-dark mb-1" for="email">Email</label>
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              placeholder="jane@company.com"
+              class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
+              :class="
+                error
+                  ? 'border-red-400 focus:border-red-400'
+                  : 'border-brand-border focus:border-brand-teal'
+              "
+            />
+            <p v-if="error" class="text-xs text-red-500 mt-1">{{ error }}</p>
+          </div>
+
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold transition-opacity mt-2"
+            :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
+          >
+            {{ loading ? 'Sending…' : 'Send reset link' }}
+          </button>
+        </form>
+
+        <p class="text-center text-sm text-gray-500 mt-6">
+          <RouterLink to="/sign-in" class="text-brand-teal font-medium hover:underline"
+            >← Back to sign in</RouterLink
+          >
+        </p>
+      </div>
+
+      <div v-else class="bg-white rounded-2xl shadow-sm border border-brand-border p-8 text-center">
+        <div
+          class="w-14 h-14 rounded-full bg-brand-surface flex items-center justify-center mx-auto mb-4"
+        >
+          <svg
+            class="w-7 h-7 text-brand-teal"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
+            />
+          </svg>
+        </div>
+
+        <h1 class="text-2xl font-bold text-brand-dark mb-2">Check your email</h1>
+        <p class="text-sm text-gray-500">
+          If an account exists for <span class="font-medium text-brand-dark">{{ email }}</span
+          >, we've sent a link to reset your password. The link expires in 1 hour.
+        </p>
+
+        <RouterLink
+          to="/sign-in"
+          class="block mt-6 text-sm text-brand-teal font-medium hover:underline"
+        >
+          ← Back to sign in
+        </RouterLink>
+      </div>
+    </div>
+  </div>
+</template>

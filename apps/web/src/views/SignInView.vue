@@ -95,9 +95,16 @@ async function submit() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-brand-dark mb-1" for="password"
-              >Password</label
-            >
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-sm font-medium text-brand-dark" for="password"
+                >Password</label
+              >
+              <RouterLink
+                to="/forgot-password"
+                class="text-xs text-brand-teal font-medium hover:underline"
+                >Forgot password?</RouterLink
+              >
+            </div>
             <input
               id="password"
               v-model="form.password"
@@ -113,6 +120,13 @@ async function submit() {
             />
             <p v-if="errors.password" class="text-xs text-red-500 mt-1">{{ errors.password }}</p>
           </div>
+
+          <p
+            v-if="route.query.reset === 'success'"
+            class="text-sm text-brand-teal bg-brand-surface rounded-lg px-3 py-2"
+          >
+            Password updated. Please sign in with your new password.
+          </p>
 
           <p v-if="serverError" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
             {{ serverError }}
