@@ -5,6 +5,7 @@ import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
 const VERIFICATION_EMAIL_FROM = 'noreply@staffcomplete.io'
+const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7
 
 export const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => {
@@ -40,6 +41,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+  },
+  session: {
+    expiresIn: Number(process.env.SESSION_EXPIRES_IN_SECONDS ?? SEVEN_DAYS_IN_SECONDS),
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {

@@ -1,4 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { authClient } from '../lib/auth-client'
+import { requireAuth } from './guards'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,11 +22,24 @@ const router = createRouter({
       component: () => import('../views/SignUpView.vue'),
     },
     {
+      path: '/sign-in',
+      name: 'sign-in',
+      component: () => import('../views/SignInView.vue'),
+    },
+    {
       path: '/check-email',
       name: 'check-email',
       component: () => import('../views/CheckEmailView.vue'),
     },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/DashboardView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
+
+router.beforeEach((to) => requireAuth(to, () => authClient.getSession()))
 
 export default router
