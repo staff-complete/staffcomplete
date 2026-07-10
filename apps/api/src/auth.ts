@@ -24,6 +24,7 @@ export const auth = betterAuth({
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
       const resend = new Resend(process.env.RESEND_API_KEY)
+      const safeUrl = url.replace(/&/g, '&amp;')
       await resend.emails.send({
         from: 'StaffComplete <noreply@staffcomplete.io>',
         to: user.email,
@@ -31,7 +32,7 @@ export const auth = betterAuth({
         html: `
           <p>Hi ${user.name},</p>
           <p>Click the link below to verify your email address and activate your StaffComplete account.</p>
-          <p><a href="${url}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">Verify email</a></p>
+          <p><a href="${safeUrl}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">Verify email</a></p>
           <p>This link expires in 24 hours. If you did not sign up, you can safely ignore this email.</p>
         `,
       })

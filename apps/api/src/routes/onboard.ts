@@ -41,7 +41,7 @@ onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
 
   // Register user via Better Auth
   const signUpResponse = await auth.api.signUpEmail({
-    body: { name, email, password, callbackURL: '/' },
+    body: { name, email, password, callbackURL: process.env.APP_URL ?? 'http://localhost:5173' },
     asResponse: true,
   })
 
