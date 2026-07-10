@@ -57,8 +57,21 @@ async function submit() {
   const result = schema.safeParse(form.value)
   if (!result.success) {
     for (const issue of result.error.issues) {
-      const field = issue.path[0] as string
-      if (!errors.value[field]) errors.value[field] = issue.message
+      const field = issue.path[0]
+      switch (field) {
+        case 'name':
+          errors.value.name ||= issue.message
+          break
+        case 'email':
+          errors.value.email ||= issue.message
+          break
+        case 'password':
+          errors.value.password ||= issue.message
+          break
+        case 'company':
+          errors.value.company ||= issue.message
+          break
+      }
     }
     return
   }
@@ -72,7 +85,7 @@ async function submit() {
     })
 
     if (res.ok) {
-      router.push({ name: 'check-email', query: { email: form.value.email } })
+      await router.push({ name: 'check-email', query: { email: form.value.email } })
       return
     }
 

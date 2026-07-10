@@ -4,6 +4,16 @@ import { Resend } from 'resend'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char)
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
   secret: process.env.AUTH_SECRET ?? 'dev-secret-change-in-production',
@@ -30,7 +40,7 @@ export const auth = betterAuth({
         to: user.email,
         subject: 'Verify your email address',
         html: `
-          <p>Hi ${user.name},</p>
+          <p>Hi ${escapeHtml(user.name)},</p>
           <p>Click the link below to verify your email address and activate your StaffComplete account.</p>
           <p><a href="${safeUrl}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">Verify email</a></p>
           <p>This link expires in 24 hours. If you did not sign up, you can safely ignore this email.</p>
