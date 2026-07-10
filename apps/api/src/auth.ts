@@ -44,8 +44,7 @@ export const auth = betterAuth({
       const resend = new Resend(process.env.RESEND_API_KEY)
       const safeUrl = url.replace(/&/g, '&amp;')
       await resend.emails.send({
-        // nosemgrep: the angle brackets are a mailbox "Name <email>" header, not HTML
-        from: 'StaffComplete <noreply@staffcomplete.io>',
+        from: 'StaffComplete <noreply@staffcomplete.io>', // nosemgrep: mailbox header, not HTML
         to: user.email,
         subject: 'Verify your email address',
         html: `
