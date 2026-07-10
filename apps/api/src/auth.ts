@@ -4,7 +4,7 @@ import { Resend } from 'resend'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
-const escapeHtml = (value: string) =>
+export const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => {
     switch (char) {
       case '&':
