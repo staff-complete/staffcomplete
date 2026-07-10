@@ -25,7 +25,7 @@ export const escapeHtml = (value: string) =>
     }
   })
 
-const sendAuthEmail = (to: string, subject: string, html: string) => {
+export const sendAuthEmail = (to: string, subject: string, html: string) => {
   const resend = new Resend(process.env.RESEND_API_KEY)
   return resend.emails.send({ from: AUTH_EMAIL_FROM, to, subject, html })
 }

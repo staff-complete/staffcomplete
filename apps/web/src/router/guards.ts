@@ -11,5 +11,12 @@ export async function requireAuth(
     return { name: 'sign-in', query: { redirect: to.fullPath } }
   }
 
+  if (to.meta.requiresAdmin) {
+    const role = (data as { user?: { role?: string } }).user?.role
+    if (role !== 'admin') {
+      return { name: 'dashboard' }
+    }
+  }
+
   return true
 }

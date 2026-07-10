@@ -57,3 +57,19 @@ export const verification = pgTable('verification', {
   createdAt: timestamp('createdAt').defaultNow(),
   updatedAt: timestamp('updatedAt').defaultNow(),
 })
+
+export const invitation = pgTable('invitation', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenantId')
+    .notNull()
+    .references(() => tenant.id),
+  email: text('email').notNull(),
+  role: text('role').notNull(),
+  invitedByUserId: text('invitedByUserId')
+    .notNull()
+    .references(() => user.id),
+  token: text('token').notNull().unique(),
+  status: text('status').notNull().default('pending'),
+  expiresAt: timestamp('expiresAt').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})

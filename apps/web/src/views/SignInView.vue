@@ -128,6 +128,13 @@ async function submit() {
             Password updated. Please sign in with your new password.
           </p>
 
+          <p
+            v-if="route.query.invited === 'success'"
+            class="text-sm text-brand-teal bg-brand-surface rounded-lg px-3 py-2"
+          >
+            Your account is ready. Please sign in.
+          </p>
+
           <p v-if="serverError" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
             {{ serverError }}
           </p>

@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authClient } from '../lib/auth-client'
 
 const router = useRouter()
 const session = authClient.useSession()
+const isAdmin = computed(
+  () => (session.value.data?.user as { role?: string } | undefined)?.role === 'admin',
+)
 
 async function logout() {
   await authClient.signOut()
@@ -28,6 +32,13 @@ async function logout() {
         Signed in as
         <span class="font-medium text-brand-dark">{{ session.data?.user.email }}</span>
       </p>
+      <RouterLink
+        v-if="isAdmin"
+        to="/team"
+        class="inline-block mt-6 text-sm text-brand-teal font-medium hover:underline"
+      >
+        Invite a team member →
+      </RouterLink>
     </div>
   </div>
 </template>

@@ -5,6 +5,7 @@ import { requireAuth } from './guards'
 declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
+    requiresAdmin?: boolean
   }
 }
 
@@ -42,10 +43,21 @@ const router = createRouter({
       component: () => import('../views/ResetPasswordView.vue'),
     },
     {
+      path: '/accept-invite',
+      name: 'accept-invite',
+      component: () => import('../views/AcceptInviteView.vue'),
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('../views/DashboardView.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/team',
+      name: 'team',
+      component: () => import('../views/TeamView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
   ],
 })

@@ -2,8 +2,12 @@ import type { RouteLocationNormalized } from 'vue-router'
 import { describe, expect, it } from 'vitest'
 import { requireAuth } from './guards'
 
-function toRoute(requiresAuth: boolean, fullPath = '/dashboard'): RouteLocationNormalized {
-  return { meta: { requiresAuth }, fullPath } as RouteLocationNormalized
+function toRoute(
+  requiresAuth: boolean,
+  fullPath = '/dashboard',
+  requiresAdmin = false,
+): RouteLocationNormalized {
+  return { meta: { requiresAuth, requiresAdmin }, fullPath } as RouteLocationNormalized
 }
 
 describe('requireAuth', () => {
@@ -29,5 +33,23 @@ describe('requireAuth', () => {
     const result = await requireAuth(toRoute(true, '/dashboard'), getSession)
 
     expect(result).toEqual({ name: 'sign-in', query: { redirect: '/dashboard' } })
+  })
+
+  it('allows an admin onto a requiresAdmin route', async () => {
+    const getSession = () =>
+      Promise.resolve({ data: { user: { email: 'jane@company.com', role: 'admin' } } })
+
+    const result = await requireAuth(toRoute(true, '/team', true), getSession)
+
+    expect(result).toBe(true)
+  })
+
+  it('redirects a non-admin away from a requiresAdmin route', async () => {
+    const getSession = () =>
+      Promise.resolve({ data: { user: { email: 'jane@company.com', role: 'member' } } })
+
+    const result = await requireAuth(toRoute(true, '/team', true), getSession)
+
+    expect(result).toEqual({ name: 'dashboard' })
   })
 })
