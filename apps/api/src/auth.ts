@@ -4,15 +4,23 @@ import { Resend } from 'resend'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
-const HTML_ESCAPES: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-}
 const escapeHtml = (value: string) =>
-  value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char)
+  value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case '&':
+        return '&amp;'
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '"':
+        return '&quot;'
+      case "'":
+        return '&#39;'
+      default:
+        return char
+    }
+  })
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
@@ -36,6 +44,7 @@ export const auth = betterAuth({
       const resend = new Resend(process.env.RESEND_API_KEY)
       const safeUrl = url.replace(/&/g, '&amp;')
       await resend.emails.send({
+        // nosemgrep: the angle brackets are a mailbox "Name <email>" header, not HTML
         from: 'StaffComplete <noreply@staffcomplete.io>',
         to: user.email,
         subject: 'Verify your email address',
