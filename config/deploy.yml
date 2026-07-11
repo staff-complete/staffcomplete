@@ -1,6 +1,9 @@
 service: staffcomplete
 image: staff-complete/staffcomplete
 
+ssh:
+  user: deploy
+
 servers:
   web:
     hosts:
