@@ -28,6 +28,7 @@ USER dev
 WORKDIR /home/dev
 
 ENV GEM_HOME="/home/dev/.gems"
+ENV PATH="${GEM_HOME}/bin:${PATH}"
 
 # Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
