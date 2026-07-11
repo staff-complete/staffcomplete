@@ -9,13 +9,13 @@ import postgres from 'postgres'
 // var, so a real credential never lands in committed SQL. See ADR-0012.
 
 const databaseUrl = process.env.DATABASE_URL
-const appDbPassword = process.env.APP_DB_PASSWORD
+const appDbPassword = process.env.TENANT_DB_PASSWORD
 
 if (!databaseUrl) {
   throw new Error('DATABASE_URL environment variable is required')
 }
 if (!appDbPassword) {
-  throw new Error('APP_DB_PASSWORD environment variable is required')
+  throw new Error('TENANT_DB_PASSWORD environment variable is required')
 }
 
 const databaseName = new URL(databaseUrl).pathname.replace(/^\//, '')
@@ -23,7 +23,7 @@ const sql = postgres(databaseUrl)
 
 // ALTER ROLE ... PASSWORD doesn't accept a bind parameter, so the password is
 // escaped via standard SQL string-literal quoting (doubling single quotes)
-// rather than interpolated raw. APP_DB_PASSWORD is an operator-generated
+// rather than interpolated raw. TENANT_DB_PASSWORD is an operator-generated
 // secret, not user input.
 const escapedPassword = appDbPassword.replace(/'/g, "''")
 
