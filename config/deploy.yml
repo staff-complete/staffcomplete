@@ -13,6 +13,8 @@ servers:
 
 builder:
   arch: amd64
+  args:
+    VITE_APP_VERSION: <%= ENV.fetch("VITE_APP_VERSION", "dev") %>
 
 proxy:
   ssl: true

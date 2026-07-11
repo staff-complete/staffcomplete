@@ -85,6 +85,7 @@
     "nosemgrep",
     "semgrep",
     "BYPASSRLS",
-    "rolbypassrls"
+    "rolbypassrls",
+    "Vite"
   ]
 }

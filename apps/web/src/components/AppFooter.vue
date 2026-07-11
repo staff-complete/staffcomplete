@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import AppLogo from './AppLogo.vue'
 
+// Set via a Docker build arg (Dockerfile's ARG VITE_APP_VERSION) sourced from
+// the just-created release tag in the deploy workflow — unset in local dev.
+const appVersion = import.meta.env.VITE_APP_VERSION || 'dev'
+
 const columns = [
   {
     label: 'Product',
@@ -46,7 +50,10 @@ const columns = [
         </div>
       </div>
       <div class="pt-7 border-t border-white/[0.07] flex items-center justify-between">
-        <div class="text-xs text-white/20">© 2026 StaffComplete. All rights reserved.</div>
+        <div class="text-xs text-white/20">
+          © 2026 StaffComplete. All rights reserved.
+          <span class="ml-2">{{ appVersion }}</span>
+        </div>
         <div class="text-xs text-white/20">Made for HR teams who have better things to do.</div>
       </div>
     </div>

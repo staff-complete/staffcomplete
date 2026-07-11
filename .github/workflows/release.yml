@@ -35,6 +35,11 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Get released version
+        id: version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "version=$(gh release view --json tagName -q .tagName)" >> "$GITHUB_OUTPUT"
       - uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -48,3 +53,4 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}

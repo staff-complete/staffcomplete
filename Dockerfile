@@ -10,9 +10,13 @@ RUN pnpm install --frozen-lockfile
 
 # -- builder: compile all packages --
 FROM deps AS builder
+# Vite only exposes VITE_-prefixed vars to import.meta.env, and only at build
+# time — set before the web build specifically, not globally, so it doesn't
+# leak into the api/shared build steps that don't need it.
+ARG VITE_APP_VERSION=dev
 COPY . .
 RUN pnpm --filter @staffcomplete/shared build && \
-    pnpm --filter @staffcomplete/web build && \
+    VITE_APP_VERSION=$VITE_APP_VERSION pnpm --filter @staffcomplete/web build && \
     pnpm --filter @staffcomplete/api build
 
 # -- prod-deps: production-only node_modules for the api (no symlinks) --
