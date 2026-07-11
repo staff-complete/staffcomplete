@@ -2,9 +2,9 @@ import { sql } from 'drizzle-orm'
 import { boolean, pgPolicy, pgRole, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 // Non-superuser role used for tenant-scoped queries (see ADR-0012). LOGIN and
-// PASSWORD aren't managed here — apps/api/src/db/setup-app-role.ts handles
+// PASSWORD aren't managed here — apps/api/src/db/setup-tenant-role.ts handles
 // those from an env var so credentials never land in version-controlled SQL.
-export const appRole = pgRole('staffcomplete_app', { inherit: true })
+export const tenantRole = pgRole('staffcomplete_tenant', { inherit: true })
 
 export const tenant = pgTable('tenant', {
   id: text('id').primaryKey(),
@@ -87,7 +87,7 @@ export const invitation = pgTable(
     // instead of erroring or leaking other tenants' invitations.
     pgPolicy('invitation_tenant_isolation', {
       for: 'all',
-      to: appRole,
+      to: tenantRole,
       using: sql`${table.tenantId} = current_setting('app.tenant_id', true)`,
       withCheck: sql`${table.tenantId} = current_setting('app.tenant_id', true)`,
     }),

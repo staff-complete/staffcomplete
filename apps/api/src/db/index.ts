@@ -10,10 +10,10 @@ const sql = postgres(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staf
 
 export const db = drizzle(sql, { schema })
 
-// Connects as the restricted staffcomplete_app role (no BYPASSRLS) — see
+// Connects as the restricted staffcomplete_tenant role (no BYPASSRLS) — see
 // ADR-0012. Only reach for this via withTenant() below; a bare tenantDb
 // query outside a transaction that sets app.tenant_id sees zero rows.
-const appSql = postgres(
+const tenantSql = postgres(
   process.env.TENANT_DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete',
   {
     max: 10,
@@ -21,7 +21,7 @@ const appSql = postgres(
   },
 )
 
-export const tenantDb = drizzle(appSql, { schema })
+export const tenantDb = drizzle(tenantSql, { schema })
 
 /**
  * Runs `fn` inside a transaction with Postgres session var `app.tenant_id`
