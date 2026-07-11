@@ -75,16 +75,26 @@ invitesRouter.post('/', zValidator('json', inviteSchema), async (c) => {
   })
   const companyName = tenantRow ? escapeHtml(tenantRow.name) : 'StaffComplete'
 
-  // Responds identically to a real invite either way (same status, same
-  // body shape) so this endpoint can't be used to learn whether an email
-  // already has an account in *another* tenant. Instead of just going
-  // silent, the actual account owner gets a real, actionable email — the
-  // inviting admin never learns whether it was sent.
   const existingUser = await db.query.user.findFirst({
     where: eq(user.email, normalizedEmail),
-    columns: { name: true },
+    columns: { name: true, tenantId: true },
   })
   if (existingUser) {
+    // Same-tenant membership isn't sensitive to reveal — the admin already
+    // has legitimate visibility into their own team via /team, so this is
+    // just a clear, actionable error, same as the pending-invite case below.
+    if (existingUser.tenantId === tenantId) {
+      return c.json(
+        { code: 'ALREADY_MEMBER', message: 'This person is already a member of your team.' },
+        409,
+      )
+    }
+
+    // Cross-tenant: responds identically to a real invite (same status,
+    // same body shape, no invitation row created) so this endpoint can't be
+    // used to learn whether an email has an account in *another* tenant.
+    // Instead of just going silent, the actual account owner gets a real,
+    // actionable email — the inviting admin never learns whether it was sent.
     await sendAuthEmail(
       email,
       `Someone tried to invite you to ${companyName} on StaffComplete`,
