@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ../..:/workspaces/staffcomplete:cached
+      - ..:/workspaces/staffcomplete:cached
       - ~/.gitconfig:/home/dev/.gitconfig:cached
       - ~/.ssh:/home/dev/.ssh:cached
       - ~/.zsh_history:/home/dev/.zsh_history:cached
