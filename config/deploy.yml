@@ -38,6 +38,8 @@ env:
   clear:
     NODE_ENV: production
     PORT: '3000'
+    BETTER_AUTH_URL: https://staffcomplete.io
+    APP_URL: https://staffcomplete.io
 
 accessories:
   db:
