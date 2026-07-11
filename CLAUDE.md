@@ -16,6 +16,14 @@ The system ensures that employee state changes are consistently reflected across
 
 ---
 
+## Development Environment
+
+All development work — including CLI tools like `gh`, `kamal`, and `ruby`, not just app code — happens inside the devcontainer (`.devcontainer/`), never on the bare host machine. The devcontainer's `Dockerfile` already installs everything this project needs: `gh`, `ruby-full` + `kamal` (for deploy/infra work), Node 24, `pnpm`, `turbo`, and standard git/SSH tooling.
+
+**If a tool needed for a task isn't available, that's a signal you're not in the devcontainer — not a reason to `brew install` or `apt-get install` it onto the host.** Installing tooling ad-hoc on the host is easy to get subtly wrong (e.g. a host Postgres role or Ruby version diverging from what the container/CI actually uses) and leaves nothing for the next session or the next person. If something is genuinely missing from the devcontainer itself, add it to `.devcontainer/Dockerfile` so it's versioned and available to everyone, rather than installing it once, locally, ad-hoc.
+
+---
+
 ## Tech Stack
 
 | Layer              | Choice                                                        |
