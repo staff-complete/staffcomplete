@@ -22,17 +22,16 @@ export const onboardRouter = new Hono()
 onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
   const { name, email, password, company } = c.req.valid('json')
 
-  // Check for duplicate email before creating tenant
+  // Check for duplicate email before creating tenant. Responds identically
+  // to a real sign-up either way (same status, same body shape) so this
+  // endpoint can't be used to enumerate which emails already have accounts.
   const existing = await db.query.user.findFirst({
     where: eq(user.email, email.toLowerCase()),
     columns: { id: true },
   })
 
   if (existing) {
-    return c.json(
-      { code: 'EMAIL_IN_USE', message: 'An account with this email already exists.' },
-      409,
-    )
+    return c.json({ status: 'pending_verification' }, 201)
   }
 
   // Create tenant first

@@ -58,14 +58,15 @@ describe('POST /api/onboard', () => {
     mocks.signUpEmailMock.mockReset()
   })
 
-  it('returns 409 when the email is already registered', async () => {
+  it('responds like a real sign-up when the email is already registered, without creating one', async () => {
     mocks.findFirstMock.mockResolvedValue({ id: 'existing-user' })
 
     const res = await postOnboard(validBody)
 
-    expect(res.status).toBe(409)
-    expect((await res.json()).code).toBe('EMAIL_IN_USE')
+    expect(res.status).toBe(201)
+    expect((await res.json()).status).toBe('pending_verification')
     expect(mocks.signUpEmailMock).not.toHaveBeenCalled()
+    expect(mocks.insertValuesMock).not.toHaveBeenCalled()
   })
 
   it('rolls back the tenant when sign-up fails', async () => {

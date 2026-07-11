@@ -69,15 +69,15 @@ invitesRouter.post('/', zValidator('json', inviteSchema), async (c) => {
   const normalizedEmail = email.toLowerCase()
   const tenantId = session.user.tenantId
 
+  // Responds identically to a real invite either way (same status, same
+  // body shape) so this endpoint can't be used to learn whether an email
+  // already has an account in *another* tenant.
   const existingUser = await db.query.user.findFirst({
     where: eq(user.email, normalizedEmail),
     columns: { id: true },
   })
   if (existingUser) {
-    return c.json(
-      { code: 'EMAIL_IN_USE', message: 'An account with this email already exists.' },
-      409,
-    )
+    return c.json({ status: 'invited' }, 201)
   }
 
   const tenantRow = await db.query.tenant.findFirst({
