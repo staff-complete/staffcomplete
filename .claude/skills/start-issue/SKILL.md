@@ -24,16 +24,16 @@ Pick up a GitHub issue and get a branch ready to code on.
    - Example: issue #42 "Add Slack provisioning step" → `feat/42-add-slack-provisioning-step`
    - Keep it under 60 characters total; truncate the slug if needed
 
-5. **Ensure `dev` is up to date**:
+5. **Ensure `main` is up to date**:
 
    ```bash
-   git fetch origin dev
+   git fetch origin main
    ```
 
 6. **Create and switch to the branch**:
 
    ```bash
-   git checkout -b <branch-name> origin/dev
+   git checkout -b <branch-name> origin/main
    ```
 
 7. **Assign the issue to yourself and mark it in progress**:
@@ -51,7 +51,7 @@ Pick up a GitHub issue and get a branch ready to code on.
      - Commits must be GPG signed
      - Follow Conventional Commits: `<type>(<scope>): description`
      - Relevant scopes for this issue's domain area (read from `area:` label if present)
-     - Rebase onto `dev` before opening a PR — PRs target `dev`, never `main`
+     - Rebase onto `main` before opening a PR — PRs target `main`
      - PR description should include `Closes #<number>`
 
 ## Branch naming

@@ -127,58 +127,44 @@ Architectural decisions are documented in `docs/decisions/`. Before proposing ch
 
 ## Git Strategy
 
+Trunk-based — see [ADR-0013](docs/decisions/0013-trunk-based-single-environment.md) for why there's no `dev` branch or environment.
+
 - **Signed commits required** — all commits must be GPG signed
-- **Rebase only** — no merge commits; rebase feature branches onto `dev`
-- **Linear history** — enforced on both `main` and `dev` via branch protection
-- **PR required** — no direct pushes to `main` or `dev`
+- **Rebase only** — no merge commits; rebase feature branches onto `main`
+- **Linear history** — enforced on `main` via branch protection
+- **PR required** — no direct pushes to `main`
 
 ### Branch model
 
 ```
-feature/* ──► dev ──► main
-               │         │
-               ▼         ▼
-      dev.staffcomplete  staffcomplete.io
-           .io           (+ GitHub Release)
+feature/* ──► main ──► staffcomplete.io (+ GitHub Release)
 ```
 
-- **Feature branches** target `dev`. All day-to-day development goes here.
-- **`dev`** is the integration branch. Every merge auto-deploys to `dev.staffcomplete.io`.
-- **`main`** is production-only. Only updated by merging `dev` → `main`, which triggers Semantic Release and a production deploy to `staffcomplete.io`.
-- Never merge a feature branch directly into `main`.
+- **Feature branches** target `main`. All development goes here — there is no integration branch.
+- **`main`** is the only long-lived branch. Every merge triggers Semantic Release and a production Kamal deploy.
+- Ship small, frequent PRs rather than batching changes — there's no staging environment to catch problems before they're live, and `kamal rollback` is the safety net, not a pre-prod buffer.
 
-### Merging a PR (feature → dev)
+### Merging a PR (feature → main)
 
 The `gh` CLI token in this environment lacks merge permissions. Merge PRs locally:
 
 ```sh
-git checkout dev
-git pull origin dev
+git checkout main
+git pull origin main
 git merge <branch>   # fast-forward only; no merge commits
-git push origin dev
+git push origin main
 ```
 
 **Critical rules — the push will be rejected if either is violated:**
 
-1. **Never commit directly to `dev`.** All work must be on a `feature/*` or `fix/*` branch.
-2. **A PR must exist before pushing.** The GitHub ruleset allows fast-forward pushes to `dev`
-   only when the commits being pushed belong to an open PR targeting `dev`. Create the PR with
-   `gh pr create --base dev` before running `git push origin dev`.
+1. **Never commit directly to `main`.** All work must be on a `feature/*` or `fix/*` branch.
+2. **A PR must exist before pushing.** The GitHub ruleset allows fast-forward pushes to `main`
+   only when the commits being pushed belong to an open PR targeting `main`. Create the PR with
+   `gh pr create --base main` before running `git push origin main`.
 3. **Never disable rulesets** to work around a rejected push — a rejected push means one of the
    above rules was broken. Fix the process, not the protection.
 
-### Releasing to production (dev → main)
-
-When `dev` is stable and ready to ship:
-
-```sh
-git checkout main
-git pull origin main
-git merge dev        # fast-forward only; no merge commits
-git push origin main
-```
-
-This triggers Semantic Release (GitHub release + changelog) and the production Kamal deploy.
+Merging to `main` immediately triggers Semantic Release (GitHub release + changelog) and a production Kamal deploy — there's no separate "release" step.
 
 ---
 
