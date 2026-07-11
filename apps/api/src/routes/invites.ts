@@ -69,21 +69,34 @@ invitesRouter.post('/', zValidator('json', inviteSchema), async (c) => {
   const normalizedEmail = email.toLowerCase()
   const tenantId = session.user.tenantId
 
-  // Responds identically to a real invite either way (same status, same
-  // body shape) so this endpoint can't be used to learn whether an email
-  // already has an account in *another* tenant.
-  const existingUser = await db.query.user.findFirst({
-    where: eq(user.email, normalizedEmail),
-    columns: { id: true },
-  })
-  if (existingUser) {
-    return c.json({ status: 'invited' }, 201)
-  }
-
   const tenantRow = await db.query.tenant.findFirst({
     where: eq(tenant.id, tenantId),
     columns: { name: true },
   })
+  const companyName = tenantRow ? escapeHtml(tenantRow.name) : 'StaffComplete'
+
+  // Responds identically to a real invite either way (same status, same
+  // body shape) so this endpoint can't be used to learn whether an email
+  // already has an account in *another* tenant. Instead of just going
+  // silent, the actual account owner gets a real, actionable email — the
+  // inviting admin never learns whether it was sent.
+  const existingUser = await db.query.user.findFirst({
+    where: eq(user.email, normalizedEmail),
+    columns: { name: true },
+  })
+  if (existingUser) {
+    await sendAuthEmail(
+      email,
+      `Someone tried to invite you to ${companyName} on StaffComplete`,
+      `
+        <p>Hi ${escapeHtml(existingUser.name)},</p>
+        <p>An admin at <strong>${companyName}</strong> just tried to invite this email address to their StaffComplete account, but you already have one.</p>
+        <p>If you'd like to join ${companyName}, ask them to send the invite to a different email, or reach out to them directly.</p>
+        <p>If you weren't expecting this, no action is needed — your account is unaffected and you can safely ignore this email.</p>
+      `,
+    )
+    return c.json({ status: 'invited' }, 201)
+  }
 
   const id = crypto.randomUUID()
   const token = crypto.randomUUID()
@@ -123,7 +136,6 @@ invitesRouter.post('/', zValidator('json', inviteSchema), async (c) => {
 
   const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
   const acceptUrl = `${appUrl}/accept-invite?token=${token}`
-  const companyName = tenantRow ? escapeHtml(tenantRow.name) : 'StaffComplete'
 
   await sendAuthEmail(
     email,

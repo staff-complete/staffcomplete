@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   updateSetMock: vi.fn(),
   updateMock: vi.fn(),
   signUpEmailMock: vi.fn(),
+  sendAuthEmailMock: vi.fn(),
 }))
 
 vi.mock('../db/index.js', () => ({
@@ -24,6 +25,8 @@ vi.mock('../db/index.js', () => ({
 
 vi.mock('../auth.js', () => ({
   auth: { api: { signUpEmail: mocks.signUpEmailMock } },
+  sendAuthEmail: mocks.sendAuthEmailMock,
+  escapeHtml: (value: string) => value,
 }))
 
 const { onboardRouter } = await import('./onboard.js')
@@ -56,10 +59,11 @@ describe('POST /api/onboard', () => {
     mocks.updateSetMock.mockReset().mockReturnValue({ where: mocks.updateWhereMock })
     mocks.updateWhereMock.mockReset().mockResolvedValue(undefined)
     mocks.signUpEmailMock.mockReset()
+    mocks.sendAuthEmailMock.mockReset().mockResolvedValue(undefined)
   })
 
   it('responds like a real sign-up when the email is already registered, without creating one', async () => {
-    mocks.findFirstMock.mockResolvedValue({ id: 'existing-user' })
+    mocks.findFirstMock.mockResolvedValue({ name: 'Existing User' })
 
     const res = await postOnboard(validBody)
 
@@ -67,6 +71,11 @@ describe('POST /api/onboard', () => {
     expect((await res.json()).status).toBe('pending_verification')
     expect(mocks.signUpEmailMock).not.toHaveBeenCalled()
     expect(mocks.insertValuesMock).not.toHaveBeenCalled()
+    expect(mocks.sendAuthEmailMock).toHaveBeenCalledWith(
+      validBody.email,
+      expect.stringContaining('tried to sign up'),
+      expect.stringContaining('Existing User'),
+    )
   })
 
   it('rolls back the tenant when sign-up fails', async () => {

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { auth } from '../auth.js'
+import { auth, escapeHtml, sendAuthEmail } from '../auth.js'
 import { db } from '../db/index.js'
 import { tenant, user } from '../db/schema.js'
 
@@ -22,15 +22,29 @@ export const onboardRouter = new Hono()
 onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
   const { name, email, password, company } = c.req.valid('json')
 
+  const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
+
   // Check for duplicate email before creating tenant. Responds identically
   // to a real sign-up either way (same status, same body shape) so this
   // endpoint can't be used to enumerate which emails already have accounts.
+  // Instead of just going silent, the actual account owner gets a real,
+  // actionable email — the requester never learns whether it was sent.
   const existing = await db.query.user.findFirst({
     where: eq(user.email, email.toLowerCase()),
-    columns: { id: true },
+    columns: { name: true },
   })
 
   if (existing) {
+    await sendAuthEmail(
+      email,
+      'Someone tried to sign up with your email',
+      `
+        <p>Hi ${escapeHtml(existing.name)},</p>
+        <p>Someone just tried to create a new StaffComplete account using this email address, but you already have one.</p>
+        <p>If this was you, you can <a href="${appUrl}/sign-in">sign in</a> instead, or <a href="${appUrl}/forgot-password">reset your password</a> if you've forgotten it.</p>
+        <p>If it wasn't you, no action is needed — your account is unaffected and you can safely ignore this email.</p>
+      `,
+    )
     return c.json({ status: 'pending_verification' }, 201)
   }
 
@@ -41,7 +55,6 @@ onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
   // Register user via Better Auth. callbackURL is where the verification
   // email's link lands after auto-sign-in — the dashboard, not the bare
   // marketing home page, since they're authenticated at that point.
-  const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
   const signUpResponse = await auth.api.signUpEmail({
     body: { name, email, password, callbackURL: `${appUrl}/dashboard` },
     asResponse: true,
