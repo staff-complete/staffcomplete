@@ -38,9 +38,12 @@ onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
   const tenantId = crypto.randomUUID()
   await db.insert(tenant).values({ id: tenantId, name: company })
 
-  // Register user via Better Auth
+  // Register user via Better Auth. callbackURL is where the verification
+  // email's link lands after auto-sign-in — the dashboard, not the bare
+  // marketing home page, since they're authenticated at that point.
+  const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
   const signUpResponse = await auth.api.signUpEmail({
-    body: { name, email, password, callbackURL: process.env.APP_URL ?? 'http://localhost:5173' },
+    body: { name, email, password, callbackURL: `${appUrl}/dashboard` },
     asResponse: true,
   })
 

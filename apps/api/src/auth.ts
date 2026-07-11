@@ -75,6 +75,7 @@ export const auth = betterAuth({
     expiresIn: Number(process.env.SESSION_EXPIRES_IN_SECONDS ?? SEVEN_DAYS_IN_SECONDS),
   },
   emailVerification: {
+    autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       const safeUrl = url.replace(/&/g, '&amp;')
       await sendAuthEmail(
