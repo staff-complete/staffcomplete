@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { z } from 'zod'
+import OrgSwitcher from '../components/OrgSwitcher.vue'
 
 type Invite = { id: string; email: string; role: string; expiresAt: string; createdAt: string }
 
@@ -87,9 +88,12 @@ async function revoke(id: string) {
     <div class="max-w-2xl mx-auto space-y-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold text-brand-dark">Team</h1>
-        <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline"
-          >← Back to dashboard</RouterLink
-        >
+        <div class="flex items-center gap-4">
+          <OrgSwitcher />
+          <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline"
+            >← Back to dashboard</RouterLink
+          >
+        </div>
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
