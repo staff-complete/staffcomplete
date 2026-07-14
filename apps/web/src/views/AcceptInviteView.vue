@@ -11,13 +11,22 @@ const token = computed(() =>
   typeof route.query.token === 'string' ? route.query.token : undefined,
 )
 
+type Invite = {
+  email: string
+  role: string
+  organizationName: string | null
+  accountExists: boolean
+  sessionMatches: boolean
+}
+
 const checkingInvite = ref(true)
-const invite = ref<{ email: string; role: string; tenantName: string | null } | null>(null)
+const invite = ref<Invite | null>(null)
 
 const form = ref({ name: '', password: '', confirmPassword: '' })
 const errors = ref<Record<string, string>>({})
 const serverError = ref('')
 const loading = ref(false)
+const joining = ref(false)
 
 const schema = z
   .object({
@@ -43,16 +52,36 @@ onMounted(async () => {
   try {
     const res = await fetch(`/api/invites/${token.value}`)
     if (res.ok) {
-      invite.value = (await res.json()) as {
-        email: string
-        role: string
-        tenantName: string | null
-      }
+      invite.value = (await res.json()) as Invite
     }
   } finally {
     checkingInvite.value = false
   }
 })
+
+async function join() {
+  serverError.value = ''
+  joining.value = true
+  try {
+    const res = await fetch(`/api/invites/${token.value}/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+
+    if (res.ok) {
+      await router.push('/dashboard')
+      return
+    }
+
+    const data = (await res.json()) as { message?: string }
+    serverError.value = data.message ?? 'Something went wrong. Please try again.'
+  } catch {
+    serverError.value = 'Unable to connect. Please check your connection and try again.'
+  } finally {
+    joining.value = false
+  }
+}
 
 async function submit() {
   errors.value = {}
@@ -110,10 +139,57 @@ async function submit() {
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
         <p v-if="checkingInvite" class="text-sm text-gray-500">Checking your invite…</p>
 
+        <template v-else-if="invite && invite.accountExists && invite.sessionMatches">
+          <div class="mb-6">
+            <h1 class="text-2xl font-bold text-brand-dark">
+              Join {{ invite.organizationName ?? 'this team' }}
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">
+              You're signed in as
+              <span class="font-medium text-brand-dark">{{ invite.email }}</span
+              >. Join as {{ invite.role === 'admin' ? 'an admin' : 'a member' }}.
+            </p>
+          </div>
+
+          <p v-if="serverError" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
+            {{ serverError }}
+          </p>
+
+          <button
+            type="button"
+            :disabled="joining"
+            class="w-full bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold transition-opacity"
+            :class="joining ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
+            @click="join"
+          >
+            {{ joining ? 'Joining…' : `Join ${invite.organizationName ?? 'team'}` }}
+          </button>
+        </template>
+
+        <template v-else-if="invite && invite.accountExists">
+          <div class="mb-6">
+            <h1 class="text-2xl font-bold text-brand-dark">
+              Join {{ invite.organizationName ?? 'this team' }}
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">
+              You already have a StaffComplete account for
+              <span class="font-medium text-brand-dark">{{ invite.email }}</span
+              >. Sign in to accept this invite.
+            </p>
+          </div>
+
+          <RouterLink
+            :to="{ path: '/sign-in', query: { redirect: route.fullPath } }"
+            class="block w-full text-center bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Sign in to accept
+          </RouterLink>
+        </template>
+
         <template v-else-if="invite">
           <div class="mb-6">
             <h1 class="text-2xl font-bold text-brand-dark">
-              Join {{ invite.tenantName ?? 'your team' }}
+              Join {{ invite.organizationName ?? 'your team' }}
             </h1>
             <p class="text-sm text-gray-500 mt-1">
               Set a password for

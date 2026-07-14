@@ -2,9 +2,10 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import { APIError } from 'better-auth/api'
 import { auth, escapeHtml, sendAuthEmail } from '../auth.js'
 import { db } from '../db/index.js'
-import { tenant, user } from '../db/schema.js'
+import { user } from '../db/schema.js'
 
 const signUpSchema = z.object({
   name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -16,6 +17,18 @@ const signUpSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   company: z.string().min(2, 'Company name must be at least 2 characters'),
 })
+
+// Organization slugs must be unique; the random suffix avoids a second
+// "Acme Co" signup colliding with the first without asking the user to
+// pick one themselves.
+function slugify(company: string): string {
+  const base = company
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return `${base || 'org'}-${crypto.randomUUID().slice(0, 8)}`
+}
 
 export const onboardRouter = new Hono()
 
@@ -48,10 +61,6 @@ onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
     return c.json({ status: 'pending_verification' }, 201)
   }
 
-  // Create tenant first
-  const tenantId = crypto.randomUUID()
-  await db.insert(tenant).values({ id: tenantId, name: company })
-
   // Register user via Better Auth. callbackURL is where the verification
   // email's link lands after auto-sign-in — the dashboard, not the bare
   // marketing home page, since they're authenticated at that point.
@@ -61,8 +70,6 @@ onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
   })
 
   if (!signUpResponse.ok) {
-    // Clean up the tenant we just created
-    await db.delete(tenant).where(eq(tenant.id, tenantId))
     const error = (await signUpResponse.json()) as { message?: string }
     return c.json(
       { code: 'SIGNUP_FAILED', message: error.message ?? 'Sign up failed. Please try again.' },
@@ -74,7 +81,21 @@ onboardRouter.post('/', zValidator('json', signUpSchema), async (c) => {
   const userId = data.user?.id
 
   if (userId) {
-    await db.update(user).set({ tenantId }).where(eq(user.id, userId))
+    try {
+      // Server-only call (no headers/session): passing userId directly
+      // makes this a trusted system action per the plugin's own contract,
+      // since there's no session yet — the account isn't verified. The
+      // creator becomes the org's 'owner' (Better Auth's default role).
+      await auth.api.createOrganization({
+        body: { name: company, slug: slugify(company), userId },
+      })
+    } catch (err) {
+      // Clean up the orphaned user rather than leaving an account with no
+      // organization to land in.
+      await db.delete(user).where(eq(user.id, userId))
+      const message = err instanceof APIError ? err.message : 'Sign up failed. Please try again.'
+      return c.json({ code: 'SIGNUP_FAILED', message }, 500)
+    }
   }
 
   return c.json({ status: 'pending_verification' }, 201)

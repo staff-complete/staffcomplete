@@ -3,11 +3,10 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { auth, escapeHtml, sendAuthEmail } from '../auth.js'
+import { APIError } from 'better-auth/api'
+import { auth } from '../auth.js'
 import { db, withTenant } from '../db/index.js'
-import { invitation, tenant, user } from '../db/schema.js'
-
-const SEVENTY_TWO_HOURS_IN_MS = 72 * 60 * 60 * 1000
+import { invitation, member, organization, user } from '../db/schema.js'
 
 const inviteSchema = z.object({
   email: z.string().email('Valid email required'),
@@ -15,26 +14,33 @@ const inviteSchema = z.object({
 })
 
 const acceptInviteSchema = z.object({
-  name: z.string().min(2, 'Full name must be at least 2 characters'),
+  name: z.string().min(2, 'Full name must be at least 2 characters').optional(),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .optional(),
 })
 
-type AdminSession = {
-  user: { id: string; tenantId: string; role: string }
-}
+type AdminSession = { user: { id: string }; organizationId: string }
 
 async function requireAdmin(c: Context): Promise<AdminSession | null> {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
-  const tenantId = (session?.user as { tenantId?: string } | undefined)?.tenantId
-  const role = (session?.user as { role?: string } | undefined)?.role
-  if (!session || role !== 'admin' || !tenantId) {
+  const result = await auth.api.getSession({ headers: c.req.raw.headers })
+  const organizationId = result?.session.activeOrganizationId
+  if (!result || !organizationId) {
     return null
   }
-  return { user: { id: session.user.id, tenantId, role } }
+
+  const membership = await db.query.member.findFirst({
+    where: and(eq(member.userId, result.user.id), eq(member.organizationId, organizationId)),
+    columns: { role: true },
+  })
+  if (!membership || (membership.role !== 'admin' && membership.role !== 'owner')) {
+    return null
+  }
+
+  return { user: { id: result.user.id }, organizationId }
 }
 
 export const invitesRouter = new Hono()
@@ -45,11 +51,11 @@ invitesRouter.get('/', async (c) => {
     return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
   }
 
-  // No explicit tenantId filter: the invitation_tenant_isolation RLS policy
-  // (ADR-0012) already scopes every row to session.user.tenantId via
-  // withTenant's set_config — adding one here would just mask a broken
-  // policy instead of letting it fail loudly.
-  const invites = await withTenant(session.user.tenantId, (tx) =>
+  // No explicit organizationId filter: the invitation_tenant_isolation RLS
+  // policy (ADR-0012, re-keyed by ADR-0014) already scopes every row to
+  // session.organizationId via withTenant's set_config — adding one here
+  // would just mask a broken policy instead of letting it fail loudly.
+  const invites = await withTenant(session.organizationId, (tx) =>
     tx.query.invitation.findMany({
       where: eq(invitation.status, 'pending'),
       columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
@@ -66,96 +72,37 @@ invitesRouter.post('/', zValidator('json', inviteSchema), async (c) => {
   }
 
   const { email, role } = c.req.valid('json')
-  const normalizedEmail = email.toLowerCase()
-  const tenantId = session.user.tenantId
 
-  const tenantRow = await db.query.tenant.findFirst({
-    where: eq(tenant.id, tenantId),
-    columns: { name: true },
-  })
-  const companyName = tenantRow ? escapeHtml(tenantRow.name) : 'StaffComplete'
-
-  const existingUser = await db.query.user.findFirst({
-    where: eq(user.email, normalizedEmail),
-    columns: { name: true, tenantId: true },
-  })
-  if (existingUser) {
-    // Same-tenant membership isn't sensitive to reveal — the admin already
-    // has legitimate visibility into their own team via /team, so this is
-    // just a clear, actionable error, same as the pending-invite case below.
-    if (existingUser.tenantId === tenantId) {
+  try {
+    // The plugin's own invite flow (ADR-0014) already handles same-org
+    // duplicate-member and pending-invite de-duplication, and — the entire
+    // point of this ADR — raises no error at all when the email belongs to
+    // an account in a *different* organization, since that's now a normal,
+    // fully-supported invite instead of an enumeration risk to route around.
+    await auth.api.createInvitation({
+      headers: c.req.raw.headers,
+      body: { email, role, organizationId: session.organizationId },
+    })
+  } catch (err) {
+    const code =
+      err instanceof APIError ? (err.body as { code?: string } | undefined)?.code : undefined
+    if (code === 'USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION') {
       return c.json(
         { code: 'ALREADY_MEMBER', message: 'This person is already a member of your team.' },
         409,
       )
     }
-
-    // Cross-tenant: responds identically to a real invite (same status,
-    // same body shape, no invitation row created) so this endpoint can't be
-    // used to learn whether an email has an account in *another* tenant.
-    // Instead of just going silent, the actual account owner gets a real,
-    // actionable email — the inviting admin never learns whether it was sent.
-    await sendAuthEmail(
-      email,
-      `Someone tried to invite you to ${companyName} on StaffComplete`,
-      `
-        <p>Hi ${escapeHtml(existingUser.name)},</p>
-        <p>An admin at <strong>${companyName}</strong> just tried to invite this email address to their StaffComplete account, but you already have one.</p>
-        <p>If you'd like to join ${companyName}, ask them to send the invite to a different email, or reach out to them directly.</p>
-        <p>If you weren't expecting this, no action is needed — your account is unaffected and you can safely ignore this email.</p>
-      `,
-    )
-    return c.json({ status: 'invited' }, 201)
-  }
-
-  const id = crypto.randomUUID()
-  const token = crypto.randomUUID()
-  const expiresAt = new Date(Date.now() + SEVENTY_TWO_HOURS_IN_MS)
-
-  // Check-then-insert runs inside one withTenant transaction so RLS scopes
-  // both statements to this tenant, and a concurrent request can't slip an
-  // insert in between the two (see ADR-0012).
-  const inserted = await withTenant(tenantId, async (tx) => {
-    const existingInvite = await tx.query.invitation.findFirst({
-      where: and(eq(invitation.email, normalizedEmail), eq(invitation.status, 'pending')),
-      columns: { id: true },
-    })
-    if (existingInvite) {
-      return false
+    if (code === 'USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION') {
+      return c.json(
+        { code: 'INVITE_PENDING', message: 'An invite is already pending for this email.' },
+        409,
+      )
     }
-
-    await tx.insert(invitation).values({
-      id,
-      tenantId,
-      email: normalizedEmail,
-      role,
-      invitedByUserId: session.user.id,
-      token,
-      status: 'pending',
-      expiresAt,
-    })
-    return true
-  })
-
-  if (!inserted) {
     return c.json(
-      { code: 'INVITE_PENDING', message: 'An invite is already pending for this email.' },
-      409,
+      { code: 'INVITE_FAILED', message: 'Could not send the invite. Please try again.' },
+      500,
     )
   }
-
-  const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
-  const acceptUrl = `${appUrl}/accept-invite?token=${token}`
-
-  await sendAuthEmail(
-    email,
-    `You've been invited to join ${companyName} on StaffComplete`,
-    `
-      <p>You've been invited to join <strong>${companyName}</strong> on StaffComplete as a ${role === 'admin' ? 'an admin' : 'team member'}.</p>
-      <p><a href="${acceptUrl}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">Accept invite</a></p>
-      <p>This link expires in 72 hours. If you weren't expecting this invite, you can safely ignore this email.</p>
-    `,
-  )
 
   return c.json({ status: 'invited' }, 201)
 })
@@ -167,24 +114,27 @@ invitesRouter.delete('/:id', async (c) => {
   }
 
   const id = c.req.param('id')
-  const result = await withTenant(session.user.tenantId, (tx) =>
-    tx
-      .update(invitation)
-      .set({ status: 'revoked' })
-      .where(and(eq(invitation.id, id), eq(invitation.status, 'pending')))
-      .returning({ id: invitation.id }),
+  const pending = await withTenant(session.organizationId, (tx) =>
+    tx.query.invitation.findFirst({
+      where: and(eq(invitation.id, id), eq(invitation.status, 'pending')),
+      columns: { id: true },
+    }),
   )
-
-  if (result.length === 0) {
+  if (!pending) {
     return c.json({ code: 'NOT_FOUND', message: 'Invite not found.' }, 404)
   }
+
+  await auth.api.cancelInvitation({
+    headers: c.req.raw.headers,
+    body: { invitationId: id },
+  })
 
   return c.json({ status: 'revoked' })
 })
 
 invitesRouter.get('/:token', async (c) => {
   const token = c.req.param('token')
-  const invite = await db.query.invitation.findFirst({ where: eq(invitation.token, token) })
+  const invite = await db.query.invitation.findFirst({ where: eq(invitation.id, token) })
 
   if (!invite || invite.status !== 'pending' || invite.expiresAt < new Date()) {
     return c.json(
@@ -193,24 +143,81 @@ invitesRouter.get('/:token', async (c) => {
     )
   }
 
-  const tenantRow = await db.query.tenant.findFirst({
-    where: eq(tenant.id, invite.tenantId),
+  const org = await db.query.organization.findFirst({
+    where: eq(organization.id, invite.organizationId),
     columns: { name: true },
   })
+  const existingUser = await db.query.user.findFirst({
+    where: eq(user.email, invite.email),
+    columns: { id: true },
+  })
+  const currentSession = await auth.api.getSession({ headers: c.req.raw.headers })
+  const sessionMatches = currentSession?.user.email.toLowerCase() === invite.email.toLowerCase()
 
-  return c.json({ email: invite.email, role: invite.role, tenantName: tenantRow?.name ?? null })
+  return c.json({
+    email: invite.email,
+    role: invite.role,
+    organizationName: org?.name ?? null,
+    // Lets the frontend distinguish "set a password to create your
+    // account" from "you already have an account — sign in to accept"
+    // (ADR-0014's whole point: a second organization no longer requires a
+    // second account).
+    accountExists: !!existingUser,
+    sessionMatches,
+  })
 })
 
 invitesRouter.post('/:token/accept', zValidator('json', acceptInviteSchema), async (c) => {
   const token = c.req.param('token')
-  const { name, password } = c.req.valid('json')
+  const body = c.req.valid('json')
 
-  const invite = await db.query.invitation.findFirst({ where: eq(invitation.token, token) })
+  const invite = await db.query.invitation.findFirst({ where: eq(invitation.id, token) })
   if (!invite || invite.status !== 'pending' || invite.expiresAt < new Date()) {
     return c.json(
       { code: 'INVALID_INVITE', message: 'This invite link is invalid or has expired.' },
       404,
     )
+  }
+
+  const currentSession = await auth.api.getSession({ headers: c.req.raw.headers })
+
+  // Already signed in as the invited email (the cross-org case ADR-0014
+  // exists for): delegate straight to the plugin's own accept flow rather
+  // than reimplementing membership/limit checks it already does.
+  if (currentSession?.user.email.toLowerCase() === invite.email.toLowerCase()) {
+    try {
+      await auth.api.acceptInvitation({
+        headers: c.req.raw.headers,
+        body: { invitationId: token },
+      })
+    } catch (err) {
+      const message =
+        err instanceof APIError ? err.message : 'Could not accept the invite. Please try again.'
+      return c.json({ code: 'ACCEPT_FAILED', message }, 400)
+    }
+    return c.json({ status: 'accepted' }, 201)
+  }
+
+  const existingUser = await db.query.user.findFirst({
+    where: eq(user.email, invite.email),
+    columns: { id: true },
+  })
+  if (existingUser) {
+    // Can't silently create a second account for this email (Better Auth's
+    // email-uniqueness constraint would reject it anyway) — send them to
+    // sign in first, then revisit this same link to accept.
+    return c.json(
+      {
+        code: 'ACCOUNT_EXISTS',
+        message: 'You already have an account for this email. Sign in to accept the invite.',
+      },
+      409,
+    )
+  }
+
+  const { name, password } = body
+  if (!name || !password) {
+    return c.json({ code: 'VALIDATION_ERROR', message: 'Name and password are required.' }, 400)
   }
 
   const signUpResponse = await auth.api.signUpEmail({
@@ -235,10 +242,13 @@ invitesRouter.post('/:token/accept', zValidator('json', acceptInviteSchema), asy
   const userId = data.user?.id
 
   if (userId) {
-    await db
-      .update(user)
-      .set({ tenantId: invite.tenantId, role: invite.role, emailVerified: true })
-      .where(eq(user.id, userId))
+    await db.insert(member).values({
+      id: crypto.randomUUID(),
+      organizationId: invite.organizationId,
+      userId,
+      role: invite.role,
+    })
+    await db.update(user).set({ emailVerified: true }).where(eq(user.id, userId))
   }
 
   await db.update(invitation).set({ status: 'accepted' }).where(eq(invitation.id, invite.id))

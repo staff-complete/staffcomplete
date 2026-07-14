@@ -3,28 +3,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   findFirstMock: vi.fn(),
-  insertValuesMock: vi.fn(),
-  insertMock: vi.fn(),
   deleteWhereMock: vi.fn(),
   deleteMock: vi.fn(),
-  updateWhereMock: vi.fn(),
-  updateSetMock: vi.fn(),
-  updateMock: vi.fn(),
   signUpEmailMock: vi.fn(),
+  createOrganizationMock: vi.fn(),
   sendAuthEmailMock: vi.fn(),
 }))
 
 vi.mock('../db/index.js', () => ({
   db: {
     query: { user: { findFirst: mocks.findFirstMock } },
-    insert: mocks.insertMock,
     delete: mocks.deleteMock,
-    update: mocks.updateMock,
   },
 }))
 
 vi.mock('../auth.js', () => ({
-  auth: { api: { signUpEmail: mocks.signUpEmailMock } },
+  auth: {
+    api: {
+      signUpEmail: mocks.signUpEmailMock,
+      createOrganization: mocks.createOrganizationMock,
+    },
+  },
   sendAuthEmail: mocks.sendAuthEmailMock,
   escapeHtml: (value: string) => value,
 }))
@@ -51,14 +50,10 @@ function postOnboard(body: unknown) {
 describe('POST /api/onboard', () => {
   beforeEach(() => {
     mocks.findFirstMock.mockReset()
-    mocks.insertMock.mockReset().mockReturnValue({ values: mocks.insertValuesMock })
-    mocks.insertValuesMock.mockReset().mockResolvedValue(undefined)
     mocks.deleteMock.mockReset().mockReturnValue({ where: mocks.deleteWhereMock })
     mocks.deleteWhereMock.mockReset().mockResolvedValue(undefined)
-    mocks.updateMock.mockReset().mockReturnValue({ set: mocks.updateSetMock })
-    mocks.updateSetMock.mockReset().mockReturnValue({ where: mocks.updateWhereMock })
-    mocks.updateWhereMock.mockReset().mockResolvedValue(undefined)
     mocks.signUpEmailMock.mockReset()
+    mocks.createOrganizationMock.mockReset().mockResolvedValue({ id: 'org-id' })
     mocks.sendAuthEmailMock.mockReset().mockResolvedValue(undefined)
   })
 
@@ -70,7 +65,7 @@ describe('POST /api/onboard', () => {
     expect(res.status).toBe(201)
     expect((await res.json()).status).toBe('pending_verification')
     expect(mocks.signUpEmailMock).not.toHaveBeenCalled()
-    expect(mocks.insertValuesMock).not.toHaveBeenCalled()
+    expect(mocks.createOrganizationMock).not.toHaveBeenCalled()
     expect(mocks.sendAuthEmailMock).toHaveBeenCalledWith(
       validBody.email,
       expect.stringContaining('tried to sign up'),
@@ -78,7 +73,7 @@ describe('POST /api/onboard', () => {
     )
   })
 
-  it('rolls back the tenant when sign-up fails', async () => {
+  it('returns a signup error without creating an organization when sign-up fails', async () => {
     mocks.findFirstMock.mockResolvedValue(null)
     mocks.signUpEmailMock.mockResolvedValue({
       ok: false,
@@ -92,10 +87,26 @@ describe('POST /api/onboard', () => {
     const json = await res.json()
     expect(json.code).toBe('SIGNUP_FAILED')
     expect(json.message).toBe('Weak password')
+    expect(mocks.createOrganizationMock).not.toHaveBeenCalled()
+  })
+
+  it('rolls back the new user when organization creation fails', async () => {
+    mocks.findFirstMock.mockResolvedValue(null)
+    mocks.signUpEmailMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ user: { id: 'new-user-id' } }),
+    })
+    mocks.createOrganizationMock.mockRejectedValue(new Error('slug taken'))
+
+    const res = await postOnboard(validBody)
+
+    expect(res.status).toBe(500)
+    expect((await res.json()).code).toBe('SIGNUP_FAILED')
     expect(mocks.deleteWhereMock).toHaveBeenCalled()
   })
 
-  it('creates a tenant and links the admin user on success', async () => {
+  it('creates the organization for the new user as a server-only action on success', async () => {
     mocks.findFirstMock.mockResolvedValue(null)
     mocks.signUpEmailMock.mockResolvedValue({
       ok: true,
@@ -107,13 +118,10 @@ describe('POST /api/onboard', () => {
 
     expect(res.status).toBe(201)
     expect((await res.json()).status).toBe('pending_verification')
-    expect(mocks.insertValuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Acme Co' }),
-    )
-    expect(mocks.updateSetMock).toHaveBeenCalledWith(
-      expect.objectContaining({ tenantId: expect.any(String) }),
-    )
-    expect(mocks.updateWhereMock).toHaveBeenCalled()
+    expect(mocks.createOrganizationMock).toHaveBeenCalledWith({
+      body: expect.objectContaining({ name: 'Acme Co', userId: 'new-user-id' }),
+    })
+    expect(mocks.deleteWhereMock).not.toHaveBeenCalled()
   })
 
   it('rejects invalid input with a validation error', async () => {

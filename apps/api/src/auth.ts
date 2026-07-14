@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { organization } from 'better-auth/plugins/organization'
@@ -79,6 +80,30 @@ export const auth = betterAuth({
   },
   session: {
     expiresIn: Number(process.env.SESSION_EXPIRES_IN_SECONDS ?? SEVEN_DAYS_IN_SECONDS),
+  },
+  databaseHooks: {
+    session: {
+      create: {
+        // The organization plugin never sets activeOrganizationId itself
+        // outside of a couple of endpoints that already have a live
+        // session in hand (e.g. accept-invitation). Every other new
+        // session — a plain sign-in being the common case — would
+        // otherwise start with no active organization at all, breaking
+        // every org-scoped route. Default it to the user's first
+        // membership; this is a one-org-per-user assumption that holds
+        // until the org switcher (ADR-0014) lets someone pick.
+        before: async (session) => {
+          const membership = await db.query.member.findFirst({
+            where: eq(schema.member.userId, session.userId),
+            columns: { organizationId: true },
+          })
+          if (!membership) {
+            return
+          }
+          return { data: { activeOrganizationId: membership.organizationId } }
+        },
+      },
+    },
   },
   emailVerification: {
     autoSignInAfterVerification: true,
