@@ -22,7 +22,13 @@ async function submit() {
 
   loading.value = true
   try {
-    await authClient.requestPasswordReset({ email: email.value, redirectTo: '/reset-password' })
+    // Must be absolute: Better Auth resolves a relative redirectTo against
+    // its own server origin (the API), not the app the link should land
+    // on, since the reset click is handled server-side before redirecting.
+    await authClient.requestPasswordReset({
+      email: email.value,
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
     // Always show the same confirmation, regardless of whether the account
     // exists, so the response gives no signal about account existence.
     submitted.value = true
