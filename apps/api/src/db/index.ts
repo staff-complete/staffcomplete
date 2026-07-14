@@ -32,17 +32,18 @@ const tenantSql = postgres(tenantDatabaseUrl, {
 export const tenantDb = drizzle(tenantSql, { schema })
 
 /**
- * Runs `fn` inside a transaction with Postgres session var `app.tenant_id`
- * set to `tenantId`, so RLS policies scoped to that setting apply. Use for
- * any query against a tenant-scoped table that should only see/touch rows
- * belonging to a known, already-authenticated tenant.
+ * Runs `fn` inside a transaction with Postgres session var
+ * `app.organization_id` set to `organizationId`, so RLS policies scoped to
+ * that setting apply. Use for any query against a tenant-scoped table that
+ * should only see/touch rows belonging to a known, already-authenticated
+ * organization (ADR-0014 re-keyed RLS off `organization.id`).
  */
 export async function withTenant<T>(
-  tenantId: string,
+  organizationId: string,
   fn: (tx: Parameters<Parameters<typeof tenantDb.transaction>[0]>[0]) => Promise<T>,
 ): Promise<T> {
   return tenantDb.transaction(async (tx) => {
-    await tx.execute(rawSql`select set_config('app.tenant_id', ${tenantId}, true)`)
+    await tx.execute(rawSql`select set_config('app.organization_id', ${organizationId}, true)`)
     return fn(tx)
   })
 }

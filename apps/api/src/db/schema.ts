@@ -6,12 +6,6 @@ import { boolean, pgPolicy, pgRole, pgTable, text, timestamp } from 'drizzle-orm
 // those from an env var so credentials never land in version-controlled SQL.
 export const tenantRole = pgRole('staffcomplete_tenant', { inherit: true })
 
-export const tenant = pgTable('tenant', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
-})
-
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -20,8 +14,6 @@ export const user = pgTable('user', {
   image: text('image'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
-  tenantId: text('tenantId').references(() => tenant.id),
-  role: text('role').notNull().default('admin'),
 })
 
 export const session = pgTable('session', {
@@ -35,6 +27,7 @@ export const session = pgTable('session', {
   userId: text('userId')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
+  activeOrganizationId: text('activeOrganizationId'),
 })
 
 export const account = pgTable('account', {
@@ -64,32 +57,56 @@ export const verification = pgTable('verification', {
   updatedAt: timestamp('updatedAt').defaultNow(),
 })
 
+// organization/member/invitation replace the hand-rolled tenant/invitation
+// tables (ADR-0014) — shape and field names mirror Better Auth's
+// `organization` plugin schema exactly, since its Drizzle adapter maps onto
+// these tables by field name.
+export const organization = pgTable('organization', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  logo: text('logo'),
+  metadata: text('metadata'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+
+export const member = pgTable('member', {
+  id: text('id').primaryKey(),
+  organizationId: text('organizationId')
+    .notNull()
+    .references(() => organization.id, { onDelete: 'cascade' }),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+
 export const invitation = pgTable(
   'invitation',
   {
     id: text('id').primaryKey(),
-    tenantId: text('tenantId')
+    organizationId: text('organizationId')
       .notNull()
-      .references(() => tenant.id),
+      .references(() => organization.id, { onDelete: 'cascade' }),
     email: text('email').notNull(),
     role: text('role').notNull(),
-    invitedByUserId: text('invitedByUserId')
+    status: text('status').notNull().default('pending'),
+    inviterId: text('inviterId')
       .notNull()
       .references(() => user.id),
-    token: text('token').notNull().unique(),
-    status: text('status').notNull().default('pending'),
     expiresAt: timestamp('expiresAt').notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
   (table) => [
     // Fails closed: current_setting(..., true) returns NULL when unset, so a
     // query that reaches this table outside withTenant() sees zero rows
-    // instead of erroring or leaking other tenants' invitations.
+    // instead of erroring or leaking other organizations' invitations.
     pgPolicy('invitation_tenant_isolation', {
       for: 'all',
       to: tenantRole,
-      using: sql`${table.tenantId} = current_setting('app.tenant_id', true)`,
-      withCheck: sql`${table.tenantId} = current_setting('app.tenant_id', true)`,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
     }),
   ],
 ).enableRLS()

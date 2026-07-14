@@ -1,8 +1,11 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { organization } from 'better-auth/plugins/organization'
 import { Resend } from 'resend'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
+
+const SEVENTY_TWO_HOURS_IN_SECONDS = 72 * 60 * 60
 
 const AUTH_EMAIL_FROM = 'noreply@staffcomplete.io'
 const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7
@@ -51,6 +54,9 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      organization: schema.organization,
+      member: schema.member,
+      invitation: schema.invitation,
     },
   }),
   emailAndPassword: {
@@ -90,21 +96,23 @@ export const auth = betterAuth({
       )
     },
   },
-  user: {
-    additionalFields: {
-      tenantId: {
-        type: 'string',
-        required: false,
-        fieldName: 'tenantId',
-        input: false,
+  plugins: [
+    organization({
+      invitationExpiresIn: SEVENTY_TWO_HOURS_IN_SECONDS,
+      sendInvitationEmail: async ({ email, invitation, organization: org }) => {
+        const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
+        const acceptUrl = `${appUrl}/accept-invite?token=${invitation.id}`
+        const companyName = escapeHtml(org.name)
+        await sendAuthEmail(
+          email,
+          `You've been invited to join ${companyName} on StaffComplete`,
+          `
+            <p>You've been invited to join <strong>${companyName}</strong> on StaffComplete as ${invitation.role === 'admin' ? 'an admin' : 'a team member'}.</p>
+            <p><a href="${acceptUrl}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">Accept invite</a></p>
+            <p>This link expires in 72 hours. If you weren't expecting this invite, you can safely ignore this email.</p>
+          `,
+        )
       },
-      role: {
-        type: 'string',
-        required: false,
-        defaultValue: 'admin',
-        fieldName: 'role',
-        input: false,
-      },
-    },
-  },
+    }),
+  ],
 })
