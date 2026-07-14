@@ -62,6 +62,12 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => requireAuth(to, () => authClient.getSession()))
+router.beforeEach((to) =>
+  requireAuth(
+    to,
+    () => authClient.getSession(),
+    () => authClient.organization.getActiveMemberRole(),
+  ),
+)
 
 export default router

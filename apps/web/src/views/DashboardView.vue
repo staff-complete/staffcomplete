@@ -5,9 +5,11 @@ import { authClient } from '../lib/auth-client'
 
 const router = useRouter()
 const session = authClient.useSession()
-const isAdmin = computed(
-  () => (session.value.data?.user as { role?: string } | undefined)?.role === 'admin',
-)
+const activeMemberRole = authClient.useActiveMemberRole()
+const isAdmin = computed(() => {
+  const role = activeMemberRole.value.data?.role
+  return role === 'admin' || role === 'owner'
+})
 
 async function logout() {
   await authClient.signOut()
