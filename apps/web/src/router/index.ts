@@ -59,6 +59,12 @@ const router = createRouter({
       component: () => import('../views/TeamView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    {
+      path: '/billing',
+      name: 'billing',
+      component: () => import('../views/BillingView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
   ],
 })
 
