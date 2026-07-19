@@ -22,3 +22,4 @@ Template: [0000-adr-template.md](0000-adr-template.md)
 | [0012](0012-row-level-security-implementation.md) | Row-Level Security Implementation Mechanism                            | accepted |
 | [0013](0013-trunk-based-single-environment.md)    | Trunk-Based Development, Single Environment                            | accepted |
 | [0014](0014-multi-organization-user-accounts.md)  | Multi-Organization User Accounts via Better Auth's Organization Plugin | accepted |
+| [0015](0015-trial-and-subscription-state.md)      | Trial and Subscription State Model                                     | accepted |
