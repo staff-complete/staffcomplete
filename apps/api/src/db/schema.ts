@@ -82,6 +82,35 @@ export const member = pgTable('member', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 
+// One row per organization, created by startTrialIfNeeded on first login
+// (ADR-0015). `status` is a reporting-only field — enforcement code must
+// independently check `trialEndsAt < now()` rather than trusting `status`,
+// since the daily lifecycle job that flips it to 'expired' can lag by up
+// to 24h. See ADR-0015 for the full rationale.
+export const subscription = pgTable(
+  'subscription',
+  {
+    organizationId: text('organizationId')
+      .primaryKey()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('trialing'), // trialing | active | expired | canceled
+    plan: text('plan'), // null while trialing; set by issue #45 on subscribe
+    trialStartedAt: timestamp('trialStartedAt').notNull(),
+    trialEndsAt: timestamp('trialEndsAt').notNull(),
+    trialReminderSentAt: timestamp('trialReminderSentAt'),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  },
+  (table) => [
+    pgPolicy('subscription_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
 export const invitation = pgTable(
   'invitation',
   {

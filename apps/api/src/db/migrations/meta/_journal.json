@@ -36,6 +36,13 @@
       "when": 1784052950219,
       "tag": "0004_multi_organization_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784492979039,
+      "tag": "0005_add_subscription_table",
+      "breakpoints": true
     }
   ]
 }
