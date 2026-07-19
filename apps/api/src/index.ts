@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { auth } from './auth.js'
+import { runTrialLifecycleScan } from './jobs/trial-lifecycle-scan.js'
 import { queue, startQueue, stopQueue } from './queue/index.js'
 import { invitesRouter } from './routes/invites.js'
 import { onboardRouter } from './routes/onboard.js'
@@ -31,6 +32,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) })
 
   await startQueue()
+  queue.process('trial-lifecycle-scan', () => runTrialLifecycleScan())
   await queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)
 
   const shutdown = async () => {
