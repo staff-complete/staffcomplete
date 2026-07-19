@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+export type { Job, JobHandler, Queue } from './queue.js'
+
 export const signUpSchema = z.object({
   name: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Valid work email required'),
