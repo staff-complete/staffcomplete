@@ -1,13 +1,12 @@
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
-import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { APIError } from 'better-auth/api'
 import { auth } from '../auth.js'
 import { db, withTenant } from '../db/index.js'
 import { invitation, member, organization, user } from '../db/schema.js'
-import { resolveOrgSession } from '../lib/session.js'
+import { requireAdmin } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
 
 const inviteSchema = z.object({
@@ -24,28 +23,6 @@ const acceptInviteSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number')
     .optional(),
 })
-
-type AdminSession = { user: { id: string }; organizationId: string }
-
-async function requireAdmin(c: Context): Promise<AdminSession | null> {
-  const session = await resolveOrgSession(c)
-  if (!session) {
-    return null
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: and(
-      eq(member.userId, session.userId),
-      eq(member.organizationId, session.organizationId),
-    ),
-    columns: { role: true },
-  })
-  if (!membership || (membership.role !== 'admin' && membership.role !== 'owner')) {
-    return null
-  }
-
-  return { user: { id: session.userId }, organizationId: session.organizationId }
-}
 
 export const invitesRouter = new Hono()
 
