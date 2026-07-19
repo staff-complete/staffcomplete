@@ -41,6 +41,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     await stopQueue()
     process.exit(0)
   }
-  process.on('SIGTERM', shutdown)
-  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', () => void shutdown())
+  process.on('SIGINT', () => void shutdown())
 }

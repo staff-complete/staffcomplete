@@ -13,9 +13,15 @@ const REMINDER_WINDOW_DAYS = 3
 // See ADR-0015 for why `status` is only updated here, never trusted for
 // enforcement.
 export async function runTrialLifecycleScan(): Promise<void> {
-  const trialingOrgs = await db.query.subscription.findMany({
-    where: eq(subscription.status, 'trialing'),
-  })
+  let trialingOrgs: Awaited<ReturnType<typeof db.query.subscription.findMany>>
+  try {
+    trialingOrgs = await db.query.subscription.findMany({
+      where: eq(subscription.status, 'trialing'),
+    })
+  } catch (err) {
+    console.error('trial-lifecycle-scan failed to fetch trialing organizations', err)
+    return
+  }
 
   for (const sub of trialingOrgs) {
     try {
