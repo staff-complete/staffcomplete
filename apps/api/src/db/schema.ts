@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { boolean, pgPolicy, pgRole, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, integer, pgPolicy, pgRole, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 // Non-superuser role used for tenant-scoped queries (see ADR-0012). LOGIN and
 // PASSWORD aren't managed here — apps/api/src/db/setup-tenant-role.ts handles
@@ -132,6 +132,61 @@ export const invitation = pgTable(
     // query that reaches this table outside withTenant() sees zero rows
     // instead of erroring or leaking other organizations' invitations.
     pgPolicy('invitation_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
+// A reusable checklist definition an org builds up-front (issue #22) — the
+// template a future run (#23) instantiates for a specific employee. Named
+// `workflowTemplate` rather than `workflow` to avoid colliding with the
+// separate runtime workflow-engine concept (apps/api/src/workflows/<name>/).
+export const workflowTemplate = pgTable(
+  'workflow_template',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    type: text('type').notNull(), // onboarding | offboarding
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  },
+  (table) => [
+    pgPolicy('workflow_template_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
+export const workflowTemplateStep = pgTable(
+  'workflow_template_step',
+  {
+    id: text('id').primaryKey(),
+    workflowTemplateId: text('workflowTemplateId')
+      .notNull()
+      .references(() => workflowTemplate.id, { onDelete: 'cascade' }),
+    // Denormalized per ADR-0005 ("every tenant-scoped table must have a
+    // tenant_id column") — RLS policies can't join through workflowTemplateId.
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    type: text('type').notNull(), // automated | manual
+    assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }),
+    dueDateOffsetDays: integer('dueDateOffsetDays'), // manual steps only
+    position: integer('position').notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => [
+    pgPolicy('workflow_template_step_tenant_isolation', {
       for: 'all',
       to: tenantRole,
       using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,

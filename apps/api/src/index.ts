@@ -8,6 +8,7 @@ import { queue, startQueue, stopQueue } from './queue/index.js'
 import { billingRouter } from './routes/billing.js'
 import { invitesRouter } from './routes/invites.js'
 import { onboardRouter } from './routes/onboard.js'
+import { workflowsRouter } from './routes/workflows.js'
 
 // Daily scan handling both the 3-day trial-reminder email and flipping
 // expired trials to status: 'expired' — see apps/api/src/jobs/trial-lifecycle-scan.ts
@@ -24,6 +25,7 @@ app.on(['GET', 'POST'], '/api/auth/**', (c) => auth.handler(c.req.raw))
 app.route('/api/onboard', onboardRouter)
 app.route('/api/invites', invitesRouter)
 app.route('/api/billing', billingRouter)
+app.route('/api/workflows', workflowsRouter)
 
 app.use('/*', serveStatic({ root: './public' }))
 app.use('/*', serveStatic({ path: './public/index.html' }))

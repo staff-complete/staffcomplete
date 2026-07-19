@@ -37,6 +37,8 @@ await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "invitation" TO "staffcomplete
 // where this script had already run once (ALTER ROLE only re-applies what's
 // listed here, it doesn't pick up new tables automatically).
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "subscription" TO "staffcomplete_tenant"`
+await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template" TO "staffcomplete_tenant"`
+await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template_step" TO "staffcomplete_tenant"`
 
 console.log('staffcomplete_tenant role configured.')
 

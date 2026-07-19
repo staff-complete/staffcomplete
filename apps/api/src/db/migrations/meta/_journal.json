@@ -43,6 +43,13 @@
       "when": 1784492979039,
       "tag": "0005_add_subscription_table",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784498788409,
+      "tag": "0006_add_workflow_template_tables",
+      "breakpoints": true
     }
   ]
 }

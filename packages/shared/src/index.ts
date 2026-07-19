@@ -3,6 +3,22 @@ import { z } from 'zod'
 export type { Job, JobHandler, Queue } from './queue.js'
 export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'
 export type { TrialState } from './trial.js'
+export {
+  createStepSchema,
+  createWorkflowTemplateSchema,
+  reorderStepsSchema,
+  stepTypeSchema,
+  updateStepSchema,
+  updateWorkflowTemplateSchema,
+  workflowTypeSchema,
+} from './workflow.js'
+export type {
+  CreateStepInput,
+  CreateWorkflowTemplateInput,
+  ReorderStepsInput,
+  UpdateStepInput,
+  UpdateWorkflowTemplateInput,
+} from './workflow.js'
 
 export const signUpSchema = z.object({
   name: z.string().min(2, 'Full name must be at least 2 characters'),
