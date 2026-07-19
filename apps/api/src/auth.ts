@@ -3,6 +3,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { organization } from 'better-auth/plugins/organization'
 import { Resend } from 'resend'
+import { startTrialIfNeeded } from './billing/start-trial.js'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
@@ -32,6 +33,35 @@ export const escapeHtml = (value: string) =>
 export const sendAuthEmail = (to: string, subject: string, html: string) => {
   const resend = new Resend(process.env.RESEND_API_KEY)
   return resend.emails.send({ from: AUTH_EMAIL_FROM, to, subject, html })
+}
+
+// The organization plugin never sets activeOrganizationId itself outside of
+// a couple of endpoints that already have a live session in hand (e.g.
+// accept-invitation). Every other new session — a plain sign-in being the
+// common case — would otherwise start with no active organization at all,
+// breaking every org-scoped route. Default it to the user's first
+// membership; this is a one-org-per-user assumption that holds until the
+// org switcher (ADR-0014) lets someone pick.
+//
+// This also doubles as the "first login after sign-up" hook (ADR-0015):
+// it fires on every new session, and startTrialIfNeeded is itself
+// idempotent, so there's no separate "is this actually the first login"
+// check needed here.
+export async function handleSessionCreate(session: { userId: string }) {
+  const membership = await db.query.member.findFirst({
+    where: eq(schema.member.userId, session.userId),
+    columns: { organizationId: true },
+  })
+  if (!membership) {
+    return
+  }
+  try {
+    await startTrialIfNeeded(membership.organizationId)
+  } catch (err) {
+    // Never let a trial-start hiccup block someone from signing in.
+    console.error('startTrialIfNeeded failed', err)
+  }
+  return { data: { activeOrganizationId: membership.organizationId } }
 }
 
 export const auth = betterAuth({
@@ -84,24 +114,7 @@ export const auth = betterAuth({
   databaseHooks: {
     session: {
       create: {
-        // The organization plugin never sets activeOrganizationId itself
-        // outside of a couple of endpoints that already have a live
-        // session in hand (e.g. accept-invitation). Every other new
-        // session — a plain sign-in being the common case — would
-        // otherwise start with no active organization at all, breaking
-        // every org-scoped route. Default it to the user's first
-        // membership; this is a one-org-per-user assumption that holds
-        // until the org switcher (ADR-0014) lets someone pick.
-        before: async (session) => {
-          const membership = await db.query.member.findFirst({
-            where: eq(schema.member.userId, session.userId),
-            columns: { organizationId: true },
-          })
-          if (!membership) {
-            return
-          }
-          return { data: { activeOrganizationId: membership.organizationId } }
-        },
+        before: handleSessionCreate,
       },
     },
   },
