@@ -7,6 +7,7 @@ import { APIError } from 'better-auth/api'
 import { auth } from '../auth.js'
 import { db, withTenant } from '../db/index.js'
 import { invitation, member, organization, user } from '../db/schema.js'
+import { resolveOrgSession } from '../lib/session.js'
 
 const inviteSchema = z.object({
   email: z.string().email('Valid email required'),
@@ -26,21 +27,23 @@ const acceptInviteSchema = z.object({
 type AdminSession = { user: { id: string }; organizationId: string }
 
 async function requireAdmin(c: Context): Promise<AdminSession | null> {
-  const result = await auth.api.getSession({ headers: c.req.raw.headers })
-  const organizationId = result?.session.activeOrganizationId
-  if (!result || !organizationId) {
+  const session = await resolveOrgSession(c)
+  if (!session) {
     return null
   }
 
   const membership = await db.query.member.findFirst({
-    where: and(eq(member.userId, result.user.id), eq(member.organizationId, organizationId)),
+    where: and(
+      eq(member.userId, session.userId),
+      eq(member.organizationId, session.organizationId),
+    ),
     columns: { role: true },
   })
   if (!membership || (membership.role !== 'admin' && membership.role !== 'owner')) {
     return null
   }
 
-  return { user: { id: result.user.id }, organizationId }
+  return { user: { id: session.userId }, organizationId: session.organizationId }
 }
 
 export const invitesRouter = new Hono()
