@@ -3,8 +3,15 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { auth } from './auth.js'
+import { queue, startQueue, stopQueue } from './queue/index.js'
 import { invitesRouter } from './routes/invites.js'
 import { onboardRouter } from './routes/onboard.js'
+
+// Daily scan handling both the 3-day trial-reminder email and flipping
+// expired trials to status: 'expired' — see apps/api/src/jobs/trial-lifecycle-scan.ts
+// and ADR-0015. 13:00 UTC avoids landing the reminder email in the middle
+// of any single timezone's night for most of the customer base.
+const TRIAL_LIFECYCLE_SCAN_CRON = '0 13 * * *'
 
 const app = new Hono()
 
@@ -22,4 +29,14 @@ export { app }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) })
+
+  await startQueue()
+  await queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)
+
+  const shutdown = async () => {
+    await stopQueue()
+    process.exit(0)
+  }
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
 }
