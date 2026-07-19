@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authClient } from '../lib/auth-client'
 import OrgSwitcher from '../components/OrgSwitcher.vue'
+import TrialBanner from '../components/TrialBanner.vue'
 
 const router = useRouter()
 const session = authClient.useSession()
@@ -20,31 +21,34 @@ async function logout() {
 
 <template>
   <div class="min-h-screen bg-brand-surface px-4 py-12">
-    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-brand-dark">Dashboard</h1>
-        <div class="flex items-center gap-4">
-          <OrgSwitcher />
-          <button
-            type="button"
-            class="text-sm font-medium text-brand-teal hover:underline"
-            @click="logout"
-          >
-            Log out
-          </button>
+    <div class="max-w-2xl mx-auto space-y-4">
+      <TrialBanner />
+      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold text-brand-dark">Dashboard</h1>
+          <div class="flex items-center gap-4">
+            <OrgSwitcher />
+            <button
+              type="button"
+              class="text-sm font-medium text-brand-teal hover:underline"
+              @click="logout"
+            >
+              Log out
+            </button>
+          </div>
         </div>
+        <p class="text-sm text-gray-500">
+          Signed in as
+          <span class="font-medium text-brand-dark">{{ session.data?.user.email }}</span>
+        </p>
+        <RouterLink
+          v-if="isAdmin"
+          to="/team"
+          class="inline-block mt-6 text-sm text-brand-teal font-medium hover:underline"
+        >
+          Invite a team member →
+        </RouterLink>
       </div>
-      <p class="text-sm text-gray-500">
-        Signed in as
-        <span class="font-medium text-brand-dark">{{ session.data?.user.email }}</span>
-      </p>
-      <RouterLink
-        v-if="isAdmin"
-        to="/team"
-        class="inline-block mt-6 text-sm text-brand-teal font-medium hover:underline"
-      >
-        Invite a team member →
-      </RouterLink>
     </div>
   </div>
 </template>

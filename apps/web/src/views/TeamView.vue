@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { z } from 'zod'
 import OrgSwitcher from '../components/OrgSwitcher.vue'
+import TrialBanner from '../components/TrialBanner.vue'
 
 type Invite = { id: string; email: string; role: string; expiresAt: string; createdAt: string }
 
@@ -86,6 +87,7 @@ async function revoke(id: string) {
 <template>
   <div class="min-h-screen bg-brand-surface px-4 py-12">
     <div class="max-w-2xl mx-auto space-y-6">
+      <TrialBanner />
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold text-brand-dark">Team</h1>
         <div class="flex items-center gap-4">
