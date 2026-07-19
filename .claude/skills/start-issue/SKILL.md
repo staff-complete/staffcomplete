@@ -48,7 +48,7 @@ Pick up a GitHub issue and get a branch ready to code on.
    - Issue: #number — title
    - Branch: branch-name
    - Remind the developer:
-     - Commits must be GPG signed
+     - Commits must be signed (SSH signing, not GPG)
      - Follow Conventional Commits: `<type>(<scope>): description`
      - Relevant scopes for this issue's domain area (read from `area:` label if present)
      - Rebase onto `main` before opening a PR — PRs target `main`

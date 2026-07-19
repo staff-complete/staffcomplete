@@ -16,7 +16,7 @@ Verify the codebase is ready for release before merging to `main`.
    - `feat` commits → minor bump
    - `feat!` or `BREAKING CHANGE` footer → major bump
    - Report what the next version would be
-7. **Signed commits check** — verify all commits are GPG signed: `git log origin/main..HEAD --show-signature`
+7. **Signed commits check** — verify all commits are signed (SSH signing, not GPG): `git log origin/main..HEAD --show-signature`
 
 ## Report
 
@@ -28,7 +28,7 @@ Produce a checklist:
 - [ ] Type check passes
 - [ ] Tests pass
 - [ ] All commit messages follow Conventional Commits
-- [ ] All commits are GPG signed
+- [ ] All commits are signed (SSH signing)
 - [ ] Expected version bump: vX.Y.Z
 
 If all checks pass: ready to open a PR.

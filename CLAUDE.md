@@ -137,7 +137,7 @@ Architectural decisions are documented in `docs/decisions/`. Before proposing ch
 
 Trunk-based — see [ADR-0013](docs/decisions/0013-trunk-based-single-environment.md) for why there's no `dev` branch or environment.
 
-- **Signed commits required** — all commits must be GPG signed
+- **Signed commits required** — all commits must be signed (SSH signing, not GPG)
 - **Rebase only** — no merge commits; rebase feature branches onto `main`
 - **Linear history** — enforced on `main` via branch protection
 - **PR required** — no direct pushes to `main`

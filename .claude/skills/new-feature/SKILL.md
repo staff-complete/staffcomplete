@@ -11,7 +11,7 @@ Set up a new feature branch following the project's git strategy.
 3. **Ensure `main` is up to date** — run `git fetch origin main`
 4. **Create and switch to the branch** — run `git checkout -b <branch-name> origin/main`
 5. **Confirm** — show the branch name and remind the developer of:
-   - Commits must be GPG signed (`git config commit.gpgsign true`)
+   - Commits must be signed via SSH, not GPG (`git config gpg.format ssh` and `git config commit.gpgsign true`)
    - Follow Conventional Commits: `feat(scope): description`
    - Keep commits atomic — one concern per commit
    - Rebase onto `main` before opening a PR (`git rebase origin/main`)
