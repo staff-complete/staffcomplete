@@ -31,6 +31,12 @@ await sql.unsafe(`ALTER ROLE "staffcomplete_tenant" WITH LOGIN PASSWORD '${escap
 await sql.unsafe(`GRANT CONNECT ON DATABASE "${databaseName}" TO "staffcomplete_tenant"`)
 await sql`GRANT USAGE ON SCHEMA public TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "invitation" TO "staffcomplete_tenant"`
+// subscription (0005) was added after this script was first written and
+// missed this grant — every withTenant query against it (trial-status route,
+// trial-lock middleware) was hitting "permission denied" in any environment
+// where this script had already run once (ALTER ROLE only re-applies what's
+// listed here, it doesn't pick up new tables automatically).
+await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "subscription" TO "staffcomplete_tenant"`
 
 console.log('staffcomplete_tenant role configured.')
 
