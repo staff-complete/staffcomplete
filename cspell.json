@@ -86,6 +86,7 @@
     "semgrep",
     "BYPASSRLS",
     "rolbypassrls",
-    "Vite"
+    "Vite",
+    "unstub"
   ]
 }
