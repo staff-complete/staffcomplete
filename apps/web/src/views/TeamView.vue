@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { z } from 'zod'
+import { useTrialStatus } from '../composables/useTrialStatus'
 import OrgSwitcher from '../components/OrgSwitcher.vue'
 import TrialBanner from '../components/TrialBanner.vue'
 
 type Invite = { id: string; email: string; role: string; expiresAt: string; createdAt: string }
+
+const { data: trialStatus } = useTrialStatus()
+// UX only — the server-side source of truth is blockMutationsWhenExpired
+// (apps/api/src/middleware/trial-lock.ts), which these same POST/DELETE
+// requests hit regardless of what the button here allows.
+const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const invites = ref<Invite[]>([])
 const loadingInvites = ref(true)
@@ -36,6 +43,8 @@ async function loadInvites() {
 onMounted(loadInvites)
 
 async function submit() {
+  if (isReadOnly.value) return
+
   errors.value = {}
   serverError.value = ''
   successMessage.value = ''
@@ -79,6 +88,8 @@ async function submit() {
 }
 
 async function revoke(id: string) {
+  if (isReadOnly.value) return
+
   await fetch(`/api/invites/${id}`, { method: 'DELETE' })
   await loadInvites()
 }
@@ -100,6 +111,10 @@ async function revoke(id: string) {
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
         <h2 class="text-lg font-semibold text-brand-dark mb-4">Invite a team member</h2>
+
+        <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
+          Your trial has ended. Subscribe to invite more teammates.
+        </p>
 
         <form class="space-y-4" @submit.prevent="submit">
           <div class="flex gap-3">
@@ -148,9 +163,9 @@ async function revoke(id: string) {
 
           <button
             type="submit"
-            :disabled="loading"
+            :disabled="loading || isReadOnly"
             class="bg-brand-teal text-white py-2.5 px-5 rounded-lg text-sm font-semibold transition-opacity"
-            :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
+            :class="loading || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
           >
             {{ loading ? 'Sending…' : 'Send invite' }}
           </button>
@@ -174,7 +189,9 @@ async function revoke(id: string) {
             </div>
             <button
               type="button"
-              class="text-sm text-red-500 font-medium hover:underline"
+              :disabled="isReadOnly"
+              class="text-sm text-red-500 font-medium"
+              :class="isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:underline'"
               @click="revoke(invite.id)"
             >
               Revoke
