@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   invitationFindManyMock: vi.fn(),
   organizationFindFirstMock: vi.fn(),
   userFindFirstMock: vi.fn(),
+  subscriptionFindFirstMock: vi.fn(),
   createInvitationMock: vi.fn(),
   cancelInvitationMock: vi.fn(),
   acceptInvitationMock: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock('../db/index.js', () => ({
           findFirst: mocks.invitationFindFirstMock,
           findMany: mocks.invitationFindManyMock,
         },
+        subscription: { findFirst: mocks.subscriptionFindFirstMock },
       },
     }),
 }))
@@ -86,6 +88,10 @@ beforeEach(() => {
   mocks.invitationFindManyMock.mockReset()
   mocks.organizationFindFirstMock.mockReset()
   mocks.userFindFirstMock.mockReset()
+  mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
+    status: 'trialing',
+    trialEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  })
   mocks.createInvitationMock.mockReset()
   mocks.cancelInvitationMock.mockReset()
   mocks.acceptInvitationMock.mockReset()
@@ -173,6 +179,19 @@ describe('POST /api/invites', () => {
     })
   })
 
+  it('rejects when the org trial has expired', async () => {
+    adminSession()
+    mocks.subscriptionFindFirstMock.mockResolvedValue({
+      status: 'expired',
+      trialEndsAt: new Date(Date.now() - 1000),
+    })
+
+    const res = await postInvite({ email: 'someone@example.com', role: 'member' })
+
+    expect(res.status).toBe(402)
+    expect(mocks.createInvitationMock).not.toHaveBeenCalled()
+  })
+
   it('rejects invalid input with a validation error', async () => {
     const res = await postInvite({ email: 'not-an-email', role: 'member' })
 
@@ -222,6 +241,19 @@ describe('DELETE /api/invites/:id', () => {
     const res = await app.request('/api/invites/invite-1', { method: 'DELETE' })
 
     expect(res.status).toBe(404)
+    expect(mocks.cancelInvitationMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the org trial has expired', async () => {
+    adminSession()
+    mocks.subscriptionFindFirstMock.mockResolvedValue({
+      status: 'expired',
+      trialEndsAt: new Date(Date.now() - 1000),
+    })
+
+    const res = await app.request('/api/invites/invite-1', { method: 'DELETE' })
+
+    expect(res.status).toBe(402)
     expect(mocks.cancelInvitationMock).not.toHaveBeenCalled()
   })
 })

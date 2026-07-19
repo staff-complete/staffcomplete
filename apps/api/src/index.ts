@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { auth } from './auth.js'
 import { runTrialLifecycleScan } from './jobs/trial-lifecycle-scan.js'
 import { queue, startQueue, stopQueue } from './queue/index.js'
+import { billingRouter } from './routes/billing.js'
 import { invitesRouter } from './routes/invites.js'
 import { onboardRouter } from './routes/onboard.js'
 
@@ -22,6 +23,7 @@ app.on(['GET', 'POST'], '/api/auth/**', (c) => auth.handler(c.req.raw))
 
 app.route('/api/onboard', onboardRouter)
 app.route('/api/invites', invitesRouter)
+app.route('/api/billing', billingRouter)
 
 app.use('/*', serveStatic({ root: './public' }))
 app.use('/*', serveStatic({ path: './public/index.html' }))
