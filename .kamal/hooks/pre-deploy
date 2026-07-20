@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Kamal runs this on the machine invoking `kamal deploy` (the GitHub Actions
+# runner), before the new container swaps in — see ADR-0008 and the
+# new-migration skill. Migrations aren't baked into the runner image (kept
+# deliberately minimal, prod deps only), so they run from here instead,
+# through an SSH tunnel to the Postgres accessory's host-mapped loopback
+# port (see config/deploy.yml's `127.0.0.1:5432:5432`) — the runner can't
+# resolve the `kamal` Docker network's internal hostname directly.
+
+REMOTE_HOST="${KAMAL_HOSTS%%,*}"
+TUNNEL_PORT=15432
+
+ssh -o StrictHostKeyChecking=yes -N -L "${TUNNEL_PORT}:127.0.0.1:5432" "deploy@${REMOTE_HOST}" &
+TUNNEL_PID=$!
+
+cleanup() {
+  kill "$TUNNEL_PID" 2>/dev/null || true
+  rm -f .env
+}
+trap cleanup EXIT
+
+for _ in $(seq 1 10); do
+  (exec 3<>"/dev/tcp/127.0.0.1/${TUNNEL_PORT}") 2>/dev/null && exec 3<&- 3>&- && break
+  sleep 1
+done
+
+# Same production credentials, just routed through the tunnel above instead
+# of the internal hostname the deployed containers use. The credential
+# portion is matched up to the *last* @ (greedy) rather than the first, so a
+# password containing an @ can't get truncated mid-parse.
+tunnel_host="127.0.0.1:${TUNNEL_PORT}"
+tunneled_database_url=$(echo "$DATABASE_URL" | sed -E "s#^(.*)@[^/]*/#\1@${tunnel_host}/#")
+tunneled_tenant_database_url=$(echo "$TENANT_DATABASE_URL" | sed -E "s#^(.*)@[^/]*/#\1@${tunnel_host}/#")
+tenant_postgres_password=$(echo "$TENANT_DATABASE_URL" | sed -E 's#^[^:]+://[^:]+:(.*)@[^@]*$#\1#')
+
+cat > .env <<ENV
+DATABASE_URL=${tunneled_database_url}
+TENANT_DATABASE_URL=${tunneled_tenant_database_url}
+TENANT_POSTGRES_PASSWORD=${tenant_postgres_password}
+ENV
+
+pnpm --filter @staffcomplete/api db:migrate
