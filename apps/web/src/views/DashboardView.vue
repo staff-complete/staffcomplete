@@ -48,6 +48,9 @@ async function logout() {
           <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline">
             Manage checklist templates →
           </RouterLink>
+          <RouterLink to="/runs" class="text-sm text-brand-teal font-medium hover:underline">
+            Start an onboarding run →
+          </RouterLink>
         </div>
       </div>
     </div>

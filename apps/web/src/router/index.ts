@@ -77,6 +77,12 @@ const router = createRouter({
       component: () => import('../views/WorkflowEditorView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    {
+      path: '/runs',
+      name: 'runs',
+      component: () => import('../views/RunsView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
   ],
 })
 

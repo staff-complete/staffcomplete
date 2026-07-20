@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm'
-import { boolean, integer, pgPolicy, pgRole, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  date,
+  integer,
+  pgPolicy,
+  pgRole,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 
 // Non-superuser role used for tenant-scoped queries (see ADR-0012). LOGIN and
 // PASSWORD aren't managed here — apps/api/src/db/setup-tenant-role.ts handles
@@ -187,6 +196,70 @@ export const workflowTemplateStep = pgTable(
   },
   (table) => [
     pgPolicy('workflow_template_step_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
+// A workflow template instantiated for a specific employee (issue #25).
+// workflowTemplateId is nullable/set-null on delete because employeeName,
+// employeeRole, eventDate and `type` are captured here at creation time and
+// the steps are copied onto runStep — a run must keep its own history even
+// if the template it started from is edited or deleted later.
+export const run = pgTable(
+  'run',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    workflowTemplateId: text('workflowTemplateId').references(() => workflowTemplate.id, {
+      onDelete: 'set null',
+    }),
+    type: text('type').notNull(), // onboarding | offboarding
+    employeeName: text('employeeName').notNull(),
+    employeeEmail: text('employeeEmail').notNull(),
+    employeeRole: text('employeeRole').notNull(),
+    eventDate: date('eventDate').notNull(), // onboarding start date / offboarding last day
+    status: text('status').notNull().default('pending'), // pending | in_progress | completed
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  },
+  (table) => [
+    pgPolicy('run_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
+export const runStep = pgTable(
+  'run_step',
+  {
+    id: text('id').primaryKey(),
+    runId: text('runId')
+      .notNull()
+      .references(() => run.id, { onDelete: 'cascade' }),
+    // Denormalized per ADR-0005 ("every tenant-scoped table must have a
+    // tenant_id column") — RLS policies can't join through runId.
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    type: text('type').notNull(), // automated | manual
+    assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }),
+    dueDateOffsetDays: integer('dueDateOffsetDays'), // manual steps only
+    status: text('status').notNull().default('pending'), // pending | completed
+    position: integer('position').notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => [
+    pgPolicy('run_step_tenant_isolation', {
       for: 'all',
       to: tenantRole,
       using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
