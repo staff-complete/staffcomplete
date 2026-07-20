@@ -10,7 +10,7 @@
     "test": "TENANT_DATABASE_URL=postgres://localhost:5432/staffcomplete vitest run --passWithNoTests",
     "test:coverage": "TENANT_DATABASE_URL=postgres://localhost:5432/staffcomplete vitest run --coverage --coverage.reporter=lcov --passWithNoTests",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "dotenv -e ../../.env -- drizzle-kit migrate && pnpm run db:setup-roles",
+    "db:migrate": "dotenv -e ../../.env -- tsx src/db/migrate.ts && pnpm run db:setup-roles",
     "db:push": "dotenv -e ../../.env -- drizzle-kit push",
     "db:setup-roles": "dotenv -e ../../.env -- tsx src/db/setup-tenant-role.ts"
   },
