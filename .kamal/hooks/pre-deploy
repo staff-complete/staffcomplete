@@ -18,7 +18,7 @@ migrate_log=""
 
 cleanup() {
   kill "$TUNNEL_PID" 2>/dev/null || true
-  rm -f .env "$migrate_log"
+  rm -f "$migrate_log"
 }
 trap cleanup EXIT
 
@@ -32,15 +32,21 @@ done
 # portion is matched up to the *last* @ (greedy) rather than the first, so a
 # password containing an @ can't get truncated mid-parse.
 tunnel_host="127.0.0.1:${TUNNEL_PORT}"
+tenant_postgres_password=$(echo "$TENANT_DATABASE_URL" | sed -E 's#^[^:]+://[^:]+:(.*)@[^@]*$#\1#')
 tunneled_database_url=$(echo "$DATABASE_URL" | sed -E "s#^(.*)@[^/]*/#\1@${tunnel_host}/#")
 tunneled_tenant_database_url=$(echo "$TENANT_DATABASE_URL" | sed -E "s#^(.*)@[^/]*/#\1@${tunnel_host}/#")
-tenant_postgres_password=$(echo "$TENANT_DATABASE_URL" | sed -E 's#^[^:]+://[^:]+:(.*)@[^@]*$#\1#')
 
-cat > .env <<ENV
-DATABASE_URL=${tunneled_database_url}
-TENANT_DATABASE_URL=${tunneled_tenant_database_url}
-TENANT_POSTGRES_PASSWORD=${tenant_postgres_password}
-ENV
+# Exported (not just assigned) on purpose: dotenv-cli — which the api
+# package's db:migrate/db:setup-roles scripts invoke via `dotenv -e ../../.env`
+# — only fills in variables that aren't already set, and DATABASE_URL /
+# TENANT_DATABASE_URL are already present in this process's environment
+# (inherited from kamal deploy's own env, still pointing at the untunneled
+# internal hostname). Writing the tunneled values to a .env file, as this
+# hook used to, was therefore silently ignored; exporting them directly is
+# what actually makes the child process pick up the tunnel instead.
+export DATABASE_URL="$tunneled_database_url"
+export TENANT_DATABASE_URL="$tunneled_tenant_database_url"
+export TENANT_POSTGRES_PASSWORD="$tenant_postgres_password"
 
 # drizzle-kit's migrate spinner writes \r/ANSI redraws that overwrite the
 # real error before the process exits, so a plain invocation here loses the
