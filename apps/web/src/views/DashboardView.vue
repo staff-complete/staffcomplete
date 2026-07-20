@@ -41,13 +41,14 @@ async function logout() {
           Signed in as
           <span class="font-medium text-brand-dark">{{ session.data?.user.email }}</span>
         </p>
-        <RouterLink
-          v-if="isAdmin"
-          to="/team"
-          class="inline-block mt-6 text-sm text-brand-teal font-medium hover:underline"
-        >
-          Invite a team member →
-        </RouterLink>
+        <div v-if="isAdmin" class="mt-6 flex flex-col gap-2 items-start">
+          <RouterLink to="/team" class="text-sm text-brand-teal font-medium hover:underline">
+            Invite a team member →
+          </RouterLink>
+          <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline">
+            Manage checklist templates →
+          </RouterLink>
+        </div>
       </div>
     </div>
   </div>

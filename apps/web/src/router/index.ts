@@ -65,6 +65,18 @@ const router = createRouter({
       component: () => import('../views/BillingView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    {
+      path: '/workflows',
+      name: 'workflows',
+      component: () => import('../views/WorkflowsView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/workflows/:id',
+      name: 'workflow-editor',
+      component: () => import('../views/WorkflowEditorView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
   ],
 })
 
