@@ -14,10 +14,11 @@ TUNNEL_PORT=15432
 
 ssh -o StrictHostKeyChecking=yes -N -L "${TUNNEL_PORT}:127.0.0.1:5432" "deploy@${REMOTE_HOST}" &
 TUNNEL_PID=$!
+migrate_log=""
 
 cleanup() {
   kill "$TUNNEL_PID" 2>/dev/null || true
-  rm -f .env
+  rm -f .env "$migrate_log"
 }
 trap cleanup EXIT
 
@@ -41,4 +42,14 @@ TENANT_DATABASE_URL=${tunneled_tenant_database_url}
 TENANT_POSTGRES_PASSWORD=${tenant_postgres_password}
 ENV
 
-pnpm --filter @staffcomplete/api db:migrate
+# drizzle-kit's migrate spinner writes \r/ANSI redraws that overwrite the
+# real error before the process exits, so a plain invocation here loses the
+# actual failure reason. Redirecting to a regular file sidesteps that (and
+# the separate async-pipe truncation risk on process.exit) since file writes
+# don't get dropped the way a piped stdout can — then we dump it either way.
+migrate_log="$(mktemp)"
+if ! pnpm --filter @staffcomplete/api db:migrate > "$migrate_log" 2>&1; then
+  cat "$migrate_log"
+  exit 1
+fi
+cat "$migrate_log"
