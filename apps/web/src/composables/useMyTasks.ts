@@ -31,8 +31,12 @@ export function useMyTasks() {
 }
 
 export async function completeTask(id: string): Promise<void> {
-  const res = await fetch(`/api/tasks/${id}/complete`, { method: 'POST' })
-  if (!res.ok) {
-    throw new Error('Failed to complete task')
+  try {
+    const res = await fetch(`/api/tasks/${id}/complete`, { method: 'POST' })
+    if (!res.ok) {
+      throw new Error('Failed to complete task')
+    }
+  } catch (err) {
+    throw err instanceof Error ? err : new Error('Failed to complete task')
   }
 }
