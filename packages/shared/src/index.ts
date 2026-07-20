@@ -3,6 +3,7 @@ import { z } from 'zod'
 export type { Job, JobHandler, Queue } from './queue.js'
 export { createRunSchema } from './run.js'
 export type { CreateRunInput } from './run.js'
+export { computeDueDate, isTaskOverdue } from './task.js'
 export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'
 export type { TrialState } from './trial.js'
 export {

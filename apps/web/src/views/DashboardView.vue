@@ -41,16 +41,21 @@ async function logout() {
           Signed in as
           <span class="font-medium text-brand-dark">{{ session.data?.user.email }}</span>
         </p>
-        <div v-if="isAdmin" class="mt-6 flex flex-col gap-2 items-start">
-          <RouterLink to="/team" class="text-sm text-brand-teal font-medium hover:underline">
-            Invite a team member →
+        <div class="mt-6 flex flex-col gap-2 items-start">
+          <RouterLink to="/tasks" class="text-sm text-brand-teal font-medium hover:underline">
+            My tasks →
           </RouterLink>
-          <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline">
-            Manage checklist templates →
-          </RouterLink>
-          <RouterLink to="/runs" class="text-sm text-brand-teal font-medium hover:underline">
-            Start an onboarding run →
-          </RouterLink>
+          <template v-if="isAdmin">
+            <RouterLink to="/team" class="text-sm text-brand-teal font-medium hover:underline">
+              Invite a team member →
+            </RouterLink>
+            <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline">
+              Manage checklist templates →
+            </RouterLink>
+            <RouterLink to="/runs" class="text-sm text-brand-teal font-medium hover:underline">
+              Start an onboarding run →
+            </RouterLink>
+          </template>
         </div>
       </div>
     </div>

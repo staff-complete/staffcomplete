@@ -9,6 +9,7 @@ import { billingRouter } from './routes/billing.js'
 import { invitesRouter } from './routes/invites.js'
 import { onboardRouter } from './routes/onboard.js'
 import { runsRouter } from './routes/runs.js'
+import { tasksRouter } from './routes/tasks.js'
 import { workflowsRouter } from './routes/workflows.js'
 
 // Daily scan handling both the 3-day trial-reminder email and flipping
@@ -28,6 +29,7 @@ app.route('/api/invites', invitesRouter)
 app.route('/api/billing', billingRouter)
 app.route('/api/workflows', workflowsRouter)
 app.route('/api/runs', runsRouter)
+app.route('/api/tasks', tasksRouter)
 
 app.use('/*', serveStatic({ root: './public' }))
 app.use('/*', serveStatic({ path: './public/index.html' }))
