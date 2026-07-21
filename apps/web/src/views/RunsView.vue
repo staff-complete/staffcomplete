@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 import { z } from 'zod'
 import { useTrialStatus } from '../composables/useTrialStatus'
@@ -7,6 +8,12 @@ import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
 import { useRuns } from '../composables/useRuns'
 import OrgSwitcher from '../components/OrgSwitcher.vue'
 import TrialBanner from '../components/TrialBanner.vue'
+
+const route = useRoute()
+const type = computed(() => route.params.type as 'onboarding' | 'offboarding')
+const eventDateLabel = computed(() =>
+  type.value === 'offboarding' ? 'Last working day' : 'Start date',
+)
 
 const { data: trialStatus } = useTrialStatus()
 // UX only — the server-side source of truth is blockMutationsWhenExpired
@@ -16,11 +23,12 @@ const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const queryClient = useQueryClient()
 const { data: templates, isLoading: templatesLoading } = useWorkflowTemplates()
-const onboardingTemplates = computed(
-  () => templates.value?.filter((t) => t.type === 'onboarding') ?? [],
+const matchingTemplates = computed(
+  () => templates.value?.filter((t) => t.type === type.value) ?? [],
 )
 
 const { data: runs, isLoading: runsLoading } = useRuns()
+const matchingRuns = computed(() => runs.value?.filter((r) => r.type === type.value) ?? [])
 
 const form = ref({
   workflowTemplateId: '',
@@ -33,6 +41,22 @@ const errors = ref<Record<string, string>>({})
 const serverError = ref('')
 const successMessage = ref('')
 const starting = ref(false)
+
+// Switching between /runs/onboarding and /runs/offboarding reuses this
+// component — clear stale form state and messages left over from the
+// other type.
+watch(type, () => {
+  form.value = {
+    workflowTemplateId: '',
+    employeeName: '',
+    employeeEmail: '',
+    employeeRole: '',
+    eventDate: '',
+  }
+  errors.value = {}
+  serverError.value = ''
+  successMessage.value = ''
+})
 
 const schema = z.object({
   workflowTemplateId: z.string().min(1, 'Choose a checklist template'),
@@ -68,7 +92,7 @@ async function startRun() {
 
     if (res.ok) {
       const created = (await res.json()) as { employeeName: string; steps: unknown[] }
-      successMessage.value = `Onboarding run started for ${created.employeeName} — ${created.steps.length} ${created.steps.length === 1 ? 'step' : 'steps'} assigned.`
+      successMessage.value = `${type.value === 'offboarding' ? 'Offboarding' : 'Onboarding'} run started for ${created.employeeName} — ${created.steps.length} ${created.steps.length === 1 ? 'step' : 'steps'} assigned.`
       form.value = {
         workflowTemplateId: '',
         employeeName: '',
@@ -95,7 +119,7 @@ async function startRun() {
     <div class="max-w-2xl mx-auto space-y-6">
       <TrialBanner />
       <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">Onboarding runs</h1>
+        <h1 class="text-2xl font-bold text-brand-dark capitalize">{{ type }} runs</h1>
         <div class="flex items-center gap-4">
           <OrgSwitcher />
           <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline"
@@ -105,17 +129,19 @@ async function startRun() {
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">Start an onboarding run</h2>
+        <h2 class="text-lg font-semibold text-brand-dark mb-4 capitalize">
+          Start a {{ type }} run
+        </h2>
 
         <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
-          Your trial has ended. Subscribe to start more onboarding runs.
+          Your trial has ended. Subscribe to start more {{ type }} runs.
         </p>
 
         <p
-          v-else-if="!templatesLoading && onboardingTemplates.length === 0"
+          v-else-if="!templatesLoading && matchingTemplates.length === 0"
           class="text-sm text-gray-500"
         >
-          No onboarding checklist templates yet.
+          No {{ type }} checklist templates yet.
           <RouterLink to="/workflows" class="text-brand-teal font-medium hover:underline"
             >Create one first →</RouterLink
           >
@@ -132,7 +158,7 @@ async function startRun() {
               class="w-full px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
             >
               <option value="" disabled>Select a template</option>
-              <option v-for="t in onboardingTemplates" :key="t.id" :value="t.id">
+              <option v-for="t in matchingTemplates" :key="t.id" :value="t.id">
                 {{ t.name }}
               </option>
             </select>
@@ -206,9 +232,9 @@ async function startRun() {
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="event-date"
-                >Start date</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="event-date">{{
+                eventDateLabel
+              }}</label>
               <input
                 id="event-date"
                 v-model="form.eventDate"
@@ -251,13 +277,14 @@ async function startRun() {
         <h2 class="text-lg font-semibold text-brand-dark mb-4">Active runs</h2>
 
         <p v-if="runsLoading" class="text-sm text-gray-500">Loading…</p>
-        <p v-else-if="!runs || runs.length === 0" class="text-sm text-gray-500">No runs yet.</p>
+        <p v-else-if="matchingRuns.length === 0" class="text-sm text-gray-500">No runs yet.</p>
         <ul v-else class="divide-y divide-brand-border">
-          <li v-for="r in runs" :key="r.id" class="py-3">
+          <li v-for="r in matchingRuns" :key="r.id" class="py-3">
             <p class="text-sm font-medium text-brand-dark">{{ r.employeeName }}</p>
             <p class="text-xs text-gray-500 capitalize">
-              {{ r.type }} · starts {{ r.eventDate }} · {{ r.stepCount }}
-              {{ r.stepCount === 1 ? 'step' : 'steps' }} · {{ r.status }}
+              {{ r.type }} · {{ r.type === 'offboarding' ? 'last day' : 'starts' }}
+              {{ r.eventDate }} · {{ r.stepCount }} {{ r.stepCount === 1 ? 'step' : 'steps' }} ·
+              {{ r.status }}
             </p>
           </li>
         </ul>

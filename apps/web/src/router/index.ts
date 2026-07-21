@@ -78,7 +78,7 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: '/runs',
+      path: '/runs/:type(onboarding|offboarding)',
       name: 'runs',
       component: () => import('../views/RunsView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
