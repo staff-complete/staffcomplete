@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   templateFindFirstMock: vi.fn(),
   templateStepFindManyMock: vi.fn(),
   runFindManyMock: vi.fn(),
+  runFindFirstMock: vi.fn(),
   runStepFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
   insertMock: vi.fn(),
@@ -19,7 +20,7 @@ function tx() {
     query: {
       workflowTemplate: { findFirst: mocks.templateFindFirstMock },
       workflowTemplateStep: { findMany: mocks.templateStepFindManyMock },
-      run: { findMany: mocks.runFindManyMock },
+      run: { findMany: mocks.runFindManyMock, findFirst: mocks.runFindFirstMock },
       runStep: { findMany: mocks.runStepFindManyMock },
       subscription: { findFirst: mocks.subscriptionFindFirstMock },
     },
@@ -76,6 +77,7 @@ beforeEach(() => {
   mocks.templateFindFirstMock.mockReset()
   mocks.templateStepFindManyMock.mockReset()
   mocks.runFindManyMock.mockReset()
+  mocks.runFindFirstMock.mockReset()
   mocks.runStepFindManyMock.mockReset()
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
     status: 'trialing',
@@ -109,7 +111,7 @@ describe('admin gate', () => {
 })
 
 describe('GET /api/runs', () => {
-  it('lists runs with step counts', async () => {
+  it('lists runs with step counts and completed step counts', async () => {
     adminSession()
     mocks.runFindManyMock.mockResolvedValue([
       {
@@ -123,13 +125,96 @@ describe('GET /api/runs', () => {
         createdAt: new Date(),
       },
     ])
-    mocks.runStepFindManyMock.mockResolvedValue([{ runId: 'r1' }, { runId: 'r1' }])
+    mocks.runStepFindManyMock.mockResolvedValue([
+      { runId: 'r1', status: 'completed' },
+      { runId: 'r1', status: 'pending' },
+    ])
 
     const res = await req('/')
     const json = await res.json()
 
     expect(res.status).toBe(200)
-    expect(json.runs).toEqual([expect.objectContaining({ id: 'r1', stepCount: 2 })])
+    expect(json.runs).toEqual([
+      expect.objectContaining({ id: 'r1', stepCount: 2, completedStepCount: 1 }),
+    ])
+  })
+})
+
+describe('GET /api/runs/:id', () => {
+  it('rejects callers with no session', async () => {
+    mocks.getSessionMock.mockResolvedValue(null)
+
+    const res = await req('/r1')
+
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 404 when the run does not exist', async () => {
+    adminSession()
+    mocks.runFindFirstMock.mockResolvedValue(undefined)
+
+    const res = await req('/r1')
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns the run with its steps, due dates, and overdue flags', async () => {
+    adminSession()
+    mocks.runFindFirstMock.mockResolvedValue({
+      id: 'r1',
+      type: 'onboarding',
+      employeeName: 'Jane Doe',
+      employeeEmail: 'jane@example.com',
+      employeeRole: 'Engineer',
+      eventDate: '2020-01-01',
+      status: 'in_progress',
+      createdAt: new Date(),
+    })
+    mocks.runStepFindManyMock.mockResolvedValue([
+      {
+        id: 'rs1',
+        title: 'Order laptop',
+        type: 'manual',
+        assigneeId: 'm1',
+        dueDateOffsetDays: 1,
+        status: 'pending',
+        position: 0,
+      },
+      {
+        id: 'rs2',
+        title: 'Create Slack account',
+        type: 'automated',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        status: 'completed',
+        position: 1,
+      },
+    ])
+
+    const res = await req('/r1')
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json).toEqual(
+      expect.objectContaining({
+        id: 'r1',
+        status: 'in_progress',
+        steps: [
+          expect.objectContaining({
+            id: 'rs1',
+            status: 'pending',
+            dueDate: '2020-01-02',
+            isOverdue: true,
+          }),
+          expect.objectContaining({
+            id: 'rs2',
+            status: 'completed',
+            dueDate: null,
+            isOverdue: false,
+          }),
+        ],
+      }),
+    )
   })
 })
 

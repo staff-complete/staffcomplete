@@ -84,6 +84,18 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
+      path: '/runs/:type(onboarding|offboarding)/history',
+      name: 'runs-history',
+      component: () => import('../views/RunsHistoryView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/runs/:type(onboarding|offboarding)/:id',
+      name: 'run-detail',
+      component: () => import('../views/RunDetailView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/tasks',
       name: 'tasks',
       component: () => import('../views/MyTasksView.vue'),

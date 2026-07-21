@@ -9,6 +9,7 @@ export interface RunSummary {
   eventDate: string
   status: string
   stepCount: number
+  completedStepCount: number
   createdAt: string
 }
 

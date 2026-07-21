@@ -28,7 +28,9 @@ const matchingTemplates = computed(
 )
 
 const { data: runs, isLoading: runsLoading } = useRuns()
-const matchingRuns = computed(() => runs.value?.filter((r) => r.type === type.value) ?? [])
+const activeRuns = computed(
+  () => runs.value?.filter((r) => r.type === type.value && r.status !== 'completed') ?? [],
+)
 
 const form = ref({
   workflowTemplateId: '',
@@ -274,18 +276,27 @@ async function startRun() {
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">Active runs</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-brand-dark">Active runs</h2>
+          <RouterLink
+            :to="`/runs/${type}/history`"
+            class="text-sm text-brand-teal font-medium hover:underline"
+            >View history →</RouterLink
+          >
+        </div>
 
         <p v-if="runsLoading" class="text-sm text-gray-500">Loading…</p>
-        <p v-else-if="matchingRuns.length === 0" class="text-sm text-gray-500">No runs yet.</p>
+        <p v-else-if="activeRuns.length === 0" class="text-sm text-gray-500">No active runs.</p>
         <ul v-else class="divide-y divide-brand-border">
-          <li v-for="r in matchingRuns" :key="r.id" class="py-3">
-            <p class="text-sm font-medium text-brand-dark">{{ r.employeeName }}</p>
-            <p class="text-xs text-gray-500 capitalize">
-              {{ r.type }} · {{ r.type === 'offboarding' ? 'last day' : 'starts' }}
-              {{ r.eventDate }} · {{ r.stepCount }} {{ r.stepCount === 1 ? 'step' : 'steps' }} ·
-              {{ r.status }}
-            </p>
+          <li v-for="r in activeRuns" :key="r.id" class="py-3">
+            <RouterLink :to="`/runs/${type}/${r.id}`" class="block hover:opacity-80">
+              <p class="text-sm font-medium text-brand-dark">{{ r.employeeName }}</p>
+              <p class="text-xs text-gray-500 capitalize">
+                {{ r.type }} · {{ r.type === 'offboarding' ? 'last day' : 'starts' }}
+                {{ r.eventDate }} · {{ r.completedStepCount }} of {{ r.stepCount }}
+                {{ r.stepCount === 1 ? 'step' : 'steps' }} complete · {{ r.status }}
+              </p>
+            </RouterLink>
           </li>
         </ul>
       </div>
