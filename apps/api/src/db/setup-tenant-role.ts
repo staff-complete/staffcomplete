@@ -27,7 +27,22 @@ const sql = postgres(databaseUrl)
 // secret, not user input.
 const escapedPassword = tenantPassword.replace(/'/g, "''")
 
-await sql.unsafe(`ALTER ROLE "staffcomplete_tenant" WITH LOGIN PASSWORD '${escapedPassword}'`)
+try {
+  await sql.unsafe(`ALTER ROLE "staffcomplete_tenant" WITH LOGIN PASSWORD '${escapedPassword}'`)
+} catch (error) {
+  // Deliberately don't rethrow (or attach as `cause`) the original error:
+  // it wraps this exact query, real password included, and postgres.js
+  // only keeps that off the enumerable surface — i.e. out of default error
+  // logging — while its `debug` option is off (see connection.js's
+  // queryError). TENANT_POSTGRES_PASSWORD isn't its own GitHub secret (it's
+  // derived at deploy time from TENANT_DATABASE_URL), so unlike the other
+  // deploy secrets, nothing would auto-redact it from the log if it ever
+  // did surface. Re-throwing only the safe bits means a future `debug: true`
+  // flip on this connection can't turn this into a credential leak.
+  const message = error instanceof Error ? error.message : String(error)
+  const code = error && typeof error === 'object' && 'code' in error ? ` (${error.code})` : ''
+  throw new Error(`Failed to set staffcomplete_tenant role password: ${message}${code}`)
+}
 await sql.unsafe(`GRANT CONNECT ON DATABASE "${databaseName}" TO "staffcomplete_tenant"`)
 await sql`GRANT USAGE ON SCHEMA public TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "invitation" TO "staffcomplete_tenant"`
