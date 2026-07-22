@@ -91,7 +91,7 @@ tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
 
     const [updatedStep] = await tx
       .update(runStep)
-      .set({ status: 'completed' })
+      .set({ status: 'completed', completedAt: new Date() })
       .where(eq(runStep.id, stepId))
       .returning()
 

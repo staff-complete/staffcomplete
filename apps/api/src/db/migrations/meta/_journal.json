@@ -57,6 +57,13 @@
       "when": 1784568043559,
       "tag": "0007_add_run_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784734260732,
+      "tag": "0008_add_run_step_completed_at",
+      "breakpoints": true
     }
   ]
 }

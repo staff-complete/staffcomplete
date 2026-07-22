@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { auth } from './auth.js'
 import { runTrialLifecycleScan } from './jobs/trial-lifecycle-scan.js'
 import { queue, startQueue, stopQueue } from './queue/index.js'
+import { activityRouter } from './routes/activity.js'
 import { billingRouter } from './routes/billing.js'
 import { invitesRouter } from './routes/invites.js'
 import { onboardRouter } from './routes/onboard.js'
@@ -30,6 +31,7 @@ app.route('/api/billing', billingRouter)
 app.route('/api/workflows', workflowsRouter)
 app.route('/api/runs', runsRouter)
 app.route('/api/tasks', tasksRouter)
+app.route('/api/activity', activityRouter)
 
 app.use('/*', serveStatic({ root: './public' }))
 app.use('/*', serveStatic({ path: './public/index.html' }))

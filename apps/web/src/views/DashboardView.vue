@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authClient } from '../lib/auth-client'
+import ActivityFeed from '../components/ActivityFeed.vue'
 import OrgSwitcher from '../components/OrgSwitcher.vue'
 import TrialBanner from '../components/TrialBanner.vue'
 
@@ -67,6 +68,8 @@ async function logout() {
           </template>
         </div>
       </div>
+
+      <ActivityFeed v-if="isAdmin" />
     </div>
   </div>
 </template>

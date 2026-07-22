@@ -257,6 +257,10 @@ export const runStep = pgTable(
     status: text('status').notNull().default('pending'), // pending | completed
     position: integer('position').notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
+    // Set only when status flips to 'completed' (issue #86's activity feed
+    // needs a real completion timestamp — createdAt is when the run started,
+    // not when the step finished).
+    completedAt: timestamp('completedAt'),
   },
   (table) => [
     pgPolicy('run_step_tenant_isolation', {
