@@ -52,6 +52,7 @@ async function saveDetails() {
       serverError.value = t('common.genericError')
       return
     }
+    await activeOrganization.value.refetch()
     successMessage.value = t('settings.saved')
   } catch {
     serverError.value = t('common.networkError')
