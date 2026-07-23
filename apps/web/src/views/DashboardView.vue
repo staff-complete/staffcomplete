@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { authClient } from '../lib/auth-client'
 import ActivityFeed from '../components/ActivityFeed.vue'
 import OrgSwitcher from '../components/OrgSwitcher.vue'
 import TrialBanner from '../components/TrialBanner.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const session = authClient.useSession()
 const activeMemberRole = authClient.useActiveMemberRole()
@@ -26,7 +28,7 @@ async function logout() {
       <TrialBanner />
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
         <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold text-brand-dark">Dashboard</h1>
+          <h1 class="text-2xl font-bold text-brand-dark">{{ t('dashboard.title') }}</h1>
           <div class="flex items-center gap-4">
             <OrgSwitcher />
             <button
@@ -34,36 +36,36 @@ async function logout() {
               class="text-sm font-medium text-brand-teal hover:underline"
               @click="logout"
             >
-              Log out
+              {{ t('dashboard.logOut') }}
             </button>
           </div>
         </div>
         <p class="text-sm text-gray-500">
-          Signed in as
+          {{ t('dashboard.signedInAs') }}
           <span class="font-medium text-brand-dark">{{ session.data?.user.email }}</span>
         </p>
         <div class="mt-6 flex flex-col gap-2 items-start">
           <RouterLink to="/tasks" class="text-sm text-brand-teal font-medium hover:underline">
-            My tasks →
+            {{ t('dashboard.myTasks') }}
           </RouterLink>
           <template v-if="isAdmin">
             <RouterLink to="/team" class="text-sm text-brand-teal font-medium hover:underline">
-              Invite a team member →
+              {{ t('dashboard.inviteTeamMember') }}
             </RouterLink>
             <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline">
-              Manage checklist templates →
+              {{ t('dashboard.manageTemplates') }}
             </RouterLink>
             <RouterLink
               to="/runs/onboarding"
               class="text-sm text-brand-teal font-medium hover:underline"
             >
-              Start an onboarding run →
+              {{ t('dashboard.startOnboarding') }}
             </RouterLink>
             <RouterLink
               to="/runs/offboarding"
               class="text-sm text-brand-teal font-medium hover:underline"
             >
-              Start an offboarding run →
+              {{ t('dashboard.startOffboarding') }}
             </RouterLink>
           </template>
         </div>

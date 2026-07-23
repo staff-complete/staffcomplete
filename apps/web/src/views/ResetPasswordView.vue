@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
 import AppLogo from '../components/AppLogo.vue'
 import { authClient } from '../lib/auth-client'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -17,25 +19,27 @@ const errors = ref<Record<string, string>>({})
 const serverError = ref('')
 const loading = ref(false)
 
-const schema = z
-  .object({
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-      .regex(/[0-9]/, 'Must contain at least one number'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  })
+const schema = computed(() =>
+  z
+    .object({
+      password: z
+        .string()
+        .min(8, t('auth.resetPassword.validationPasswordMin'))
+        .regex(/[A-Z]/, t('auth.resetPassword.validationPasswordUppercase'))
+        .regex(/[0-9]/, t('auth.resetPassword.validationPasswordNumber')),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('auth.resetPassword.validationMismatch'),
+      path: ['confirmPassword'],
+    }),
+)
 
 async function submit() {
   errors.value = {}
   serverError.value = ''
 
-  const result = schema.safeParse(form.value)
+  const result = schema.value.safeParse(form.value)
   if (!result.success) {
     for (const issue of result.error.issues) {
       const field = issue.path[0]
@@ -52,7 +56,7 @@ async function submit() {
   }
 
   if (!token.value) {
-    serverError.value = 'This reset link is invalid. Please request a new one.'
+    serverError.value = t('auth.resetPassword.invalidLinkError')
     return
   }
 
@@ -66,14 +70,14 @@ async function submit() {
     if (error) {
       serverError.value =
         error.code === 'INVALID_TOKEN'
-          ? 'This reset link has expired or already been used. Please request a new one.'
-          : 'Something went wrong. Please try again.'
+          ? t('auth.resetPassword.invalidTokenError')
+          : t('common.genericError')
       return
     }
 
     await router.push({ name: 'sign-in', query: { reset: 'success' } })
   } catch {
-    serverError.value = 'Unable to connect. Please check your connection and try again.'
+    serverError.value = t('common.networkError')
   } finally {
     loading.value = false
   }
@@ -90,21 +94,23 @@ async function submit() {
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
         <template v-if="token">
           <div class="mb-6">
-            <h1 class="text-2xl font-bold text-brand-dark">Set a new password</h1>
-            <p class="text-sm text-gray-500 mt-1">Choose a new password for your account.</p>
+            <h1 class="text-2xl font-bold text-brand-dark">
+              {{ t('auth.resetPassword.title') }}
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">{{ t('auth.resetPassword.subtitle') }}</p>
           </div>
 
           <form class="space-y-4" @submit.prevent="submit">
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="password"
-                >New password</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="password">{{
+                t('auth.resetPassword.newPasswordLabel')
+              }}</label>
               <input
                 id="password"
                 v-model="form.password"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Min. 8 characters"
+                :placeholder="t('auth.resetPassword.newPasswordPlaceholder')"
                 class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
                 :class="
                   errors.password
@@ -118,15 +124,15 @@ async function submit() {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="confirmPassword"
-                >Confirm password</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="confirmPassword">{{
+                t('auth.resetPassword.confirmLabel')
+              }}</label>
               <input
                 id="confirmPassword"
                 v-model="form.confirmPassword"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Re-enter your new password"
+                :placeholder="t('auth.resetPassword.confirmPlaceholder')"
                 class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
                 :class="
                   errors.confirmPassword
@@ -149,21 +155,23 @@ async function submit() {
               class="w-full bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold transition-opacity mt-2"
               :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
             >
-              {{ loading ? 'Updating…' : 'Update password' }}
+              {{ loading ? t('auth.resetPassword.submitting') : t('auth.resetPassword.submit') }}
             </button>
           </form>
         </template>
 
         <template v-else>
-          <h1 class="text-2xl font-bold text-brand-dark mb-2">Invalid reset link</h1>
+          <h1 class="text-2xl font-bold text-brand-dark mb-2">
+            {{ t('auth.resetPassword.invalidTitle') }}
+          </h1>
           <p class="text-sm text-gray-500">
-            This password reset link is missing or invalid. Please request a new one.
+            {{ t('auth.resetPassword.invalidBody') }}
           </p>
           <RouterLink
             to="/forgot-password"
             class="block mt-6 text-sm text-brand-teal font-medium hover:underline"
           >
-            Request a new link
+            {{ t('auth.resetPassword.requestNewLink') }}
           </RouterLink>
         </template>
       </div>

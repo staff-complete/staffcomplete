@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
 import AppLogo from '../components/AppLogo.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const form = ref({ name: '', email: '', password: '', company: '' })
@@ -11,16 +13,18 @@ const errors = ref<Record<string, string>>({})
 const serverError = ref('')
 const loading = ref(false)
 
-const schema = z.object({
-  name: z.string().min(2, 'Full name must be at least 2 characters'),
-  email: z.string().email('Valid work email required'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Must contain at least one number'),
-  company: z.string().min(2, 'Company name must be at least 2 characters'),
-})
+const schema = computed(() =>
+  z.object({
+    name: z.string().min(2, t('auth.signUp.validationName')),
+    email: z.string().email(t('auth.signUp.validationEmail')),
+    password: z
+      .string()
+      .min(8, t('auth.signUp.validationPasswordMin'))
+      .regex(/[A-Z]/, t('auth.signUp.validationPasswordUppercase'))
+      .regex(/[0-9]/, t('auth.signUp.validationPasswordNumber')),
+    company: z.string().min(2, t('auth.signUp.validationCompany')),
+  }),
+)
 
 const passwordStrength = computed(() => {
   const p = form.value.password
@@ -36,10 +40,10 @@ const passwordStrength = computed(() => {
 
 const strengthLabel = computed(() => {
   const s = passwordStrength.value
-  if (s <= 1) return 'Weak'
-  if (s <= 2) return 'Fair'
-  if (s <= 3) return 'Good'
-  return 'Strong'
+  if (s <= 1) return t('auth.signUp.strengthWeak')
+  if (s <= 2) return t('auth.signUp.strengthFair')
+  if (s <= 3) return t('auth.signUp.strengthGood')
+  return t('auth.signUp.strengthStrong')
 })
 
 const strengthColor = computed(() => {
@@ -54,7 +58,7 @@ async function submit() {
   errors.value = {}
   serverError.value = ''
 
-  const result = schema.safeParse(form.value)
+  const result = schema.value.safeParse(form.value)
   if (!result.success) {
     for (const issue of result.error.issues) {
       const field = issue.path[0]
@@ -91,12 +95,12 @@ async function submit() {
 
     const data = (await res.json()) as { message?: string }
     if (res.status === 409) {
-      errors.value.email = data.message ?? 'An account with this email already exists.'
+      errors.value.email = data.message ?? t('auth.signUp.emailExists')
     } else {
-      serverError.value = data.message ?? 'Something went wrong. Please try again.'
+      serverError.value = data.message ?? t('common.genericError')
     }
   } catch {
-    serverError.value = 'Unable to connect. Please check your connection and try again.'
+    serverError.value = t('common.networkError')
   } finally {
     loading.value = false
   }
@@ -112,21 +116,21 @@ async function submit() {
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
         <div class="mb-6">
-          <h1 class="text-2xl font-bold text-brand-dark">Create your account</h1>
-          <p class="text-sm text-gray-500 mt-1">Start your free 14-day trial. No card required.</p>
+          <h1 class="text-2xl font-bold text-brand-dark">{{ t('auth.signUp.title') }}</h1>
+          <p class="text-sm text-gray-500 mt-1">{{ t('auth.signUp.subtitle') }}</p>
         </div>
 
         <form class="space-y-4" @submit.prevent="submit">
           <div>
-            <label class="block text-sm font-medium text-brand-dark mb-1" for="name"
-              >Full name</label
-            >
+            <label class="block text-sm font-medium text-brand-dark mb-1" for="name">{{
+              t('auth.signUp.nameLabel')
+            }}</label>
             <input
               id="name"
               v-model="form.name"
               type="text"
               autocomplete="name"
-              placeholder="Jane Smith"
+              :placeholder="t('auth.signUp.namePlaceholder')"
               class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
               :class="
                 errors.name
@@ -138,15 +142,15 @@ async function submit() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-brand-dark mb-1" for="email"
-              >Work email</label
-            >
+            <label class="block text-sm font-medium text-brand-dark mb-1" for="email">{{
+              t('auth.signUp.emailLabel')
+            }}</label>
             <input
               id="email"
               v-model="form.email"
               type="email"
               autocomplete="email"
-              placeholder="jane@company.com"
+              :placeholder="t('auth.signUp.emailPlaceholder')"
               class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
               :class="
                 errors.email
@@ -158,15 +162,15 @@ async function submit() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-brand-dark mb-1" for="password"
-              >Password</label
-            >
+            <label class="block text-sm font-medium text-brand-dark mb-1" for="password">{{
+              t('auth.signUp.passwordLabel')
+            }}</label>
             <input
               id="password"
               v-model="form.password"
               type="password"
               autocomplete="new-password"
-              placeholder="Min. 8 characters"
+              :placeholder="t('auth.signUp.passwordPlaceholder')"
               class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
               :class="
                 errors.password
@@ -189,15 +193,15 @@ async function submit() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-brand-dark mb-1" for="company"
-              >Company name</label
-            >
+            <label class="block text-sm font-medium text-brand-dark mb-1" for="company">{{
+              t('auth.signUp.companyLabel')
+            }}</label>
             <input
               id="company"
               v-model="form.company"
               type="text"
               autocomplete="organization"
-              placeholder="Acme Corp"
+              :placeholder="t('auth.signUp.companyPlaceholder')"
               class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
               :class="
                 errors.company
@@ -218,22 +222,24 @@ async function submit() {
             class="w-full bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold transition-opacity mt-2"
             :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
           >
-            {{ loading ? 'Creating account…' : 'Create account' }}
+            {{ loading ? t('auth.signUp.submitting') : t('auth.signUp.submit') }}
           </button>
         </form>
 
         <p class="text-center text-sm text-gray-500 mt-6">
-          Already have an account?
-          <RouterLink to="/sign-in" class="text-brand-teal font-medium hover:underline"
-            >Sign in</RouterLink
-          >
+          {{ t('auth.signUp.haveAccount') }}
+          <RouterLink to="/sign-in" class="text-brand-teal font-medium hover:underline">{{
+            t('auth.signUp.signInLink')
+          }}</RouterLink>
         </p>
       </div>
 
       <p class="text-center text-xs text-gray-400 mt-6">
-        By creating an account you agree to our
-        <a href="/terms" class="underline">Terms</a> and
-        <a href="/privacy" class="underline">Privacy Policy</a>.
+        {{ t('auth.signUp.termsPrefix') }}
+        <a href="/terms" class="underline">{{ t('auth.signUp.termsLink') }}</a>
+        {{ t('auth.signUp.and') }}
+        <a href="/privacy" class="underline">{{ t('auth.signUp.privacyLink') }}</a
+        >.
       </p>
     </div>
   </div>

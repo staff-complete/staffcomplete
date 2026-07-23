@@ -1,22 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
 import AppLogo from '../components/AppLogo.vue'
 import { authClient } from '../lib/auth-client'
+
+const { t } = useI18n()
 
 const email = ref('')
 const error = ref('')
 const loading = ref(false)
 const submitted = ref(false)
 
-const schema = z.string().email('Valid email required')
+const schema = computed(() => z.string().email(t('auth.forgotPassword.validationEmail')))
 
 async function submit() {
   error.value = ''
 
-  const result = schema.safeParse(email.value)
+  const result = schema.value.safeParse(email.value)
   if (!result.success) {
-    error.value = result.error.issues[0]?.message ?? 'Valid email required'
+    error.value = result.error.issues[0]?.message ?? t('auth.forgotPassword.validationEmail')
     return
   }
 
@@ -49,21 +52,23 @@ async function submit() {
 
       <div v-if="!submitted" class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
         <div class="mb-6">
-          <h1 class="text-2xl font-bold text-brand-dark">Forgot your password?</h1>
+          <h1 class="text-2xl font-bold text-brand-dark">{{ t('auth.forgotPassword.title') }}</h1>
           <p class="text-sm text-gray-500 mt-1">
-            Enter your email and we'll send you a link to reset it.
+            {{ t('auth.forgotPassword.subtitle') }}
           </p>
         </div>
 
         <form class="space-y-4" @submit.prevent="submit">
           <div>
-            <label class="block text-sm font-medium text-brand-dark mb-1" for="email">Email</label>
+            <label class="block text-sm font-medium text-brand-dark mb-1" for="email">{{
+              t('auth.forgotPassword.emailLabel')
+            }}</label>
             <input
               id="email"
               v-model="email"
               type="email"
               autocomplete="email"
-              placeholder="jane@company.com"
+              :placeholder="t('auth.forgotPassword.emailPlaceholder')"
               class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
               :class="
                 error
@@ -80,14 +85,14 @@ async function submit() {
             class="w-full bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold transition-opacity mt-2"
             :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
           >
-            {{ loading ? 'Sending…' : 'Send reset link' }}
+            {{ loading ? t('auth.forgotPassword.submitting') : t('auth.forgotPassword.submit') }}
           </button>
         </form>
 
         <p class="text-center text-sm text-gray-500 mt-6">
-          <RouterLink to="/sign-in" class="text-brand-teal font-medium hover:underline"
-            >← Back to sign in</RouterLink
-          >
+          <RouterLink to="/sign-in" class="text-brand-teal font-medium hover:underline">{{
+            t('auth.forgotPassword.backToSignIn')
+          }}</RouterLink>
         </p>
       </div>
 
@@ -110,17 +115,18 @@ async function submit() {
           </svg>
         </div>
 
-        <h1 class="text-2xl font-bold text-brand-dark mb-2">Check your email</h1>
+        <h1 class="text-2xl font-bold text-brand-dark mb-2">
+          {{ t('auth.forgotPassword.checkTitle') }}
+        </h1>
         <p class="text-sm text-gray-500">
-          If an account exists for <span class="font-medium text-brand-dark">{{ email }}</span
-          >, we've sent a link to reset your password. The link expires in 1 hour.
+          {{ t('auth.forgotPassword.checkBody', { email }) }}
         </p>
 
         <RouterLink
           to="/sign-in"
           class="block mt-6 text-sm text-brand-teal font-medium hover:underline"
         >
-          ← Back to sign in
+          {{ t('auth.forgotPassword.backToSignIn') }}
         </RouterLink>
       </div>
     </div>

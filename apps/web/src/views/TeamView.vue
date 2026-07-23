@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
+import { SUPPORTED_LOCALES, type Locale } from '@staffcomplete/shared'
 import { useTrialStatus } from '../composables/useTrialStatus'
+import { authClient } from '../lib/auth-client'
 import OrgSwitcher from '../components/OrgSwitcher.vue'
 import TrialBanner from '../components/TrialBanner.vue'
 
 type Invite = { id: string; email: string; role: string; expiresAt: string; createdAt: string }
+
+const { t } = useI18n()
 
 const { data: trialStatus } = useTrialStatus()
 // UX only — the server-side source of truth is blockMutationsWhenExpired
@@ -22,10 +27,12 @@ const serverError = ref('')
 const successMessage = ref('')
 const loading = ref(false)
 
-const schema = z.object({
-  email: z.string().email('Valid email required'),
-  role: z.enum(['admin', 'member']),
-})
+const schema = computed(() =>
+  z.object({
+    email: z.string().email(t('team.validationEmail')),
+    role: z.enum(['admin', 'member']),
+  }),
+)
 
 async function loadInvites() {
   loadingInvites.value = true
@@ -49,7 +56,7 @@ async function submit() {
   serverError.value = ''
   successMessage.value = ''
 
-  const result = schema.safeParse(form.value)
+  const result = schema.value.safeParse(form.value)
   if (!result.success) {
     for (const issue of result.error.issues) {
       const field = issue.path[0]
@@ -68,7 +75,7 @@ async function submit() {
     })
 
     if (res.ok) {
-      successMessage.value = `Invite sent to ${form.value.email}.`
+      successMessage.value = t('team.successMessage', { email: form.value.email })
       form.value = { email: '', role: 'member' }
       await loadInvites()
       return
@@ -76,12 +83,12 @@ async function submit() {
 
     const data = (await res.json()) as { message?: string }
     if (res.status === 409) {
-      errors.value.email = data.message ?? 'An invite or account already exists for this email.'
+      errors.value.email = data.message ?? t('team.emailExists')
     } else {
-      serverError.value = data.message ?? 'Something went wrong. Please try again.'
+      serverError.value = data.message ?? t('common.genericError')
     }
   } catch {
-    serverError.value = 'Unable to connect. Please check your connection and try again.'
+    serverError.value = t('common.networkError')
   } finally {
     loading.value = false
   }
@@ -93,6 +100,30 @@ async function revoke(id: string) {
   await fetch(`/api/invites/${id}`, { method: 'DELETE' })
   await loadInvites()
 }
+
+const activeOrganization = authClient.useActiveOrganization()
+const savingLocale = ref(false)
+const localeMessage = ref('')
+const localeError = ref('')
+
+async function changeLocale(event: Event) {
+  const locale = (event.target as HTMLSelectElement).value as Locale
+  localeMessage.value = ''
+  localeError.value = ''
+  savingLocale.value = true
+  try {
+    const { error } = await authClient.organization.update({ data: { locale } })
+    if (error) {
+      localeError.value = t('team.languageError')
+      return
+    }
+    localeMessage.value = t('team.languageSaved')
+  } catch {
+    localeError.value = t('team.languageError')
+  } finally {
+    savingLocale.value = false
+  }
+}
 </script>
 
 <template>
@@ -100,34 +131,53 @@ async function revoke(id: string) {
     <div class="max-w-2xl mx-auto space-y-6">
       <TrialBanner />
       <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">Team</h1>
+        <h1 class="text-2xl font-bold text-brand-dark">{{ t('team.title') }}</h1>
         <div class="flex items-center gap-4">
           <OrgSwitcher />
-          <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline"
-            >← Back to dashboard</RouterLink
-          >
+          <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline">{{
+            t('common.backToDashboard')
+          }}</RouterLink>
         </div>
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">Invite a team member</h2>
+        <h2 class="text-lg font-semibold text-brand-dark mb-1">{{ t('team.languageHeading') }}</h2>
+        <p class="text-sm text-gray-500 mb-4">{{ t('team.languageDescription') }}</p>
+
+        <select
+          :value="activeOrganization.data?.locale"
+          :disabled="savingLocale"
+          class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
+          @change="changeLocale"
+        >
+          <option v-for="loc in SUPPORTED_LOCALES" :key="loc" :value="loc">
+            {{ t(`locale.${loc}`) }}
+          </option>
+        </select>
+
+        <p v-if="localeMessage" class="text-sm text-brand-teal mt-2">{{ localeMessage }}</p>
+        <p v-if="localeError" class="text-sm text-red-500 mt-2">{{ localeError }}</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
+        <h2 class="text-lg font-semibold text-brand-dark mb-4">{{ t('team.inviteHeading') }}</h2>
 
         <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
-          Your trial has ended. Subscribe to invite more teammates.
+          {{ t('team.trialExpired') }}
         </p>
 
         <form class="space-y-4" @submit.prevent="submit">
           <div class="flex gap-3">
             <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="email"
-                >Email</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="email">{{
+                t('team.emailLabel')
+              }}</label>
               <input
                 id="email"
                 v-model="form.email"
                 type="email"
                 autocomplete="email"
-                placeholder="colleague@company.com"
+                :placeholder="t('team.emailPlaceholder')"
                 class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
                 :class="
                   errors.email
@@ -139,14 +189,16 @@ async function revoke(id: string) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="role">Role</label>
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="role">{{
+                t('team.roleLabel')
+              }}</label>
               <select
                 id="role"
                 v-model="form.role"
                 class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
               >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
+                <option value="member">{{ t('team.roleMember') }}</option>
+                <option value="admin">{{ t('team.roleAdmin') }}</option>
               </select>
             </div>
           </div>
@@ -167,16 +219,16 @@ async function revoke(id: string) {
             class="bg-brand-teal text-white py-2.5 px-5 rounded-lg text-sm font-semibold transition-opacity"
             :class="loading || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
           >
-            {{ loading ? 'Sending…' : 'Send invite' }}
+            {{ loading ? t('team.submitting') : t('team.submit') }}
           </button>
         </form>
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">Pending invites</h2>
+        <h2 class="text-lg font-semibold text-brand-dark mb-4">{{ t('team.pendingHeading') }}</h2>
 
-        <p v-if="loadingInvites" class="text-sm text-gray-500">Loading…</p>
-        <p v-else-if="invites.length === 0" class="text-sm text-gray-500">No pending invites.</p>
+        <p v-if="loadingInvites" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
+        <p v-else-if="invites.length === 0" class="text-sm text-gray-500">{{ t('team.empty') }}</p>
         <ul v-else class="divide-y divide-brand-border">
           <li
             v-for="invite in invites"
@@ -185,7 +237,9 @@ async function revoke(id: string) {
           >
             <div>
               <p class="text-sm font-medium text-brand-dark">{{ invite.email }}</p>
-              <p class="text-xs text-gray-500 capitalize">{{ invite.role }}</p>
+              <p class="text-xs text-gray-500">
+                {{ invite.role === 'admin' ? t('team.roleAdmin') : t('team.roleMember') }}
+              </p>
             </div>
             <button
               type="button"
@@ -194,7 +248,7 @@ async function revoke(id: string) {
               :class="isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:underline'"
               @click="revoke(invite.id)"
             >
-              Revoke
+              {{ t('team.revoke') }}
             </button>
           </li>
         </ul>

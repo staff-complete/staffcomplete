@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AppLogo from '../components/AppLogo.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const email = route.query.email as string | undefined
 </script>
@@ -32,19 +34,21 @@ const email = route.query.email as string | undefined
           </svg>
         </div>
 
-        <h1 class="text-2xl font-bold text-brand-dark mb-2">Check your email</h1>
+        <h1 class="text-2xl font-bold text-brand-dark mb-2">{{ t('auth.checkEmail.title') }}</h1>
         <p class="text-sm text-gray-500">
-          We sent a verification link to
-          <span v-if="email" class="font-medium text-brand-dark">{{ email }}</span>
-          <span v-else>your email address</span>. Click the link to activate your account.
+          {{
+            email
+              ? t('auth.checkEmail.bodyWithEmail', { email })
+              : t('auth.checkEmail.bodyWithoutEmail')
+          }}
         </p>
 
         <div class="mt-6 p-4 bg-brand-surface rounded-xl text-left text-sm text-gray-600 space-y-2">
-          <p class="font-medium text-brand-dark">Didn't get the email?</p>
+          <p class="font-medium text-brand-dark">{{ t('auth.checkEmail.helpTitle') }}</p>
           <ul class="list-disc list-inside space-y-1 text-gray-500">
-            <li>Check your spam or junk folder</li>
-            <li>Make sure you entered the right email</li>
-            <li>Links expire after 24 hours</li>
+            <li>{{ t('auth.checkEmail.tipSpam') }}</li>
+            <li>{{ t('auth.checkEmail.tipEmail') }}</li>
+            <li>{{ t('auth.checkEmail.tipExpiry') }}</li>
           </ul>
         </div>
 
@@ -52,7 +56,7 @@ const email = route.query.email as string | undefined
           to="/sign-up"
           class="block mt-6 text-sm text-brand-teal font-medium hover:underline"
         >
-          ← Back to sign up
+          {{ t('auth.checkEmail.backToSignUp') }}
         </RouterLink>
       </div>
     </div>

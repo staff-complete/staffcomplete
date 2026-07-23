@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
@@ -11,6 +12,7 @@ import TrialBanner from '../components/TrialBanner.vue'
 
 type Member = { id: string; user: { name: string; email: string } }
 
+const { t } = useI18n()
 const route = useRoute()
 const id = computed(() => route.params.id as string)
 
@@ -34,9 +36,9 @@ onMounted(async () => {
 })
 
 function memberLabel(memberId: string | null) {
-  if (!memberId) return 'Unassigned'
+  if (!memberId) return t('common.unassigned')
   const member = members.value.find((m) => m.id === memberId)
-  return member ? member.user.name : 'Unassigned'
+  return member ? member.user.name : t('common.unassigned')
 }
 
 const nameForm = ref({ name: '', type: 'onboarding' as 'onboarding' | 'offboarding' })
@@ -45,9 +47,9 @@ const nameError = ref('')
 
 watch(
   template,
-  (t) => {
-    if (t) {
-      nameForm.value = { name: t.name, type: t.type }
+  (loadedTemplate) => {
+    if (loadedTemplate) {
+      nameForm.value = { name: loadedTemplate.name, type: loadedTemplate.type }
     }
   },
   { immediate: true },
@@ -57,7 +59,7 @@ async function saveName() {
   if (isReadOnly.value || !template.value) return
   nameError.value = ''
   if (nameForm.value.name.trim().length < 2) {
-    nameError.value = 'Name must be at least 2 characters'
+    nameError.value = t('workflows.editor.validationName')
     return
   }
   savingName.value = true
@@ -71,7 +73,7 @@ async function saveName() {
       await invalidate()
     } else {
       const data = (await res.json()) as { message?: string }
-      nameError.value = data.message ?? 'Something went wrong. Please try again.'
+      nameError.value = data.message ?? t('common.genericError')
     }
   } finally {
     savingName.value = false
@@ -91,7 +93,7 @@ async function addStep() {
   if (isReadOnly.value) return
   stepError.value = ''
   if (stepForm.value.title.trim().length < 2) {
-    stepError.value = 'Title must be at least 2 characters'
+    stepError.value = t('workflows.editor.validationTitle')
     return
   }
 
@@ -118,7 +120,7 @@ async function addStep() {
     }
 
     const data = (await res.json()) as { message?: string }
-    stepError.value = data.message ?? 'Something went wrong. Please try again.'
+    stepError.value = data.message ?? t('common.genericError')
   } finally {
     addingStep.value = false
   }
@@ -151,30 +153,32 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
       <TrialBanner />
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold text-brand-dark">
-          {{ template?.name ?? 'Checklist template' }}
+          {{ template?.name ?? t('workflows.editor.fallbackTitle') }}
         </h1>
         <div class="flex items-center gap-4">
           <OrgSwitcher />
-          <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline"
-            >← Back to templates</RouterLink
-          >
+          <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline">{{
+            t('workflows.editor.backToTemplates')
+          }}</RouterLink>
         </div>
       </div>
 
-      <p v-if="isLoading" class="text-sm text-gray-500">Loading…</p>
+      <p v-if="isLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
 
       <template v-else-if="template">
         <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
-          Your trial has ended. Subscribe to edit this checklist template.
+          {{ t('workflows.editor.trialExpired') }}
         </p>
 
         <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-          <h2 class="text-lg font-semibold text-brand-dark mb-4">Details</h2>
+          <h2 class="text-lg font-semibold text-brand-dark mb-4">
+            {{ t('workflows.editor.detailsHeading') }}
+          </h2>
           <form class="flex gap-3 items-end" @submit.prevent="saveName">
             <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="template-name"
-                >Name</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="template-name">{{
+                t('workflows.editor.nameLabel')
+              }}</label>
               <input
                 id="template-name"
                 v-model="nameForm.name"
@@ -188,16 +192,16 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="template-type"
-                >Type</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="template-type">{{
+                t('workflows.editor.typeLabel')
+              }}</label>
               <select
                 id="template-type"
                 v-model="nameForm.type"
                 class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
               >
-                <option value="onboarding">Onboarding</option>
-                <option value="offboarding">Offboarding</option>
+                <option value="onboarding">{{ t('common.onboarding') }}</option>
+                <option value="offboarding">{{ t('common.offboarding') }}</option>
               </select>
             </div>
             <button
@@ -208,17 +212,19 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
                 savingName || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'
               "
             >
-              {{ savingName ? 'Saving…' : 'Save' }}
+              {{ savingName ? t('workflows.editor.saving') : t('workflows.editor.save') }}
             </button>
           </form>
           <p v-if="nameError" class="text-xs text-red-500 mt-2">{{ nameError }}</p>
         </div>
 
         <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-          <h2 class="text-lg font-semibold text-brand-dark mb-4">Steps</h2>
+          <h2 class="text-lg font-semibold text-brand-dark mb-4">
+            {{ t('workflows.editor.stepsHeading') }}
+          </h2>
 
           <p v-if="template.steps.length === 0" class="text-sm text-gray-500 mb-4">
-            No steps yet — add the first one below.
+            {{ t('workflows.editor.noSteps') }}
           </p>
           <ol v-else class="divide-y divide-brand-border mb-6">
             <li
@@ -228,10 +234,15 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
             >
               <div class="min-w-0">
                 <p class="text-sm font-medium text-brand-dark truncate">{{ step.title }}</p>
-                <p class="text-xs text-gray-500 capitalize">
-                  {{ step.type }} · {{ memberLabel(step.assigneeId) }}
+                <p class="text-xs text-gray-500">
+                  {{
+                    step.type === 'manual'
+                      ? t('workflows.editor.typeManual')
+                      : t('workflows.editor.typeAutomated')
+                  }}
+                  · {{ memberLabel(step.assigneeId) }}
                   <template v-if="step.type === 'manual' && step.dueDateOffsetDays !== null">
-                    · due {{ step.dueDateOffsetDays }}d after start
+                    {{ t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays }) }}
                   </template>
                 </p>
               </div>
@@ -240,7 +251,7 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
                   type="button"
                   :disabled="isReadOnly || index === 0"
                   class="text-sm text-brand-dark disabled:opacity-30 disabled:cursor-not-allowed hover:text-brand-teal"
-                  aria-label="Move step up"
+                  :aria-label="t('workflows.editor.moveUp')"
                   @click="reorder(step.id, 'up')"
                 >
                   ↑
@@ -249,7 +260,7 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
                   type="button"
                   :disabled="isReadOnly || index === template.steps.length - 1"
                   class="text-sm text-brand-dark disabled:opacity-30 disabled:cursor-not-allowed hover:text-brand-teal"
-                  aria-label="Move step down"
+                  :aria-label="t('workflows.editor.moveDown')"
                   @click="reorder(step.id, 'down')"
                 >
                   ↓
@@ -261,23 +272,25 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
                   :class="isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:underline'"
                   @click="deleteStep(step.id)"
                 >
-                  Delete
+                  {{ t('workflows.editor.delete') }}
                 </button>
               </div>
             </li>
           </ol>
 
           <form class="space-y-4 border-t border-brand-border pt-6" @submit.prevent="addStep">
-            <h3 class="text-sm font-semibold text-brand-dark">Add a step</h3>
+            <h3 class="text-sm font-semibold text-brand-dark">
+              {{ t('workflows.editor.addStepHeading') }}
+            </h3>
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="step-title"
-                >Title</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="step-title">{{
+                t('workflows.editor.titleLabel')
+              }}</label>
               <input
                 id="step-title"
                 v-model="stepForm.title"
                 type="text"
-                placeholder="Order parking permit"
+                :placeholder="t('workflows.editor.titlePlaceholder')"
                 class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
                 :class="
                   stepError
@@ -289,29 +302,29 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
 
             <div class="flex gap-3">
               <div>
-                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-type"
-                  >Type</label
-                >
+                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-type">{{
+                  t('workflows.editor.typeLabel')
+                }}</label>
                 <select
                   id="step-type"
                   v-model="stepForm.type"
                   class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
                 >
-                  <option value="manual">Manual</option>
-                  <option value="automated">Automated</option>
+                  <option value="manual">{{ t('workflows.editor.typeManual') }}</option>
+                  <option value="automated">{{ t('workflows.editor.typeAutomated') }}</option>
                 </select>
               </div>
 
               <div class="flex-1">
-                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-assignee"
-                  >Assignee</label
-                >
+                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-assignee">{{
+                  t('workflows.editor.assigneeLabel')
+                }}</label>
                 <select
                   id="step-assignee"
                   v-model="stepForm.assigneeId"
                   class="w-full px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">{{ t('common.unassigned') }}</option>
                   <option v-for="member in members" :key="member.id" :value="member.id">
                     {{ member.user.name }}
                   </option>
@@ -319,9 +332,9 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
               </div>
 
               <div v-if="stepForm.type === 'manual'">
-                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-due"
-                  >Due (days)</label
-                >
+                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-due">{{
+                  t('workflows.editor.dueDaysLabel')
+                }}</label>
                 <input
                   id="step-due"
                   v-model="stepForm.dueDateOffsetDays"
@@ -345,13 +358,13 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
                 addingStep || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'
               "
             >
-              {{ addingStep ? 'Adding…' : 'Add step' }}
+              {{ addingStep ? t('workflows.editor.submitting') : t('workflows.editor.submit') }}
             </button>
           </form>
         </div>
       </template>
 
-      <p v-else class="text-sm text-gray-500">Checklist template not found.</p>
+      <p v-else class="text-sm text-gray-500">{{ t('workflows.editor.notFound') }}</p>
     </div>
   </div>
 </template>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
 import AppLogo from '../components/AppLogo.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -28,20 +30,32 @@ const serverError = ref('')
 const loading = ref(false)
 const joining = ref(false)
 
-const schema = z
-  .object({
-    name: z.string().min(2, 'Full name must be at least 2 characters'),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-      .regex(/[0-9]/, 'Must contain at least one number'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  })
+const schema = computed(() =>
+  z
+    .object({
+      name: z.string().min(2, t('auth.acceptInvite.validationName')),
+      password: z
+        .string()
+        .min(8, t('auth.acceptInvite.validationPasswordMin'))
+        .regex(/[A-Z]/, t('auth.acceptInvite.validationPasswordUppercase'))
+        .regex(/[0-9]/, t('auth.acceptInvite.validationPasswordNumber')),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('auth.acceptInvite.validationMismatch'),
+      path: ['confirmPassword'],
+    }),
+)
+
+const roleLabel = computed(() =>
+  invite.value?.role === 'admin'
+    ? t('auth.acceptInvite.roleAdmin')
+    : t('auth.acceptInvite.roleMember'),
+)
+
+const orgName = computed(
+  () => invite.value?.organizationName ?? t('auth.acceptInvite.joinTitleFallback'),
+)
 
 onMounted(async () => {
   if (!token.value) {
@@ -75,9 +89,9 @@ async function join() {
     }
 
     const data = (await res.json()) as { message?: string }
-    serverError.value = data.message ?? 'Something went wrong. Please try again.'
+    serverError.value = data.message ?? t('common.genericError')
   } catch {
-    serverError.value = 'Unable to connect. Please check your connection and try again.'
+    serverError.value = t('common.networkError')
   } finally {
     joining.value = false
   }
@@ -87,7 +101,7 @@ async function submit() {
   errors.value = {}
   serverError.value = ''
 
-  const result = schema.safeParse(form.value)
+  const result = schema.value.safeParse(form.value)
   if (!result.success) {
     for (const issue of result.error.issues) {
       const field = issue.path[0]
@@ -120,9 +134,9 @@ async function submit() {
     }
 
     const data = (await res.json()) as { message?: string }
-    serverError.value = data.message ?? 'Something went wrong. Please try again.'
+    serverError.value = data.message ?? t('common.genericError')
   } catch {
-    serverError.value = 'Unable to connect. Please check your connection and try again.'
+    serverError.value = t('common.networkError')
   } finally {
     loading.value = false
   }
@@ -137,17 +151,17 @@ async function submit() {
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <p v-if="checkingInvite" class="text-sm text-gray-500">Checking your invite…</p>
+        <p v-if="checkingInvite" class="text-sm text-gray-500">
+          {{ t('auth.acceptInvite.checking') }}
+        </p>
 
         <template v-else-if="invite && invite.accountExists && invite.sessionMatches">
           <div class="mb-6">
             <h1 class="text-2xl font-bold text-brand-dark">
-              Join {{ invite.organizationName ?? 'this team' }}
+              {{ t('auth.acceptInvite.joinTitle', { org: orgName }) }}
             </h1>
             <p class="text-sm text-gray-500 mt-1">
-              You're signed in as
-              <span class="font-medium text-brand-dark">{{ invite.email }}</span
-              >. Join as {{ invite.role === 'admin' ? 'an admin' : 'a member' }}.
+              {{ t('auth.acceptInvite.signedInAs', { email: invite.email, role: roleLabel }) }}
             </p>
           </div>
 
@@ -162,19 +176,21 @@ async function submit() {
             :class="joining ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
             @click="join"
           >
-            {{ joining ? 'Joining…' : `Join ${invite.organizationName ?? 'team'}` }}
+            {{
+              joining
+                ? t('auth.acceptInvite.joining')
+                : t('auth.acceptInvite.join', { org: orgName })
+            }}
           </button>
         </template>
 
         <template v-else-if="invite && invite.accountExists">
           <div class="mb-6">
             <h1 class="text-2xl font-bold text-brand-dark">
-              Join {{ invite.organizationName ?? 'this team' }}
+              {{ t('auth.acceptInvite.joinTitle', { org: orgName }) }}
             </h1>
             <p class="text-sm text-gray-500 mt-1">
-              You already have a StaffComplete account for
-              <span class="font-medium text-brand-dark">{{ invite.email }}</span
-              >. Sign in to accept this invite.
+              {{ t('auth.acceptInvite.alreadyHaveAccount', { email: invite.email }) }}
             </p>
           </div>
 
@@ -182,33 +198,31 @@ async function submit() {
             :to="{ path: '/sign-in', query: { redirect: route.fullPath } }"
             class="block w-full text-center bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
-            Sign in to accept
+            {{ t('auth.acceptInvite.signInToAccept') }}
           </RouterLink>
         </template>
 
         <template v-else-if="invite">
           <div class="mb-6">
             <h1 class="text-2xl font-bold text-brand-dark">
-              Join {{ invite.organizationName ?? 'your team' }}
+              {{ t('auth.acceptInvite.joinTitle', { org: orgName }) }}
             </h1>
             <p class="text-sm text-gray-500 mt-1">
-              Set a password for
-              <span class="font-medium text-brand-dark">{{ invite.email }}</span> to finish joining
-              as {{ invite.role === 'admin' ? 'an admin' : 'a member' }}.
+              {{ t('auth.acceptInvite.setPasswordBody', { email: invite.email, role: roleLabel }) }}
             </p>
           </div>
 
           <form class="space-y-4" @submit.prevent="submit">
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="name"
-                >Full name</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="name">{{
+                t('auth.acceptInvite.nameLabel')
+              }}</label>
               <input
                 id="name"
                 v-model="form.name"
                 type="text"
                 autocomplete="name"
-                placeholder="Jane Smith"
+                :placeholder="t('auth.acceptInvite.namePlaceholder')"
                 class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
                 :class="
                   errors.name
@@ -220,15 +234,15 @@ async function submit() {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="password"
-                >Password</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="password">{{
+                t('auth.acceptInvite.passwordLabel')
+              }}</label>
               <input
                 id="password"
                 v-model="form.password"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Min. 8 characters"
+                :placeholder="t('auth.acceptInvite.passwordPlaceholder')"
                 class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
                 :class="
                   errors.password
@@ -242,15 +256,15 @@ async function submit() {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="confirmPassword"
-                >Confirm password</label
-              >
+              <label class="block text-sm font-medium text-brand-dark mb-1" for="confirmPassword">{{
+                t('auth.acceptInvite.confirmLabel')
+              }}</label>
               <input
                 id="confirmPassword"
                 v-model="form.confirmPassword"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Re-enter your password"
+                :placeholder="t('auth.acceptInvite.confirmPlaceholder')"
                 class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
                 :class="
                   errors.confirmPassword
@@ -273,22 +287,23 @@ async function submit() {
               class="w-full bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold transition-opacity mt-2"
               :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
             >
-              {{ loading ? 'Joining…' : 'Join team' }}
+              {{ loading ? t('auth.acceptInvite.submitting') : t('auth.acceptInvite.submit') }}
             </button>
           </form>
         </template>
 
         <template v-else>
-          <h1 class="text-2xl font-bold text-brand-dark mb-2">Invalid invite</h1>
+          <h1 class="text-2xl font-bold text-brand-dark mb-2">
+            {{ t('auth.acceptInvite.invalidTitle') }}
+          </h1>
           <p class="text-sm text-gray-500">
-            This invite link is missing, invalid, or has expired. Ask an admin to send you a new
-            one.
+            {{ t('auth.acceptInvite.invalidBody') }}
           </p>
           <RouterLink
             to="/sign-in"
             class="block mt-6 text-sm text-brand-teal font-medium hover:underline"
           >
-            ← Back to sign in
+            {{ t('auth.acceptInvite.backToSignIn') }}
           </RouterLink>
         </template>
       </div>
