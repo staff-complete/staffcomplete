@@ -4,14 +4,13 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { authClient } from '../lib/auth-client'
 import { useRunDetail } from '../composables/useRunDetail'
-import OrgSwitcher from '../components/OrgSwitcher.vue'
-import TrialBanner from '../components/TrialBanner.vue'
+import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
+import { runHealth } from '../lib/runHealth'
 
 type Member = { id: string; user: { name: string; email: string } }
 
 const { t } = useI18n()
 const route = useRoute()
-const type = computed(() => route.params.type as 'onboarding' | 'offboarding')
 const id = computed(() => route.params.id as string)
 
 const { data: run, isLoading } = useRunDetail(id.value)
@@ -19,6 +18,14 @@ const { data: run, isLoading } = useRunDetail(id.value)
 const completedCount = computed(
   () => run.value?.steps.filter((s) => s.status === 'completed').length ?? 0,
 )
+const overdueCount = computed(() => run.value?.steps.filter((s) => s.isOverdue).length ?? 0)
+const statusKey = computed(() =>
+  run.value
+    ? runHealth({ status: run.value.status, overdueStepCount: overdueCount.value })
+    : 'onTrack',
+)
+
+const avatar = computed(() => (run.value ? avatarColorsFor(run.value.employeeName) : null))
 
 const members = ref<Member[]>([])
 onMounted(async () => {
@@ -39,128 +46,138 @@ function stepStatusLabel(step: { status: string; isOverdue: boolean }) {
 }
 
 function stepStatusClass(step: { status: string; isOverdue: boolean }) {
-  if (step.status === 'completed') return 'bg-green-50 text-green-700'
-  if (step.isOverdue) return 'bg-red-50 text-red-600'
-  return 'bg-gray-100 text-gray-600'
-}
-
-function runStatusLabel(status: string) {
-  if (status === 'completed') return t('runs.detail.statusRunCompleted')
-  if (status === 'in_progress') return t('runs.detail.statusRunInProgress')
-  return t('runs.detail.statusRunPending')
+  if (step.status === 'completed') return 'bg-app-success-bg text-app-success'
+  if (step.isOverdue) return 'bg-app-danger-bg text-app-danger-text'
+  return 'bg-app-surface-alt text-app-slate'
 }
 
 const typeLabel = computed(() =>
-  type.value === 'offboarding' ? t('common.offboarding') : t('common.onboarding'),
+  run.value?.type === 'offboarding' ? t('common.offboarding') : t('common.onboarding'),
 )
 </script>
 
 <template>
-  <div class="min-h-screen bg-brand-surface px-4 py-12">
-    <div class="max-w-2xl mx-auto space-y-6">
-      <TrialBanner />
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">
-          {{ run?.employeeName ?? t('runs.detail.fallbackTitle') }}
-        </h1>
-        <div class="flex items-center gap-4">
-          <OrgSwitcher />
-          <RouterLink
-            :to="`/runs/${type}`"
-            class="text-sm text-brand-teal font-medium hover:underline"
-            >{{ t('runs.detail.backToRuns') }}</RouterLink
+  <div>
+    <RouterLink
+      to="/runs"
+      class="mb-5 flex w-fit items-center gap-1.5 text-[14.5px] font-bold text-app-ink"
+    >
+      {{ t('runs.detail.backToRuns') }}
+    </RouterLink>
+
+    <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+
+    <template v-else-if="run">
+      <div class="mb-5 rounded-3xl bg-white p-7">
+        <div class="mb-2.5 flex flex-wrap items-center gap-4.5">
+          <div
+            class="flex h-14.5 w-14.5 shrink-0 items-center justify-center rounded-full text-[19px] font-bold"
+            :style="{ background: avatar?.bg, color: avatar?.color }"
           >
+            {{ initialsFor(run.employeeName) }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <h1 class="mb-1 text-[22px] font-extrabold tracking-tight">{{ run.employeeName }}</h1>
+            <div class="text-[14.5px] text-app-slate">
+              {{ run.employeeRole }} · {{ run.employeeEmail }}
+            </div>
+          </div>
+          <span
+            class="shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold"
+            :class="{
+              'bg-app-success-bg text-app-success': statusKey === 'onTrack',
+              'bg-app-danger-bg text-app-danger-text': statusKey === 'blocked',
+              'bg-app-surface text-app-ink': statusKey === 'completed',
+            }"
+          >
+            {{ t(`runs.status.${statusKey}`) }}
+          </span>
+        </div>
+        <div class="mt-4.5">
+          <div class="mb-2 flex justify-between">
+            <span class="text-[14.5px] font-bold text-app-slate">
+              {{
+                t('common.ofStepsComplete', {
+                  completed: completedCount,
+                  total: run.steps.length,
+                  steps: t('common.steps', run.steps.length),
+                })
+              }}
+            </span>
+            <span class="text-[14.5px] font-extrabold">
+              {{
+                run.steps.length === 0 ? 0 : Math.round((completedCount / run.steps.length) * 100)
+              }}%
+            </span>
+          </div>
+          <div class="h-2.25 overflow-hidden rounded-full bg-app-surface-alt">
+            <div
+              class="h-full rounded-full bg-app-accent"
+              :style="{
+                width: `${run.steps.length === 0 ? 0 : Math.round((completedCount / run.steps.length) * 100)}%`,
+              }"
+            />
+          </div>
         </div>
       </div>
 
-      <p v-if="isLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
-
-      <template v-else-if="run">
-        <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-          <h2 class="text-lg font-semibold text-brand-dark mb-4">
-            {{ t('runs.detail.detailsHeading') }}
-          </h2>
-          <dl class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt class="text-gray-500">{{ t('runs.detail.typeLabel') }}</dt>
-              <dd class="text-brand-dark">{{ typeLabel }}</dd>
-            </div>
-            <div>
-              <dt class="text-gray-500">{{ t('runs.detail.statusLabel') }}</dt>
-              <dd class="text-brand-dark">{{ runStatusLabel(run.status) }}</dd>
-            </div>
-            <div>
-              <dt class="text-gray-500">{{ t('runs.detail.emailLabel') }}</dt>
-              <dd class="text-brand-dark">{{ run.employeeEmail }}</dd>
-            </div>
-            <div>
-              <dt class="text-gray-500">{{ t('runs.detail.roleLabel') }}</dt>
-              <dd class="text-brand-dark">{{ run.employeeRole }}</dd>
-            </div>
-            <div>
-              <dt class="text-gray-500">
-                {{
-                  run.type === 'offboarding'
-                    ? t('runs.detail.lastDayLabel')
-                    : t('runs.detail.startsLabel')
-                }}
-              </dt>
-              <dd class="text-brand-dark">{{ run.eventDate }}</dd>
-            </div>
-            <div>
-              <dt class="text-gray-500">{{ t('runs.detail.progressLabel') }}</dt>
-              <dd class="text-brand-dark">
-                {{
-                  t('common.ofStepsComplete', {
-                    completed: completedCount,
-                    total: run.steps.length,
-                    steps: t('common.steps', run.steps.length),
-                  })
-                }}
-              </dd>
-            </div>
-          </dl>
+      <div class="grid grid-cols-2 gap-4 mb-5 rounded-3xl bg-white p-7 text-sm sm:grid-cols-4">
+        <div>
+          <div class="text-app-muted">{{ t('runs.detail.typeLabel') }}</div>
+          <div class="text-app-ink">{{ typeLabel }}</div>
         </div>
+        <div>
+          <div class="text-app-muted">{{ t('runs.detail.statusLabel') }}</div>
+          <div class="text-app-ink">{{ t(`runs.status.${statusKey}`) }}</div>
+        </div>
+        <div>
+          <div class="text-app-muted">
+            {{
+              run.type === 'offboarding'
+                ? t('runs.detail.lastDayLabel')
+                : t('runs.detail.startsLabel')
+            }}
+          </div>
+          <div class="text-app-ink">{{ run.eventDate }}</div>
+        </div>
+      </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-          <h2 class="text-lg font-semibold text-brand-dark mb-4">
-            {{ t('runs.detail.stepsHeading') }}
-          </h2>
+      <div class="rounded-3xl bg-white px-7 pb-5 pt-2.5">
+        <h2 class="mb-4 px-0 pt-4 text-lg font-extrabold">{{ t('runs.detail.stepsHeading') }}</h2>
 
-          <p v-if="run.steps.length === 0" class="text-sm text-gray-500">
-            {{ t('runs.detail.noSteps') }}
-          </p>
-          <ol v-else class="divide-y divide-brand-border">
-            <li
-              v-for="step in run.steps"
-              :key="step.id"
-              class="flex items-center justify-between py-3 gap-3"
-            >
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-brand-dark truncate">{{ step.title }}</p>
-                <p class="text-xs text-gray-500">
-                  {{
-                    step.type === 'manual'
-                      ? t('workflows.editor.typeManual')
-                      : t('workflows.editor.typeAutomated')
-                  }}
-                  · {{ memberLabel(step.assigneeId) }}
-                  <template v-if="step.dueDate">{{
-                    t('runs.detail.dueLabel', { date: step.dueDate })
-                  }}</template>
-                </p>
-              </div>
-              <span
-                class="shrink-0 text-xs font-semibold px-2 py-1 rounded-full"
-                :class="stepStatusClass(step)"
-                >{{ stepStatusLabel(step) }}</span
+        <p v-if="run.steps.length === 0" class="text-sm text-app-muted">
+          {{ t('runs.detail.noSteps') }}
+        </p>
+        <ol v-else class="flex flex-col">
+          <li
+            v-for="step in run.steps"
+            :key="step.id"
+            class="flex items-center justify-between gap-3 border-b border-app-surface-alt py-4.5 last:border-0"
+          >
+            <div class="min-w-0">
+              <p
+                class="truncate text-[15.5px] font-bold"
+                :class="step.status === 'completed' ? 'text-app-muted line-through' : ''"
               >
-            </li>
-          </ol>
-        </div>
-      </template>
+                {{ step.title }}
+              </p>
+              <p class="mt-1 text-[13px] text-app-muted">
+                {{ memberLabel(step.assigneeId) }}
+                <template v-if="step.dueDate">{{
+                  t('runs.detail.dueLabel', { date: step.dueDate })
+                }}</template>
+              </p>
+            </div>
+            <span
+              class="shrink-0 rounded-full px-2 py-1 text-xs font-semibold"
+              :class="stepStatusClass(step)"
+              >{{ stepStatusLabel(step) }}</span
+            >
+          </li>
+        </ol>
+      </div>
+    </template>
 
-      <p v-else class="text-sm text-gray-500">{{ t('runs.detail.notFound') }}</p>
-    </div>
+    <p v-else class="text-sm text-app-muted">{{ t('runs.detail.notFound') }}</p>
   </div>
 </template>

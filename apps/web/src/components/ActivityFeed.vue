@@ -25,18 +25,21 @@ function relativeTime(at: string): string {
 </script>
 
 <template>
-  <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-    <h2 class="text-lg font-semibold text-brand-dark mb-4">{{ t('activityFeed.title') }}</h2>
+  <div class="rounded-[22px] bg-white p-6">
+    <h2 class="mb-4 text-base font-extrabold">{{ t('activityFeed.title') }}</h2>
 
-    <p v-if="isLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
-    <p v-else-if="!events || events.length === 0" class="text-sm text-gray-500">
+    <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+    <p v-else-if="!events || events.length === 0" class="text-sm text-app-muted">
       {{ t('activityFeed.empty') }}
     </p>
-    <ul v-else class="divide-y divide-brand-border">
-      <li v-for="event in events" :key="`${event.runId}-${event.type}-${event.at}`" class="py-3">
-        <RouterLink :to="`/runs/${event.runType}/${event.runId}`" class="block hover:opacity-80">
-          <p class="text-sm text-brand-dark">{{ describe(event) }}</p>
-          <p class="text-xs text-gray-500">{{ relativeTime(event.at) }}</p>
+    <ul v-else class="flex flex-col gap-4">
+      <li v-for="event in events" :key="`${event.runId}-${event.type}-${event.at}`">
+        <RouterLink :to="`/runs/${event.runId}`" class="flex gap-2.5 hover:opacity-80">
+          <div class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-app-ink" />
+          <div class="text-[13.5px] leading-relaxed text-app-slate">
+            {{ describe(event) }}
+            <span class="text-app-muted">· {{ relativeTime(event.at) }}</span>
+          </div>
         </RouterLink>
       </li>
     </ul>

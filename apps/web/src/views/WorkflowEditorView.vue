@@ -7,8 +7,6 @@ import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
 import { moveStep } from '../lib/reorderSteps'
-import OrgSwitcher from '../components/OrgSwitcher.vue'
-import TrialBanner from '../components/TrialBanner.vue'
 
 type Member = { id: string; user: { name: string; email: string } }
 
@@ -17,9 +15,6 @@ const route = useRoute()
 const id = computed(() => route.params.id as string)
 
 const { data: trialStatus } = useTrialStatus()
-// UX only — the server-side source of truth is blockMutationsWhenExpired
-// (apps/api/src/middleware/trial-lock.ts), which these same POST/DELETE
-// requests hit regardless of what the button here allows.
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const queryClient = useQueryClient()
@@ -148,223 +143,210 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
 </script>
 
 <template>
-  <div class="min-h-screen bg-brand-surface px-4 py-12">
-    <div class="max-w-2xl mx-auto space-y-6">
-      <TrialBanner />
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">
-          {{ template?.name ?? t('workflows.editor.fallbackTitle') }}
-        </h1>
-        <div class="flex items-center gap-4">
-          <OrgSwitcher />
-          <RouterLink to="/workflows" class="text-sm text-brand-teal font-medium hover:underline">{{
-            t('workflows.editor.backToTemplates')
-          }}</RouterLink>
-        </div>
+  <div>
+    <RouterLink
+      to="/workflows"
+      class="mb-5 flex w-fit items-center gap-1.5 text-[14.5px] font-bold text-app-ink"
+    >
+      {{ t('workflows.editor.backToTemplates') }}
+    </RouterLink>
+
+    <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+
+    <template v-else-if="template">
+      <h1 class="mb-5 text-2xl font-extrabold tracking-tight">
+        {{ template.name || t('workflows.editor.fallbackTitle') }}
+      </h1>
+
+      <p
+        v-if="isReadOnly"
+        class="mb-4 rounded-xl bg-app-warning-bg px-3.5 py-2.5 text-sm text-app-warning"
+      >
+        {{ t('workflows.editor.trialExpired') }}
+      </p>
+
+      <div class="mb-5 rounded-3xl bg-white p-7">
+        <h2 class="mb-4 text-lg font-extrabold">{{ t('workflows.editor.detailsHeading') }}</h2>
+        <form class="flex flex-wrap items-end gap-3" @submit.prevent="saveName">
+          <div class="min-w-[200px] flex-1">
+            <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="template-name">{{
+              t('workflows.editor.nameLabel')
+            }}</label>
+            <input
+              id="template-name"
+              v-model="nameForm.name"
+              type="text"
+              class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+            />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="template-type">{{
+              t('workflows.editor.typeLabel')
+            }}</label>
+            <select
+              id="template-type"
+              v-model="nameForm.type"
+              class="rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+            >
+              <option value="onboarding">{{ t('common.onboarding') }}</option>
+              <option value="offboarding">{{ t('common.offboarding') }}</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            :disabled="savingName || isReadOnly"
+            class="whitespace-nowrap rounded-xl bg-app-ink px-6 py-3 text-sm font-bold text-white"
+            :class="savingName || isReadOnly ? 'opacity-60' : ''"
+          >
+            {{ savingName ? t('workflows.editor.saving') : t('workflows.editor.save') }}
+          </button>
+        </form>
+        <p v-if="nameError" class="mt-2 text-xs text-app-danger">{{ nameError }}</p>
       </div>
 
-      <p v-if="isLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
+      <div class="rounded-3xl bg-white p-7">
+        <h2 class="mb-4 text-lg font-extrabold">{{ t('workflows.editor.stepsHeading') }}</h2>
 
-      <template v-else-if="template">
-        <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
-          {{ t('workflows.editor.trialExpired') }}
+        <p v-if="template.steps.length === 0" class="mb-4 text-sm text-app-muted">
+          {{ t('workflows.editor.noSteps') }}
         </p>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-          <h2 class="text-lg font-semibold text-brand-dark mb-4">
-            {{ t('workflows.editor.detailsHeading') }}
-          </h2>
-          <form class="flex gap-3 items-end" @submit.prevent="saveName">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="template-name">{{
-                t('workflows.editor.nameLabel')
-              }}</label>
-              <input
-                id="template-name"
-                v-model="nameForm.name"
-                type="text"
-                class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  nameError
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
-              />
+        <ol v-else class="mb-6 flex flex-col">
+          <li
+            v-for="(step, index) in template.steps"
+            :key="step.id"
+            class="flex items-center justify-between gap-3 border-b border-app-surface-alt py-4 last:border-0"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-[15.5px] font-bold">{{ step.title }}</p>
+              <p class="mt-0.5 text-[13px] text-app-muted">
+                {{
+                  step.type === 'manual'
+                    ? t('workflows.editor.typeManual')
+                    : t('workflows.editor.typeAutomated')
+                }}
+                · {{ memberLabel(step.assigneeId) }}
+                <template v-if="step.type === 'manual' && step.dueDateOffsetDays !== null">
+                  {{ t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays }) }}
+                </template>
+              </p>
             </div>
+            <div class="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                :disabled="isReadOnly || index === 0"
+                class="flex h-8.5 w-8.5 items-center justify-center rounded-lg text-app-ink disabled:opacity-30"
+                :aria-label="t('workflows.editor.moveUp')"
+                @click="reorder(step.id, 'up')"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                :disabled="isReadOnly || index === template.steps.length - 1"
+                class="flex h-8.5 w-8.5 items-center justify-center rounded-lg text-app-ink disabled:opacity-30"
+                :aria-label="t('workflows.editor.moveDown')"
+                @click="reorder(step.id, 'down')"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                :disabled="isReadOnly"
+                class="text-sm font-bold text-app-danger"
+                :class="isReadOnly ? 'opacity-60' : ''"
+                @click="deleteStep(step.id)"
+              >
+                {{ t('workflows.editor.delete') }}
+              </button>
+            </div>
+          </li>
+        </ol>
+
+        <form
+          class="flex flex-col gap-4 border-t border-app-surface-alt pt-6"
+          @submit.prevent="addStep"
+        >
+          <h3 class="text-sm font-extrabold">{{ t('workflows.editor.addStepHeading') }}</h3>
+          <div>
+            <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="step-title">{{
+              t('workflows.editor.titleLabel')
+            }}</label>
+            <input
+              id="step-title"
+              v-model="stepForm.title"
+              type="text"
+              :placeholder="t('workflows.editor.titlePlaceholder')"
+              class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+            />
+          </div>
+
+          <div class="flex flex-wrap gap-3">
             <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="template-type">{{
+              <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="step-type">{{
                 t('workflows.editor.typeLabel')
               }}</label>
               <select
-                id="template-type"
-                v-model="nameForm.type"
-                class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
+                id="step-type"
+                v-model="stepForm.type"
+                class="rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
               >
-                <option value="onboarding">{{ t('common.onboarding') }}</option>
-                <option value="offboarding">{{ t('common.offboarding') }}</option>
+                <option value="manual">{{ t('workflows.editor.typeManual') }}</option>
+                <option value="automated">{{ t('workflows.editor.typeAutomated') }}</option>
               </select>
             </div>
-            <button
-              type="submit"
-              :disabled="savingName || isReadOnly"
-              class="bg-brand-teal text-white py-2.5 px-5 rounded-lg text-sm font-semibold transition-opacity"
-              :class="
-                savingName || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'
-              "
-            >
-              {{ savingName ? t('workflows.editor.saving') : t('workflows.editor.save') }}
-            </button>
-          </form>
-          <p v-if="nameError" class="text-xs text-red-500 mt-2">{{ nameError }}</p>
-        </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-          <h2 class="text-lg font-semibold text-brand-dark mb-4">
-            {{ t('workflows.editor.stepsHeading') }}
-          </h2>
+            <div class="min-w-[180px] flex-1">
+              <label
+                class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                for="step-assignee"
+                >{{ t('workflows.editor.assigneeLabel') }}</label
+              >
+              <select
+                id="step-assignee"
+                v-model="stepForm.assigneeId"
+                class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+              >
+                <option value="">{{ t('common.unassigned') }}</option>
+                <option v-for="member in members" :key="member.id" :value="member.id">
+                  {{ member.user.name }}
+                </option>
+              </select>
+            </div>
 
-          <p v-if="template.steps.length === 0" class="text-sm text-gray-500 mb-4">
-            {{ t('workflows.editor.noSteps') }}
-          </p>
-          <ol v-else class="divide-y divide-brand-border mb-6">
-            <li
-              v-for="(step, index) in template.steps"
-              :key="step.id"
-              class="flex items-center justify-between py-3 gap-3"
-            >
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-brand-dark truncate">{{ step.title }}</p>
-                <p class="text-xs text-gray-500">
-                  {{
-                    step.type === 'manual'
-                      ? t('workflows.editor.typeManual')
-                      : t('workflows.editor.typeAutomated')
-                  }}
-                  · {{ memberLabel(step.assigneeId) }}
-                  <template v-if="step.type === 'manual' && step.dueDateOffsetDays !== null">
-                    {{ t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays }) }}
-                  </template>
-                </p>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  :disabled="isReadOnly || index === 0"
-                  class="text-sm text-brand-dark disabled:opacity-30 disabled:cursor-not-allowed hover:text-brand-teal"
-                  :aria-label="t('workflows.editor.moveUp')"
-                  @click="reorder(step.id, 'up')"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  :disabled="isReadOnly || index === template.steps.length - 1"
-                  class="text-sm text-brand-dark disabled:opacity-30 disabled:cursor-not-allowed hover:text-brand-teal"
-                  :aria-label="t('workflows.editor.moveDown')"
-                  @click="reorder(step.id, 'down')"
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  :disabled="isReadOnly"
-                  class="text-sm text-red-500 font-medium"
-                  :class="isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:underline'"
-                  @click="deleteStep(step.id)"
-                >
-                  {{ t('workflows.editor.delete') }}
-                </button>
-              </div>
-            </li>
-          </ol>
-
-          <form class="space-y-4 border-t border-brand-border pt-6" @submit.prevent="addStep">
-            <h3 class="text-sm font-semibold text-brand-dark">
-              {{ t('workflows.editor.addStepHeading') }}
-            </h3>
-            <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="step-title">{{
-                t('workflows.editor.titleLabel')
+            <div v-if="stepForm.type === 'manual'">
+              <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="step-due">{{
+                t('workflows.editor.dueDaysLabel')
               }}</label>
               <input
-                id="step-title"
-                v-model="stepForm.title"
-                type="text"
-                :placeholder="t('workflows.editor.titlePlaceholder')"
-                class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  stepError
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
+                id="step-due"
+                v-model="stepForm.dueDateOffsetDays"
+                type="number"
+                min="0"
+                placeholder="2"
+                class="w-24 rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
               />
             </div>
+          </div>
 
-            <div class="flex gap-3">
-              <div>
-                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-type">{{
-                  t('workflows.editor.typeLabel')
-                }}</label>
-                <select
-                  id="step-type"
-                  v-model="stepForm.type"
-                  class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
-                >
-                  <option value="manual">{{ t('workflows.editor.typeManual') }}</option>
-                  <option value="automated">{{ t('workflows.editor.typeAutomated') }}</option>
-                </select>
-              </div>
+          <p
+            v-if="stepError"
+            class="rounded-xl bg-app-danger-bg px-3.5 py-2.5 text-sm text-app-danger"
+          >
+            {{ stepError }}
+          </p>
 
-              <div class="flex-1">
-                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-assignee">{{
-                  t('workflows.editor.assigneeLabel')
-                }}</label>
-                <select
-                  id="step-assignee"
-                  v-model="stepForm.assigneeId"
-                  class="w-full px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
-                >
-                  <option value="">{{ t('common.unassigned') }}</option>
-                  <option v-for="member in members" :key="member.id" :value="member.id">
-                    {{ member.user.name }}
-                  </option>
-                </select>
-              </div>
+          <button
+            type="submit"
+            :disabled="addingStep || isReadOnly"
+            class="w-fit whitespace-nowrap rounded-xl bg-app-ink px-6 py-3 text-sm font-bold text-white"
+            :class="addingStep || isReadOnly ? 'opacity-60' : ''"
+          >
+            {{ addingStep ? t('workflows.editor.submitting') : t('workflows.editor.submit') }}
+          </button>
+        </form>
+      </div>
+    </template>
 
-              <div v-if="stepForm.type === 'manual'">
-                <label class="block text-sm font-medium text-brand-dark mb-1" for="step-due">{{
-                  t('workflows.editor.dueDaysLabel')
-                }}</label>
-                <input
-                  id="step-due"
-                  v-model="stepForm.dueDateOffsetDays"
-                  type="number"
-                  min="0"
-                  placeholder="2"
-                  class="w-24 px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
-                />
-              </div>
-            </div>
-
-            <p v-if="stepError" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
-              {{ stepError }}
-            </p>
-
-            <button
-              type="submit"
-              :disabled="addingStep || isReadOnly"
-              class="bg-brand-teal text-white py-2.5 px-5 rounded-lg text-sm font-semibold transition-opacity"
-              :class="
-                addingStep || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'
-              "
-            >
-              {{ addingStep ? t('workflows.editor.submitting') : t('workflows.editor.submit') }}
-            </button>
-          </form>
-        </div>
-      </template>
-
-      <p v-else class="text-sm text-gray-500">{{ t('workflows.editor.notFound') }}</p>
-    </div>
+    <p v-else class="text-sm text-app-muted">{{ t('workflows.editor.notFound') }}</p>
   </div>
 </template>

@@ -15,6 +15,14 @@ const en = {
     genericError: 'Something went wrong. Please try again.',
     steps: 'no steps | {n} step | {n} steps',
     ofStepsComplete: '{completed} of {total} {steps} complete',
+    cancel: 'Cancel',
+  },
+
+  nav: {
+    home: 'Home',
+    myTasks: 'My tasks',
+    runs: 'Runs',
+    templates: 'Templates',
   },
 
   auth: {
@@ -146,14 +154,21 @@ const en = {
   },
 
   dashboard: {
-    title: 'Dashboard',
     logOut: 'Log out',
-    signedInAs: 'Signed in as',
-    myTasks: 'My tasks →',
-    inviteTeamMember: 'Invite a team member →',
-    manageTemplates: 'Manage checklist templates →',
-    startOnboarding: 'Start an onboarding run →',
-    startOffboarding: 'Start an offboarding run →',
+    greeting: 'Welcome back, {name}',
+    subtitle:
+      'No one is currently in onboarding or offboarding. | {n} person is currently in onboarding or offboarding. | {n} people are currently in onboarding or offboarding.',
+    viewTodaysWork: "View today's work",
+    startingSoon: 'Starting soon',
+    overdueTasks: 'Overdue tasks',
+    blockedProcesses: 'Blocked processes',
+    finishingThisWeek: 'Finishing this week',
+    needsAttention: 'Needs your attention',
+    attentionReason: '{step} is overdue',
+    peopleInProgress: 'People in progress',
+    viewAll: 'View all →',
+    expected: 'Expected',
+    empty: 'No one is currently in onboarding or offboarding.',
   },
 
   trialBanner: {
@@ -217,46 +232,40 @@ const en = {
   },
 
   runs: {
-    start: {
-      title: '{type} runs',
-      startHeading: 'Start a {type} run',
-      trialExpired: 'Your trial has ended. Subscribe to start more {type} runs.',
-      noTemplates: 'No {type} checklist templates yet.',
-      createTemplateFirst: 'Create one first →',
+    list: {
+      subtitle: 'Every onboarding and offboarding, in one place',
+      startButton: 'Start a run',
+      filterAll: 'All',
+      filterActive: 'Active',
+      filterCompleted: 'Completed',
+      stepsProgress: '{completed}/{total} {steps}',
+      empty: 'No runs match this filter.',
+      trialExpired: 'Your trial has ended. Subscribe to start more runs.',
+    },
+    status: {
+      completed: 'Completed',
+      blocked: 'Needs attention',
+      onTrack: 'In progress',
+    },
+    startModal: {
+      title: 'Start a new run',
+      subtitle: "Pick a template and enter the employee's details.",
       templateLabel: 'Checklist template',
       selectTemplate: 'Select a template',
-      nameLabel: 'Name',
+      nameLabel: 'Employee name',
       namePlaceholder: 'Jane Doe',
       emailLabel: 'Email',
       emailPlaceholder: "jane{'@'}company.com",
       roleLabel: 'Role',
       rolePlaceholder: 'Software Engineer',
-      startDateLabel: 'Start date',
-      lastWorkingDayLabel: 'Last working day',
+      dateLabel: 'Event date',
       submit: 'Start run',
       submitting: 'Starting…',
-      successMessage: '{type} run started for {name} — {steps} assigned.',
-      activeRunsHeading: 'Active runs',
-      viewHistory: 'View history →',
-      empty: 'No active runs.',
-      starts: 'starts',
-      lastDay: 'last day',
-      statusPending: 'pending',
-      statusInProgress: 'in progress',
-      statusCompleted: 'completed',
       validationTemplate: 'Choose a checklist template',
-      validationName: 'Name must be at least 2 characters',
+      validationName: 'Employee name must be at least 2 characters',
       validationEmail: 'A valid email is required',
       validationRole: 'Role is required',
-      validationDate: 'Start date is required',
-    },
-    history: {
-      title: '{type} run history',
-      backToActive: '← Back to active runs',
-      completedHeading: 'Completed runs',
-      empty: 'No completed runs yet.',
-      started: 'started',
-      lastDay: 'last day',
+      validationDate: 'Event date is required',
     },
     detail: {
       backToRuns: '← Back to runs',
@@ -275,15 +284,13 @@ const en = {
       statusStepCompleted: 'Completed',
       statusStepOverdue: 'Overdue',
       statusStepPending: 'Pending',
-      statusRunPending: 'Pending',
-      statusRunInProgress: 'In progress',
-      statusRunCompleted: 'Completed',
       notFound: 'Run not found.',
     },
   },
 
   team: {
     title: 'Team',
+    subtitle: 'Manage members and pending invitations',
     inviteHeading: 'Invite a team member',
     trialExpired: 'Your trial has ended. Subscribe to invite more teammates.',
     emailLabel: 'Email',
@@ -291,6 +298,7 @@ const en = {
     roleLabel: 'Role',
     roleMember: 'Member',
     roleAdmin: 'Admin',
+    roleOwner: 'Owner',
     submit: 'Send invite',
     submitting: 'Sending…',
     successMessage: 'Invite sent to {email}.',
@@ -299,9 +307,35 @@ const en = {
     empty: 'No pending invites.',
     revoke: 'Revoke',
     validationEmail: 'Valid email required',
-    languageHeading: 'Organization language',
-    languageDescription: 'Choose the language everyone in your organization sees StaffComplete in.',
-    languageSaved: 'Language updated.',
+    membersHeading: 'Members ({count})',
+  },
+
+  myTasks: {
+    subtitle: 'Everything assigned to you across active runs',
+    empty: 'No open tasks assigned to you.',
+    markComplete: 'Mark complete',
+    completing: 'Completing…',
+    completeError: 'Unable to complete this task. Please try again.',
+  },
+
+  billing: {
+    title: 'Billing',
+    subtitle: 'Manage your plan and subscription',
+    trialLabel: 'Free trial',
+    comingSoonTitle: 'Plan selection is coming soon',
+    comingSoonBody:
+      "We're finishing up subscription plans. Check back shortly to add a payment method and pick a plan.",
+  },
+
+  todayAtAGlance: {
+    heading: 'Today at a glance',
+    tasksAssigned: 'Tasks assigned to you',
+    stepsNeedAttention: 'Steps need attention',
+  },
+
+  shell: {
+    upgradePlan: 'Upgrade plan',
+    search: 'Search…',
     languageError: 'Could not update the language. Please try again.',
   },
 }

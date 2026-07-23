@@ -10,6 +10,8 @@ export interface RunSummary {
   status: string
   stepCount: number
   completedStepCount: number
+  overdueStepCount: number
+  overdueStepTitle: string | null
   createdAt: string
 }
 

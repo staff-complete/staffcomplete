@@ -2,24 +2,21 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
-import { SUPPORTED_LOCALES, type Locale } from '@staffcomplete/shared'
-import { useTrialStatus } from '../composables/useTrialStatus'
 import { authClient } from '../lib/auth-client'
-import OrgSwitcher from '../components/OrgSwitcher.vue'
-import TrialBanner from '../components/TrialBanner.vue'
+import { useTrialStatus } from '../composables/useTrialStatus'
+import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
 
 type Invite = { id: string; email: string; role: string; expiresAt: string; createdAt: string }
+type Member = { id: string; role: string; user: { name: string; email: string } }
 
 const { t } = useI18n()
 
 const { data: trialStatus } = useTrialStatus()
-// UX only — the server-side source of truth is blockMutationsWhenExpired
-// (apps/api/src/middleware/trial-lock.ts), which these same POST/DELETE
-// requests hit regardless of what the button here allows.
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const invites = ref<Invite[]>([])
 const loadingInvites = ref(true)
+const members = ref<Member[]>([])
 
 const form = ref({ email: '', role: 'member' })
 const errors = ref<Record<string, string>>({})
@@ -47,7 +44,33 @@ async function loadInvites() {
   }
 }
 
-onMounted(loadInvites)
+async function loadMembers() {
+  const { data } = await authClient.organization.listMembers()
+  members.value = (data?.members ?? []) as Member[]
+}
+
+onMounted(() => {
+  void loadInvites()
+  void loadMembers()
+})
+
+function roleLabel(role: string) {
+  if (role === 'owner') return t('team.roleOwner')
+  if (role === 'admin') return t('team.roleAdmin')
+  return t('team.roleMember')
+}
+
+const decoratedMembers = computed(() =>
+  members.value.map((m) => {
+    const colors = avatarColorsFor(m.user.name)
+    return {
+      ...m,
+      initials: initialsFor(m.user.name),
+      avatarBg: colors.bg,
+      avatarText: colors.color,
+    }
+  }),
+)
 
 async function submit() {
   if (isReadOnly.value) return
@@ -100,158 +123,113 @@ async function revoke(id: string) {
   await fetch(`/api/invites/${id}`, { method: 'DELETE' })
   await loadInvites()
 }
-
-const activeOrganization = authClient.useActiveOrganization()
-const savingLocale = ref(false)
-const localeMessage = ref('')
-const localeError = ref('')
-
-async function changeLocale(event: Event) {
-  const locale = (event.target as HTMLSelectElement).value as Locale
-  localeMessage.value = ''
-  localeError.value = ''
-  savingLocale.value = true
-  try {
-    const { error } = await authClient.organization.update({ data: { locale } })
-    if (error) {
-      localeError.value = t('team.languageError')
-      return
-    }
-    localeMessage.value = t('team.languageSaved')
-  } catch {
-    localeError.value = t('team.languageError')
-  } finally {
-    savingLocale.value = false
-  }
-}
 </script>
 
 <template>
-  <div class="min-h-screen bg-brand-surface px-4 py-12">
-    <div class="max-w-2xl mx-auto space-y-6">
-      <TrialBanner />
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">{{ t('team.title') }}</h1>
-        <div class="flex items-center gap-4">
-          <OrgSwitcher />
-          <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline">{{
-            t('common.backToDashboard')
-          }}</RouterLink>
-        </div>
-      </div>
+  <div>
+    <h1 class="mb-1.5 text-2xl font-extrabold tracking-tight">{{ t('team.title') }}</h1>
+    <p class="mb-6 text-[15px] text-app-slate">{{ t('team.subtitle') }}</p>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-1">{{ t('team.languageHeading') }}</h2>
-        <p class="text-sm text-gray-500 mb-4">{{ t('team.languageDescription') }}</p>
+    <div class="grid grid-cols-1 items-start gap-4.5 lg:grid-cols-2">
+      <div class="rounded-3xl bg-white p-6.5">
+        <h2 class="mb-4.5 text-lg font-extrabold">{{ t('team.inviteHeading') }}</h2>
 
-        <select
-          :value="activeOrganization.data?.locale"
-          :disabled="savingLocale"
-          class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
-          @change="changeLocale"
+        <p
+          v-if="isReadOnly"
+          class="mb-3.5 rounded-xl bg-app-warning-bg px-3.5 py-2.5 text-sm text-app-warning"
         >
-          <option v-for="loc in SUPPORTED_LOCALES" :key="loc" :value="loc">
-            {{ t(`locale.${loc}`) }}
-          </option>
-        </select>
-
-        <p v-if="localeMessage" class="text-sm text-brand-teal mt-2">{{ localeMessage }}</p>
-        <p v-if="localeError" class="text-sm text-red-500 mt-2">{{ localeError }}</p>
-      </div>
-
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">{{ t('team.inviteHeading') }}</h2>
-
-        <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
           {{ t('team.trialExpired') }}
         </p>
 
-        <form class="space-y-4" @submit.prevent="submit">
-          <div class="flex gap-3">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="email">{{
-                t('team.emailLabel')
-              }}</label>
-              <input
-                id="email"
-                v-model="form.email"
-                type="email"
-                autocomplete="email"
-                :placeholder="t('team.emailPlaceholder')"
-                class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  errors.email
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
-              />
-              <p v-if="errors.email" class="text-xs text-red-500 mt-1">{{ errors.email }}</p>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="role">{{
-                t('team.roleLabel')
-              }}</label>
-              <select
-                id="role"
-                v-model="form.role"
-                class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="member">{{ t('team.roleMember') }}</option>
-                <option value="admin">{{ t('team.roleAdmin') }}</option>
-              </select>
-            </div>
-          </div>
-
-          <p
-            v-if="successMessage"
-            class="text-sm text-brand-teal bg-brand-surface rounded-lg px-3 py-2"
+        <form class="flex flex-col gap-3.5" @submit.prevent="submit">
+          <input
+            v-model="form.email"
+            type="email"
+            autocomplete="email"
+            :placeholder="t('team.emailPlaceholder')"
+            class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+          />
+          <select
+            v-model="form.role"
+            class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
           >
-            {{ successMessage }}
-          </p>
-          <p v-if="serverError" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
-            {{ serverError }}
-          </p>
-
+            <option value="member">{{ t('team.roleMember') }}</option>
+            <option value="admin">{{ t('team.roleAdmin') }}</option>
+          </select>
+          <p v-if="errors.email" class="text-xs text-app-danger">{{ errors.email }}</p>
           <button
             type="submit"
             :disabled="loading || isReadOnly"
-            class="bg-brand-teal text-white py-2.5 px-5 rounded-lg text-sm font-semibold transition-opacity"
-            :class="loading || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
+            class="rounded-xl bg-app-accent py-3 text-center text-[15px] font-bold text-white"
+            :class="loading || isReadOnly ? 'opacity-60' : ''"
           >
             {{ loading ? t('team.submitting') : t('team.submit') }}
           </button>
+          <p
+            v-if="successMessage"
+            class="rounded-xl bg-app-surface px-3.5 py-2.5 text-[13.5px] text-app-ink"
+          >
+            {{ successMessage }}
+          </p>
+          <p
+            v-if="serverError"
+            class="rounded-xl bg-app-danger-bg px-3.5 py-2.5 text-sm text-app-danger"
+          >
+            {{ serverError }}
+          </p>
         </form>
-      </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">{{ t('team.pendingHeading') }}</h2>
-
-        <p v-if="loadingInvites" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
-        <p v-else-if="invites.length === 0" class="text-sm text-gray-500">{{ t('team.empty') }}</p>
-        <ul v-else class="divide-y divide-brand-border">
-          <li
+        <h2 class="mb-3.5 mt-6 text-lg font-extrabold">{{ t('team.pendingHeading') }}</h2>
+        <p v-if="loadingInvites" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+        <p v-else-if="invites.length === 0" class="text-sm text-app-muted">{{ t('team.empty') }}</p>
+        <div v-else>
+          <div
             v-for="invite in invites"
             :key="invite.id"
-            class="flex items-center justify-between py-3"
+            class="flex items-center justify-between border-b border-app-surface-alt py-3.5 last:border-0"
           >
             <div>
-              <p class="text-sm font-medium text-brand-dark">{{ invite.email }}</p>
-              <p class="text-xs text-gray-500">
-                {{ invite.role === 'admin' ? t('team.roleAdmin') : t('team.roleMember') }}
-              </p>
+              <div class="text-[14.5px] font-bold">{{ invite.email }}</div>
+              <div class="text-[13px] text-app-muted">{{ roleLabel(invite.role) }}</div>
             </div>
             <button
               type="button"
               :disabled="isReadOnly"
-              class="text-sm text-red-500 font-medium"
-              :class="isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:underline'"
+              class="text-[13.5px] font-bold text-app-danger"
+              :class="isReadOnly ? 'opacity-60' : ''"
               @click="revoke(invite.id)"
             >
               {{ t('team.revoke') }}
             </button>
-          </li>
-        </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-3xl bg-white p-6.5">
+        <h2 class="mb-4.5 text-lg font-extrabold">
+          {{ t('team.membersHeading', { count: members.length }) }}
+        </h2>
+        <div
+          v-for="member in decoratedMembers"
+          :key="member.id"
+          class="flex items-center gap-3.5 border-b border-app-surface-alt py-3.5 last:border-0"
+        >
+          <div
+            class="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-full text-[13px] font-bold"
+            :style="{ background: member.avatarBg, color: member.avatarText }"
+          >
+            {{ member.initials }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14.5px] font-bold">{{ member.user.name }}</div>
+            <div class="text-[13px] text-app-muted">{{ member.user.email }}</div>
+          </div>
+          <span
+            class="shrink-0 rounded-full bg-app-surface-alt px-2.75 py-1 text-xs font-bold text-app-slate"
+          >
+            {{ roleLabel(member.role) }}
+          </span>
+        </div>
       </div>
     </div>
   </div>

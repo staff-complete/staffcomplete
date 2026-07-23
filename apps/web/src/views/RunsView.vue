@@ -1,338 +1,184 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
-import { z } from 'zod'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
-import { useRuns } from '../composables/useRuns'
-import OrgSwitcher from '../components/OrgSwitcher.vue'
-import TrialBanner from '../components/TrialBanner.vue'
+import { useRuns, type RunSummary } from '../composables/useRuns'
+import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
+import { runHealth } from '../lib/runHealth'
+import StartRunModal from '../components/StartRunModal.vue'
+
+type FilterKey = 'all' | 'onboarding' | 'offboarding' | 'active' | 'completed' | 'overdue'
 
 const { t } = useI18n()
 const route = useRoute()
-const type = computed(() => route.params.type as 'onboarding' | 'offboarding')
-const typeLabel = computed(() =>
-  type.value === 'offboarding' ? t('common.offboarding') : t('common.onboarding'),
-)
-const eventDateLabel = computed(() =>
-  type.value === 'offboarding'
-    ? t('runs.start.lastWorkingDayLabel')
-    : t('runs.start.startDateLabel'),
-)
 
 const { data: trialStatus } = useTrialStatus()
-// UX only — the server-side source of truth is blockMutationsWhenExpired
-// (apps/api/src/middleware/trial-lock.ts), which this same POST request
-// hits regardless of what the button here allows.
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
-const queryClient = useQueryClient()
-const { data: templates, isLoading: templatesLoading } = useWorkflowTemplates()
-const matchingTemplates = computed(
-  () => templates.value?.filter((template) => template.type === type.value) ?? [],
+const { data: templates } = useWorkflowTemplates()
+const { data: runs, isLoading } = useRuns()
+
+const initialFilter = route.query.filter
+const validFilters: FilterKey[] = [
+  'all',
+  'onboarding',
+  'offboarding',
+  'active',
+  'completed',
+  'overdue',
+]
+const filter = ref<FilterKey>(
+  validFilters.includes(initialFilter as FilterKey) ? (initialFilter as FilterKey) : 'all',
 )
 
-const { data: runs, isLoading: runsLoading } = useRuns()
-const activeRuns = computed(
-  () => runs.value?.filter((r) => r.type === type.value && r.status !== 'completed') ?? [],
-)
+const filterDefs = computed(() => [
+  { key: 'all' as const, label: t('runs.list.filterAll') },
+  { key: 'onboarding' as const, label: t('common.onboarding') },
+  { key: 'offboarding' as const, label: t('common.offboarding') },
+  { key: 'active' as const, label: t('runs.list.filterActive') },
+  { key: 'completed' as const, label: t('runs.list.filterCompleted') },
+  { key: 'overdue' as const, label: t('runs.status.blocked') },
+])
 
-const form = ref({
-  workflowTemplateId: '',
-  employeeName: '',
-  employeeEmail: '',
-  employeeRole: '',
-  eventDate: '',
-})
-const errors = ref<Record<string, string>>({})
-const serverError = ref('')
-const successMessage = ref('')
-const starting = ref(false)
-
-// Switching between /runs/onboarding and /runs/offboarding reuses this
-// component — clear stale form state and messages left over from the
-// other type.
-watch(type, () => {
-  form.value = {
-    workflowTemplateId: '',
-    employeeName: '',
-    employeeEmail: '',
-    employeeRole: '',
-    eventDate: '',
+function matchesFilter(run: RunSummary): boolean {
+  switch (filter.value) {
+    case 'all':
+      return true
+    case 'onboarding':
+      return run.type === 'onboarding'
+    case 'offboarding':
+      return run.type === 'offboarding'
+    case 'active':
+      return run.status !== 'completed'
+    case 'completed':
+      return run.status === 'completed'
+    case 'overdue':
+      return runHealth(run) === 'blocked'
   }
-  errors.value = {}
-  serverError.value = ''
-  successMessage.value = ''
-})
+}
 
-const schema = computed(() =>
-  z.object({
-    workflowTemplateId: z.string().min(1, t('runs.start.validationTemplate')),
-    employeeName: z.string().min(2, t('runs.start.validationName')),
-    employeeEmail: z.string().email(t('runs.start.validationEmail')),
-    employeeRole: z.string().min(1, t('runs.start.validationRole')),
-    eventDate: z.string().min(1, t('runs.start.validationDate')),
+const decoratedRuns = computed(() =>
+  (runs.value ?? []).filter(matchesFilter).map((run) => {
+    const colors = avatarColorsFor(run.employeeName)
+    const health = runHealth(run)
+    return {
+      ...run,
+      initials: initialsFor(run.employeeName),
+      avatarBg: colors.bg,
+      avatarText: colors.color,
+      typeLabel: run.type === 'offboarding' ? t('common.offboarding') : t('common.onboarding'),
+      statusKey: health,
+      progressPct:
+        run.stepCount === 0 ? 100 : Math.round((run.completedStepCount / run.stepCount) * 100),
+    }
   }),
 )
 
-function runStatusLabel(status: string) {
-  if (status === 'completed') return t('runs.start.statusCompleted')
-  if (status === 'in_progress') return t('runs.start.statusInProgress')
-  return t('runs.start.statusPending')
-}
-
-async function startRun() {
-  if (isReadOnly.value) return
-
-  errors.value = {}
-  serverError.value = ''
-  successMessage.value = ''
-
-  const result = schema.value.safeParse(form.value)
-  if (!result.success) {
-    for (const issue of result.error.issues) {
-      const field = issue.path[0] as string
-      errors.value[field] ||= issue.message
-    }
-    return
-  }
-
-  starting.value = true
-  try {
-    const res = await fetch('/api/runs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value),
-    })
-
-    if (res.ok) {
-      const created = (await res.json()) as { employeeName: string; steps: unknown[] }
-      successMessage.value = t('runs.start.successMessage', {
-        type: typeLabel.value,
-        name: created.employeeName,
-        steps: t('common.steps', created.steps.length),
-      })
-      form.value = {
-        workflowTemplateId: '',
-        employeeName: '',
-        employeeEmail: '',
-        employeeRole: '',
-        eventDate: '',
-      }
-      await queryClient.invalidateQueries({ queryKey: ['runs'] })
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    serverError.value = data.message ?? t('common.genericError')
-  } catch {
-    serverError.value = t('common.networkError')
-  } finally {
-    starting.value = false
-  }
-}
+const showModal = ref(false)
 </script>
 
 <template>
-  <div class="min-h-screen bg-brand-surface px-4 py-12">
-    <div class="max-w-2xl mx-auto space-y-6">
-      <TrialBanner />
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">
-          {{ t('runs.start.title', { type: typeLabel }) }}
-        </h1>
-        <div class="flex items-center gap-4">
-          <OrgSwitcher />
-          <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline">{{
-            t('common.backToDashboard')
-          }}</RouterLink>
-        </div>
+  <div>
+    <div class="mb-5.5 flex items-center justify-between">
+      <div>
+        <h1 class="mb-1.5 text-2xl font-extrabold tracking-tight">{{ t('nav.runs') }}</h1>
+        <p class="text-[15px] text-app-slate">{{ t('runs.list.subtitle') }}</p>
       </div>
-
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">
-          {{ t('runs.start.startHeading', { type: typeLabel }) }}
-        </h2>
-
-        <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
-          {{ t('runs.start.trialExpired', { type: typeLabel }) }}
-        </p>
-
-        <p
-          v-else-if="!templatesLoading && matchingTemplates.length === 0"
-          class="text-sm text-gray-500"
-        >
-          {{ t('runs.start.noTemplates', { type: typeLabel }) }}
-          <RouterLink to="/workflows" class="text-brand-teal font-medium hover:underline">{{
-            t('runs.start.createTemplateFirst')
-          }}</RouterLink>
-        </p>
-
-        <form v-else class="space-y-4" @submit.prevent="startRun">
-          <div>
-            <label class="block text-sm font-medium text-brand-dark mb-1" for="template">{{
-              t('runs.start.templateLabel')
-            }}</label>
-            <select
-              id="template"
-              v-model="form.workflowTemplateId"
-              class="w-full px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
-            >
-              <option value="" disabled>{{ t('runs.start.selectTemplate') }}</option>
-              <option v-for="template in matchingTemplates" :key="template.id" :value="template.id">
-                {{ template.name }}
-              </option>
-            </select>
-            <p v-if="errors.workflowTemplateId" class="text-xs text-red-500 mt-1">
-              {{ errors.workflowTemplateId }}
-            </p>
-          </div>
-
-          <div class="flex gap-3">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="employee-name">{{
-                t('runs.start.nameLabel')
-              }}</label>
-              <input
-                id="employee-name"
-                v-model="form.employeeName"
-                type="text"
-                :placeholder="t('runs.start.namePlaceholder')"
-                class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  errors.employeeName
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
-              />
-              <p v-if="errors.employeeName" class="text-xs text-red-500 mt-1">
-                {{ errors.employeeName }}
-              </p>
-            </div>
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="employee-email">{{
-                t('runs.start.emailLabel')
-              }}</label>
-              <input
-                id="employee-email"
-                v-model="form.employeeEmail"
-                type="email"
-                :placeholder="t('runs.start.emailPlaceholder')"
-                class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  errors.employeeEmail
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
-              />
-              <p v-if="errors.employeeEmail" class="text-xs text-red-500 mt-1">
-                {{ errors.employeeEmail }}
-              </p>
-            </div>
-          </div>
-
-          <div class="flex gap-3">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="employee-role">{{
-                t('runs.start.roleLabel')
-              }}</label>
-              <input
-                id="employee-role"
-                v-model="form.employeeRole"
-                type="text"
-                :placeholder="t('runs.start.rolePlaceholder')"
-                class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  errors.employeeRole
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
-              />
-              <p v-if="errors.employeeRole" class="text-xs text-red-500 mt-1">
-                {{ errors.employeeRole }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="event-date">{{
-                eventDateLabel
-              }}</label>
-              <input
-                id="event-date"
-                v-model="form.eventDate"
-                type="date"
-                class="px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  errors.eventDate
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
-              />
-              <p v-if="errors.eventDate" class="text-xs text-red-500 mt-1">
-                {{ errors.eventDate }}
-              </p>
-            </div>
-          </div>
-
-          <p
-            v-if="successMessage"
-            class="text-sm text-brand-teal bg-brand-surface rounded-lg px-3 py-2"
-          >
-            {{ successMessage }}
-          </p>
-          <p v-if="serverError" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
-            {{ serverError }}
-          </p>
-
-          <button
-            type="submit"
-            :disabled="starting || isReadOnly"
-            class="bg-brand-teal text-white py-2.5 px-5 rounded-lg text-sm font-semibold transition-opacity"
-            :class="starting || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
-          >
-            {{ starting ? t('runs.start.submitting') : t('runs.start.submit') }}
-          </button>
-        </form>
-      </div>
-
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-brand-dark">
-            {{ t('runs.start.activeRunsHeading') }}
-          </h2>
-          <RouterLink
-            :to="`/runs/${type}/history`"
-            class="text-sm text-brand-teal font-medium hover:underline"
-            >{{ t('runs.start.viewHistory') }}</RouterLink
-          >
-        </div>
-
-        <p v-if="runsLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
-        <p v-else-if="activeRuns.length === 0" class="text-sm text-gray-500">
-          {{ t('runs.start.empty') }}
-        </p>
-        <ul v-else class="divide-y divide-brand-border">
-          <li v-for="r in activeRuns" :key="r.id" class="py-3">
-            <RouterLink :to="`/runs/${type}/${r.id}`" class="block hover:opacity-80">
-              <p class="text-sm font-medium text-brand-dark">{{ r.employeeName }}</p>
-              <p class="text-xs text-gray-500">
-                {{ r.type === 'offboarding' ? t('common.offboarding') : t('common.onboarding') }}
-                · {{ r.type === 'offboarding' ? t('runs.start.lastDay') : t('runs.start.starts') }}
-                {{ r.eventDate }} ·
-                {{
-                  t('common.ofStepsComplete', {
-                    completed: r.completedStepCount,
-                    total: r.stepCount,
-                    steps: t('common.steps', r.stepCount),
-                  })
-                }}
-                · {{ runStatusLabel(r.status) }}
-              </p>
-            </RouterLink>
-          </li>
-        </ul>
-      </div>
+      <button
+        type="button"
+        :disabled="isReadOnly"
+        class="flex items-center gap-2 whitespace-nowrap rounded-full bg-app-accent px-6 py-3.5 text-white"
+        :class="isReadOnly ? 'opacity-60' : ''"
+        @click="showModal = true"
+      >
+        <span class="text-[14.5px] font-bold">{{ t('runs.list.startButton') }}</span>
+      </button>
     </div>
+
+    <p
+      v-if="isReadOnly"
+      class="mb-4 rounded-xl bg-app-warning-bg px-3.5 py-2.5 text-sm text-app-warning"
+    >
+      {{ t('runs.list.trialExpired') }}
+    </p>
+
+    <div class="mb-5.5 flex flex-wrap gap-2.5">
+      <button
+        v-for="f in filterDefs"
+        :key="f.key"
+        type="button"
+        class="whitespace-nowrap rounded-full px-4.5 py-2.5 text-sm font-bold"
+        :class="filter === f.key ? 'bg-app-accent text-white' : 'bg-white text-app-slate'"
+        @click="filter = f.key"
+      >
+        {{ f.label }}
+      </button>
+    </div>
+
+    <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+    <p v-else-if="decoratedRuns.length === 0" class="text-sm text-app-muted">
+      {{ t('runs.list.empty') }}
+    </p>
+    <div v-else class="flex flex-col gap-3.5">
+      <RouterLink
+        v-for="run in decoratedRuns"
+        :key="run.id"
+        :to="`/runs/${run.id}`"
+        class="flex flex-wrap items-center gap-5 rounded-[20px] bg-white px-6 py-4.5"
+      >
+        <div
+          class="flex h-11.5 w-11.5 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+          :style="{ background: run.avatarBg, color: run.avatarText }"
+        >
+          {{ run.initials }}
+        </div>
+        <div class="w-[170px] shrink-0 min-w-0">
+          <div class="truncate text-[15.5px] font-bold">{{ run.employeeName }}</div>
+          <div class="truncate text-[13px] text-app-muted">{{ run.employeeRole }}</div>
+        </div>
+        <span
+          class="shrink-0 whitespace-nowrap rounded-full bg-app-surface-alt px-3.5 py-1 text-[12.5px] font-bold text-app-slate"
+        >
+          {{ run.typeLabel }}
+        </span>
+        <div class="min-w-[130px] flex-1">
+          <div class="mb-1.5 h-1.75 overflow-hidden rounded-full bg-app-surface-alt">
+            <div
+              class="h-full rounded-full bg-app-accent"
+              :style="{ width: `${run.progressPct}%` }"
+            />
+          </div>
+          <div class="whitespace-nowrap text-[12.5px] text-app-muted">
+            {{
+              t('runs.list.stepsProgress', {
+                completed: run.completedStepCount,
+                total: run.stepCount,
+                steps: t('common.steps', run.stepCount),
+              })
+            }}
+          </div>
+        </div>
+        <span
+          class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-1 text-[12.5px] font-bold"
+          :class="{
+            'bg-app-success-bg text-app-success': run.statusKey === 'onTrack',
+            'bg-app-danger-bg text-app-danger-text': run.statusKey === 'blocked',
+            'bg-app-surface text-app-ink': run.statusKey === 'completed',
+          }"
+        >
+          {{ t(`runs.status.${run.statusKey}`) }}
+        </span>
+        <div
+          class="w-[84px] shrink-0 whitespace-nowrap text-end text-sm"
+          :class="run.statusKey === 'blocked' ? 'font-bold text-app-warning' : 'text-app-muted'"
+        >
+          {{ run.eventDate }}
+        </div>
+      </RouterLink>
+    </div>
+
+    <StartRunModal v-if="showModal" :templates="templates ?? []" @close="showModal = false" />
   </div>
 </template>

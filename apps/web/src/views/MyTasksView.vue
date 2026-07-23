@@ -1,13 +1,28 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { completeTask, useMyTasks } from '../composables/useMyTasks'
-import OrgSwitcher from '../components/OrgSwitcher.vue'
-import TrialBanner from '../components/TrialBanner.vue'
+import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const { data: tasks, isLoading } = useMyTasks()
-const openTasks = computed(() => tasks.value?.filter((t) => t.status === 'pending') ?? [])
+const openTasks = computed(() =>
+  (tasks.value ?? [])
+    .filter((task) => task.status === 'pending')
+    .map((task) => {
+      const colors = avatarColorsFor(task.run.employeeName)
+      return {
+        ...task,
+        initials: initialsFor(task.run.employeeName),
+        avatarBg: colors.bg,
+        avatarText: colors.color,
+        typeLabel:
+          task.run.type === 'offboarding' ? t('common.offboarding') : t('common.onboarding'),
+      }
+    }),
+)
 
 const completingId = ref<string | null>(null)
 const errorMessage = ref('')
@@ -19,7 +34,7 @@ async function markComplete(id: string) {
     await completeTask(id)
     await queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
   } catch {
-    errorMessage.value = 'Unable to complete this task. Please try again.'
+    errorMessage.value = t('myTasks.completeError')
   } finally {
     completingId.value = null
   }
@@ -27,53 +42,51 @@ async function markComplete(id: string) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-brand-surface px-4 py-12">
-    <div class="max-w-2xl mx-auto space-y-6">
-      <TrialBanner />
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">My tasks</h1>
-        <div class="flex items-center gap-4">
-          <OrgSwitcher />
-          <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline"
-            >← Back to dashboard</RouterLink
-          >
+  <div>
+    <h1 class="mb-1.5 text-2xl font-extrabold tracking-tight">{{ t('nav.myTasks') }}</h1>
+    <p class="mb-6 text-[15px] text-app-slate">{{ t('myTasks.subtitle') }}</p>
+
+    <div class="rounded-3xl bg-white px-7 py-2">
+      <p
+        v-if="errorMessage"
+        class="mt-4 rounded-xl bg-app-danger-bg px-3.5 py-2.5 text-sm text-app-danger"
+      >
+        {{ errorMessage }}
+      </p>
+
+      <p v-if="isLoading" class="py-6 text-sm text-app-muted">{{ t('common.loading') }}</p>
+      <p v-else-if="openTasks.length === 0" class="py-6 text-sm text-app-muted">
+        {{ t('myTasks.empty') }}
+      </p>
+      <div
+        v-for="task in openTasks"
+        :key="task.id"
+        class="flex items-center gap-4.5 border-b border-app-surface-alt py-5 last:border-0"
+      >
+        <div
+          class="flex h-10.5 w-10.5 shrink-0 items-center justify-center rounded-full text-[13.5px] font-bold"
+          :style="{ background: task.avatarBg, color: task.avatarText }"
+        >
+          {{ task.initials }}
         </div>
-      </div>
-
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">Open tasks</h2>
-
-        <p v-if="errorMessage" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
-          {{ errorMessage }}
-        </p>
-
-        <p v-if="isLoading" class="text-sm text-gray-500">Loading…</p>
-        <p v-else-if="openTasks.length === 0" class="text-sm text-gray-500">
-          No open tasks assigned to you.
-        </p>
-        <ul v-else class="divide-y divide-brand-border">
-          <li v-for="task in openTasks" :key="task.id" class="py-3 flex items-center gap-4">
-            <div class="flex-1">
-              <p class="text-sm font-medium text-brand-dark">{{ task.title }}</p>
-              <p class="text-xs text-gray-500 capitalize">
-                {{ task.run.employeeName }} · {{ task.run.type }}
-                <template v-if="task.dueDate">· due {{ task.dueDate }}</template>
-              </p>
-              <p v-if="task.isOverdue" class="text-xs font-semibold text-red-500 mt-1">Overdue</p>
-            </div>
-            <button
-              type="button"
-              :disabled="completingId === task.id"
-              class="shrink-0 bg-brand-teal text-white py-2 px-4 rounded-lg text-sm font-semibold transition-opacity"
-              :class="
-                completingId === task.id ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'
-              "
-              @click="markComplete(task.id)"
+        <div class="min-w-0 flex-1">
+          <div class="mb-1 text-[15.5px] font-bold">{{ task.title }}</div>
+          <div class="text-[13.5px] text-app-slate">
+            {{ task.run.employeeName }} · {{ task.typeLabel }}
+            <span v-if="task.isOverdue" class="font-bold text-app-warning">
+              · {{ t('runs.detail.statusStepOverdue') }}</span
             >
-              {{ completingId === task.id ? 'Completing…' : 'Mark complete' }}
-            </button>
-          </li>
-        </ul>
+          </div>
+        </div>
+        <button
+          type="button"
+          :disabled="completingId === task.id"
+          class="shrink-0 whitespace-nowrap rounded-full bg-app-accent px-5.5 py-3 text-sm font-bold text-white"
+          :class="completingId === task.id ? 'opacity-60' : ''"
+          @click="markComplete(task.id)"
+        >
+          {{ completingId === task.id ? t('myTasks.completing') : t('myTasks.markComplete') }}
+        </button>
       </div>
     </div>
   </div>

@@ -17,6 +17,14 @@ const ru = {
     genericError: 'Что-то пошло не так. Попробуйте снова.',
     steps: 'нет шагов | {n} шаг | {n} шага | {n} шагов',
     ofStepsComplete: 'Выполнено {completed} из {total} ({steps})',
+    cancel: 'Отмена',
+  },
+
+  nav: {
+    home: 'Главная',
+    myTasks: 'Мои задачи',
+    runs: 'Процессы',
+    templates: 'Шаблоны',
   },
 
   auth: {
@@ -147,14 +155,21 @@ const ru = {
   },
 
   dashboard: {
-    title: 'Панель управления',
     logOut: 'Выйти',
-    signedInAs: 'Вы вошли как',
-    myTasks: 'Мои задачи →',
-    inviteTeamMember: 'Пригласить участника команды →',
-    manageTemplates: 'Управление шаблонами чек-листов →',
-    startOnboarding: 'Начать онбординг →',
-    startOffboarding: 'Начать оффбординг →',
+    greeting: 'С возвращением, {name}',
+    subtitle:
+      'Никто сейчас не проходит найм или увольнение. | {n} человек сейчас проходит найм или увольнение. | {n} человека сейчас проходят найм или увольнение. | {n} человек сейчас проходят найм или увольнение.',
+    viewTodaysWork: 'Задачи на сегодня',
+    startingSoon: 'Скоро начнутся',
+    overdueTasks: 'Просроченные задачи',
+    blockedProcesses: 'Заблокированные процессы',
+    finishingThisWeek: 'Завершатся на этой неделе',
+    needsAttention: 'Требует внимания',
+    attentionReason: '«{step}» просрочен',
+    peopleInProgress: 'В процессе',
+    viewAll: 'Смотреть все →',
+    expected: 'Ожидается',
+    empty: 'Сейчас никто не проходит найм или увольнение.',
   },
 
   trialBanner: {
@@ -222,47 +237,41 @@ const ru = {
   },
 
   runs: {
-    start: {
-      title: '{type}: процессы',
-      startHeading: 'Начать {type}',
+    list: {
+      subtitle: 'Весь найм и увольнение в одном месте',
+      startButton: 'Начать процесс',
+      filterAll: 'Все',
+      filterActive: 'Активные',
+      filterCompleted: 'Завершённые',
+      stepsProgress: '{completed}/{total} ({steps})',
+      empty: 'Нет процессов, соответствующих фильтру.',
       trialExpired:
-        'Ваш пробный период завершён. Оформите подписку, чтобы начинать новые процессы ({type}).',
-      noTemplates: 'Пока нет шаблонов чек-листов для этого типа ({type}).',
-      createTemplateFirst: 'Сначала создайте шаблон →',
+        'Ваш пробный период завершён. Оформите подписку, чтобы начинать новые процессы.',
+    },
+    status: {
+      completed: 'Завершён',
+      blocked: 'Требует внимания',
+      onTrack: 'Выполняется',
+    },
+    startModal: {
+      title: 'Начать новый процесс',
+      subtitle: 'Выберите шаблон и укажите данные сотрудника.',
       templateLabel: 'Шаблон чек-листа',
       selectTemplate: 'Выберите шаблон',
-      nameLabel: 'Имя',
+      nameLabel: 'Имя сотрудника',
       namePlaceholder: 'Иван Иванов',
       emailLabel: 'Email',
       emailPlaceholder: "jane{'@'}company.com",
       roleLabel: 'Должность',
       rolePlaceholder: 'Инженер-программист',
-      startDateLabel: 'Дата начала',
-      lastWorkingDayLabel: 'Последний рабочий день',
+      dateLabel: 'Дата события',
       submit: 'Начать процесс',
       submitting: 'Запуск…',
-      successMessage: 'Процесс «{type}» запущен для {name} — назначено {steps}.',
-      activeRunsHeading: 'Активные процессы',
-      viewHistory: 'История →',
-      empty: 'Нет активных процессов.',
-      starts: 'начало',
-      lastDay: 'последний день',
-      statusPending: 'ожидает',
-      statusInProgress: 'выполняется',
-      statusCompleted: 'завершён',
       validationTemplate: 'Выберите шаблон чек-листа',
       validationName: 'Имя должно содержать не менее 2 символов',
       validationEmail: 'Введите корректный email',
       validationRole: 'Укажите должность',
       validationDate: 'Укажите дату',
-    },
-    history: {
-      title: '{type}: история процессов',
-      backToActive: '← Назад к активным процессам',
-      completedHeading: 'Завершённые процессы',
-      empty: 'Пока нет завершённых процессов.',
-      started: 'начат',
-      lastDay: 'последний день',
     },
     detail: {
       backToRuns: '← Назад к процессам',
@@ -281,15 +290,13 @@ const ru = {
       statusStepCompleted: 'Выполнено',
       statusStepOverdue: 'Просрочено',
       statusStepPending: 'Ожидает',
-      statusRunPending: 'Ожидает',
-      statusRunInProgress: 'Выполняется',
-      statusRunCompleted: 'Завершён',
       notFound: 'Процесс не найден.',
     },
   },
 
   team: {
     title: 'Команда',
+    subtitle: 'Управление участниками и приглашениями',
     inviteHeading: 'Пригласить участника команды',
     trialExpired: 'Ваш пробный период завершён. Оформите подписку, чтобы приглашать участников.',
     emailLabel: 'Email',
@@ -297,6 +304,7 @@ const ru = {
     roleLabel: 'Роль',
     roleMember: 'Участник',
     roleAdmin: 'Администратор',
+    roleOwner: 'Владелец',
     submit: 'Отправить приглашение',
     submitting: 'Отправка…',
     successMessage: 'Приглашение отправлено на {email}.',
@@ -305,10 +313,35 @@ const ru = {
     empty: 'Нет отправленных приглашений.',
     revoke: 'Отозвать',
     validationEmail: 'Введите корректный email',
-    languageHeading: 'Язык организации',
-    languageDescription:
-      'Выберите язык, на котором StaffComplete будет отображаться для всей вашей организации.',
-    languageSaved: 'Язык обновлён.',
+    membersHeading: 'Участники ({count})',
+  },
+
+  myTasks: {
+    subtitle: 'Всё, что назначено вам в активных процессах',
+    empty: 'Нет открытых задач, назначенных вам.',
+    markComplete: 'Отметить как выполнено',
+    completing: 'Завершение…',
+    completeError: 'Не удалось завершить задачу. Попробуйте снова.',
+  },
+
+  billing: {
+    title: 'Оплата',
+    subtitle: 'Управление планом и оплатой',
+    trialLabel: 'Пробный период',
+    comingSoonTitle: 'Выбор плана скоро появится',
+    comingSoonBody:
+      'Мы дорабатываем тарифные планы. Скоро вы сможете добавить способ оплаты и выбрать план.',
+  },
+
+  todayAtAGlance: {
+    heading: 'Сегодня',
+    tasksAssigned: 'Задачи, назначенные вам',
+    stepsNeedAttention: 'Шаги требуют внимания',
+  },
+
+  shell: {
+    upgradePlan: 'Улучшить план',
+    search: 'Поиск…',
     languageError: 'Не удалось обновить язык. Попробуйте снова.',
   },
 } satisfies MessageSchema

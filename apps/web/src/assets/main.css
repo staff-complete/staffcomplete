@@ -9,6 +9,27 @@
   --color-brand-surface: #eef3f2;
   --color-brand-border: #d0ede9;
   --color-brand-border-soft: #c8dcda;
+
+  /* Authenticated app shell only (dashboard, tasks, runs, templates, team,
+     billing) — marketing pages and auth views keep the brand-* palette
+     above untouched. See ADR: "StaffComplete - Dashboard System" design. */
+  --font-app-sans: 'Inter', 'Noto Sans Hebrew', ui-sans-serif, system-ui, sans-serif;
+  --color-app-ink: #0b3d37;
+  --color-app-ink-deep: #072a26;
+  --color-app-slate: #2d5450;
+  --color-app-muted: #6b9e98;
+  --color-app-bg: #eef5f4;
+  --color-app-surface: #e6f2f0;
+  --color-app-surface-alt: #eaf2f1;
+  --color-app-border: #d0e4e2;
+  --color-app-accent: #0e7c70;
+  --color-app-warning: #d97706;
+  --color-app-warning-bg: #fef3c7;
+  --color-app-danger: #dc2626;
+  --color-app-danger-bg: #fee2e2;
+  --color-app-danger-text: #b91c1c;
+  --color-app-success: #1f8a4c;
+  --color-app-success-bg: #d8f3e3;
 }
 
 @layer base {

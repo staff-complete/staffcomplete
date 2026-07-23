@@ -4,15 +4,10 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
-import OrgSwitcher from '../components/OrgSwitcher.vue'
-import TrialBanner from '../components/TrialBanner.vue'
 
 const { t } = useI18n()
 
 const { data: trialStatus } = useTrialStatus()
-// UX only — the server-side source of truth is blockMutationsWhenExpired
-// (apps/api/src/middleware/trial-lock.ts), which these same POST/DELETE
-// requests hit regardless of what the button here allows.
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const queryClient = useQueryClient()
@@ -22,6 +17,7 @@ const form = ref({ name: '', type: 'onboarding' as 'onboarding' | 'offboarding' 
 const errors = ref<Record<string, string>>({})
 const serverError = ref('')
 const creating = ref(false)
+const showForm = ref(false)
 
 function typeLabel(type: 'onboarding' | 'offboarding') {
   return type === 'offboarding' ? t('common.offboarding') : t('common.onboarding')
@@ -52,6 +48,7 @@ async function createTemplate() {
 
     if (res.ok) {
       form.value = { name: '', type: 'onboarding' }
+      showForm.value = false
       await invalidate()
       return
     }
@@ -73,115 +70,107 @@ async function deleteTemplate(id: string) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-brand-surface px-4 py-12">
-    <div class="max-w-2xl mx-auto space-y-6">
-      <TrialBanner />
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-brand-dark">{{ t('workflows.list.title') }}</h1>
-        <div class="flex items-center gap-4">
-          <OrgSwitcher />
-          <RouterLink to="/dashboard" class="text-sm text-brand-teal font-medium hover:underline">{{
-            t('common.backToDashboard')
-          }}</RouterLink>
+  <div>
+    <div class="mb-5.5 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="mb-1.5 text-2xl font-extrabold tracking-tight">
+          {{ t('workflows.list.title') }}
+        </h1>
+        <p class="text-[15px] text-app-slate">{{ t('nav.templates') }}</p>
+      </div>
+      <button
+        type="button"
+        :disabled="isReadOnly"
+        class="flex items-center gap-2 whitespace-nowrap rounded-full bg-app-accent px-6 py-3.5 text-sm font-bold text-white"
+        :class="isReadOnly ? 'opacity-60' : ''"
+        @click="showForm = !showForm"
+      >
+        {{ t('workflows.list.newTemplateHeading') }}
+      </button>
+    </div>
+
+    <div v-if="showForm" class="mb-5.5 rounded-3xl bg-white p-7">
+      <p
+        v-if="isReadOnly"
+        class="mb-4 rounded-xl bg-app-warning-bg px-3.5 py-2.5 text-sm text-app-warning"
+      >
+        {{ t('workflows.list.trialExpired') }}
+      </p>
+
+      <form class="flex flex-wrap items-end gap-3" @submit.prevent="createTemplate">
+        <div class="min-w-[200px] flex-1">
+          <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="name">{{
+            t('workflows.list.nameLabel')
+          }}</label>
+          <input
+            id="name"
+            v-model="form.name"
+            type="text"
+            :placeholder="t('workflows.list.namePlaceholder')"
+            class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+          />
+          <p v-if="errors.name" class="mt-1 text-xs text-app-danger">{{ errors.name }}</p>
         </div>
-      </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">
-          {{ t('workflows.list.newTemplateHeading') }}
-        </h2>
+        <div>
+          <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="type">{{
+            t('workflows.list.typeLabel')
+          }}</label>
+          <select
+            id="type"
+            v-model="form.type"
+            class="rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+          >
+            <option value="onboarding">{{ t('common.onboarding') }}</option>
+            <option value="offboarding">{{ t('common.offboarding') }}</option>
+          </select>
+        </div>
 
-        <p v-if="isReadOnly" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
-          {{ t('workflows.list.trialExpired') }}
-        </p>
+        <button
+          type="submit"
+          :disabled="creating || isReadOnly"
+          class="whitespace-nowrap rounded-xl bg-app-ink px-6 py-3 text-sm font-bold text-white"
+          :class="creating || isReadOnly ? 'opacity-60' : ''"
+        >
+          {{ creating ? t('workflows.list.submitting') : t('workflows.list.submit') }}
+        </button>
+      </form>
+      <p
+        v-if="serverError"
+        class="mt-3 rounded-xl bg-app-danger-bg px-3.5 py-2.5 text-sm text-app-danger"
+      >
+        {{ serverError }}
+      </p>
+    </div>
 
-        <form class="space-y-4" @submit.prevent="createTemplate">
-          <div class="flex gap-3">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="name">{{
-                t('workflows.list.nameLabel')
-              }}</label>
-              <input
-                id="name"
-                v-model="form.name"
-                type="text"
-                :placeholder="t('workflows.list.namePlaceholder')"
-                class="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors"
-                :class="
-                  errors.name
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-brand-border focus:border-brand-teal'
-                "
-              />
-              <p v-if="errors.name" class="text-xs text-red-500 mt-1">{{ errors.name }}</p>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-brand-dark mb-1" for="type">{{
-                t('workflows.list.typeLabel')
-              }}</label>
-              <select
-                id="type"
-                v-model="form.type"
-                class="px-3 py-2 rounded-lg border border-brand-border text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="onboarding">{{ t('common.onboarding') }}</option>
-                <option value="offboarding">{{ t('common.offboarding') }}</option>
-              </select>
-            </div>
-          </div>
-
-          <p v-if="serverError" class="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
-            {{ serverError }}
-          </p>
-
+    <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+    <p v-else-if="!templates || templates.length === 0" class="text-sm text-app-muted">
+      {{ t('workflows.list.empty') }}
+    </p>
+    <div v-else class="grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-3">
+      <div v-for="template in templates" :key="template.id" class="rounded-[22px] bg-white p-6.5">
+        <div class="mb-4.5 flex items-center justify-between">
+          <span
+            class="rounded-full bg-app-surface px-3.5 py-1 text-[12.5px] font-bold text-app-ink"
+          >
+            {{ typeLabel(template.type) }}
+          </span>
           <button
-            type="submit"
-            :disabled="creating || isReadOnly"
-            class="bg-brand-teal text-white py-2.5 px-5 rounded-lg text-sm font-semibold transition-opacity"
-            :class="creating || isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
+            type="button"
+            :disabled="isReadOnly"
+            class="text-sm font-bold text-app-danger"
+            :class="isReadOnly ? 'opacity-60' : ''"
+            @click="deleteTemplate(template.id)"
           >
-            {{ creating ? t('workflows.list.submitting') : t('workflows.list.submit') }}
+            {{ t('workflows.list.delete') }}
           </button>
-        </form>
-      </div>
-
-      <div class="bg-white rounded-2xl shadow-sm border border-brand-border p-8">
-        <h2 class="text-lg font-semibold text-brand-dark mb-4">
-          {{ t('workflows.list.templatesHeading') }}
-        </h2>
-
-        <p v-if="isLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</p>
-        <p v-else-if="!templates || templates.length === 0" class="text-sm text-gray-500">
-          {{ t('workflows.list.empty') }}
-        </p>
-        <ul v-else class="divide-y divide-brand-border">
-          <li
-            v-for="template in templates"
-            :key="template.id"
-            class="flex items-center justify-between py-3"
-          >
-            <RouterLink :to="`/workflows/${template.id}`" class="group">
-              <p
-                class="text-sm font-medium text-brand-dark group-hover:text-brand-teal group-hover:underline"
-              >
-                {{ template.name }}
-              </p>
-              <p class="text-xs text-gray-500">
-                {{ typeLabel(template.type) }} · {{ t('common.steps', template.stepCount) }}
-              </p>
-            </RouterLink>
-            <button
-              type="button"
-              :disabled="isReadOnly"
-              class="text-sm text-red-500 font-medium"
-              :class="isReadOnly ? 'opacity-60 cursor-not-allowed' : 'hover:underline'"
-              @click="deleteTemplate(template.id)"
-            >
-              {{ t('workflows.list.delete') }}
-            </button>
-          </li>
-        </ul>
+        </div>
+        <RouterLink :to="`/workflows/${template.id}`">
+          <h3 class="mb-2 text-[17.5px] font-extrabold tracking-tight">{{ template.name }}</h3>
+          <div class="text-[13.5px] text-app-muted">
+            {{ t('common.steps', template.stepCount) }}
+          </div>
+        </RouterLink>
       </div>
     </div>
   </div>
