@@ -10,6 +10,7 @@ const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
+const activeOrganization = authClient.useActiveOrganization()
 
 const form = ref({ email: '', password: '' })
 const errors = ref<Record<string, string>>({})
@@ -54,6 +55,11 @@ async function submit() {
       serverError.value = t('auth.signIn.genericError')
       return
     }
+
+    // The active-organization store was fetched (unauthenticated) before this
+    // sign-in and never auto-refreshes on login, so the org's locale
+    // (ADR-0016) wouldn't apply until a hard reload without this.
+    await activeOrganization.value.refetch()
 
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
     await router.push(redirect)
