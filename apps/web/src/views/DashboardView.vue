@@ -80,7 +80,7 @@ const peopleInProgress = computed(() =>
         </div>
         <RouterLink
           to="/tasks"
-          class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-app-ink px-5 py-3 text-sm font-bold text-white"
+          class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-app-accent px-5 py-3 text-sm font-bold text-white"
         >
           {{ t('dashboard.viewTodaysWork') }}
         </RouterLink>

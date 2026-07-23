@@ -195,7 +195,7 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
           <button
             type="submit"
             :disabled="savingName || isReadOnly"
-            class="whitespace-nowrap rounded-xl bg-app-ink px-6 py-3 text-sm font-bold text-white"
+            class="whitespace-nowrap rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
             :class="savingName || isReadOnly ? 'opacity-60' : ''"
           >
             {{ savingName ? t('workflows.editor.saving') : t('workflows.editor.save') }}
@@ -338,7 +338,7 @@ async function reorder(stepId: string, direction: 'up' | 'down') {
           <button
             type="submit"
             :disabled="addingStep || isReadOnly"
-            class="w-fit whitespace-nowrap rounded-xl bg-app-ink px-6 py-3 text-sm font-bold text-white"
+            class="w-fit whitespace-nowrap rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
             :class="addingStep || isReadOnly ? 'opacity-60' : ''"
           >
             {{ addingStep ? t('workflows.editor.submitting') : t('workflows.editor.submit') }}

@@ -129,7 +129,7 @@ async function deleteTemplate(id: string) {
         <button
           type="submit"
           :disabled="creating || isReadOnly"
-          class="whitespace-nowrap rounded-xl bg-app-ink px-6 py-3 text-sm font-bold text-white"
+          class="whitespace-nowrap rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
           :class="creating || isReadOnly ? 'opacity-60' : ''"
         >
           {{ creating ? t('workflows.list.submitting') : t('workflows.list.submit') }}

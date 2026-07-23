@@ -160,7 +160,7 @@ async function revoke(id: string) {
           <button
             type="submit"
             :disabled="loading || isReadOnly"
-            class="rounded-xl bg-app-accent py-3 text-center text-[15px] font-bold text-white"
+            class="rounded-full bg-app-accent py-3 text-center text-[15px] font-bold text-white"
             :class="loading || isReadOnly ? 'opacity-60' : ''"
           >
             {{ loading ? t('team.submitting') : t('team.submit') }}

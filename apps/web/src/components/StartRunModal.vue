@@ -186,7 +186,7 @@ async function submit() {
           <button
             type="submit"
             :disabled="submitting"
-            class="flex-1 rounded-xl bg-app-ink py-3 text-center text-[14.5px] font-bold text-white"
+            class="flex-1 rounded-full bg-app-accent py-3 text-center text-[14.5px] font-bold text-white"
             :class="submitting ? 'opacity-60' : ''"
           >
             {{ submitting ? t('runs.startModal.submitting') : t('runs.startModal.submit') }}

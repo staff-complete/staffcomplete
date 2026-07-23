@@ -140,7 +140,7 @@ async function changeLocale(locale: Locale) {
         <button
           type="submit"
           :disabled="saving"
-          class="w-fit rounded-xl bg-app-ink px-6 py-3 text-sm font-bold text-white"
+          class="w-fit rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
           :class="saving ? 'opacity-60' : ''"
         >
           {{ saving ? t('settings.saving') : t('settings.save') }}
@@ -161,7 +161,7 @@ async function changeLocale(locale: Locale) {
           class="rounded-full px-5 py-2.5 text-sm font-bold"
           :class="
             activeOrganization.data?.locale === loc
-              ? 'bg-app-ink text-white'
+              ? 'bg-app-accent text-white'
               : 'bg-app-bg text-app-slate'
           "
           @click="changeLocale(loc)"

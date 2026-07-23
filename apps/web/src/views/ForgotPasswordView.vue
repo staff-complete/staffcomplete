@@ -82,7 +82,7 @@ async function submit() {
           <button
             type="submit"
             :disabled="loading"
-            class="w-full bg-brand-teal text-white py-2.5 rounded-lg text-sm font-semibold transition-opacity mt-2"
+            class="w-full bg-app-accent text-white py-2.5 rounded-full text-sm font-bold transition-opacity mt-2"
             :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
           >
             {{ loading ? t('auth.forgotPassword.submitting') : t('auth.forgotPassword.submit') }}
