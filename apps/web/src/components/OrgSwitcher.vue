@@ -35,7 +35,14 @@ async function selectOrg(organizationId: string) {
       :class="hasMultipleOrgs ? 'cursor-pointer' : 'cursor-default'"
       @click="toggleMenu"
     >
+      <img
+        v-if="activeOrganization.data?.logo"
+        :src="activeOrganization.data.logo"
+        alt=""
+        class="h-7 w-7 shrink-0 rounded-lg object-cover"
+      />
       <div
+        v-else
         class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-app-ink text-xs font-extrabold text-white"
       >
         {{ initialsFor(activeOrganization.data?.name ?? '') }}
@@ -70,7 +77,14 @@ async function selectOrg(organizationId: string) {
         :class="org.id === activeOrganization.data?.id ? 'bg-app-bg' : ''"
         @click="selectOrg(org.id)"
       >
+        <img
+          v-if="org.logo"
+          :src="org.logo"
+          alt=""
+          class="h-6.5 w-6.5 shrink-0 rounded-md object-cover"
+        />
         <div
+          v-else
           class="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-md bg-app-ink text-[11px] font-extrabold text-white"
         >
           {{ initialsFor(org.name) }}
