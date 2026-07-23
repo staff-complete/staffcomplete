@@ -9,6 +9,7 @@ RUN apt-get update \
        zsh=5.9-8+b23 \
        unzip=6.0-29 \
        ca-certificates=20250419 \
+       jq \
        sudo \
        chromium \
     && install -m 0755 -d /etc/apt/keyrings \
