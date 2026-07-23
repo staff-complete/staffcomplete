@@ -60,6 +60,7 @@ const peopleInProgress = computed(() =>
       avatarBg: colors.bg,
       avatarText: colors.color,
       statusKey: statusKey(r),
+      progressPct: r.stepCount === 0 ? 100 : Math.round((r.completedStepCount / r.stepCount) * 100),
     }
   }),
 )
@@ -181,6 +182,12 @@ const peopleInProgress = computed(() =>
               }"
               >{{ t(`runs.status.${run.statusKey}`) }}</span
             >
+          </div>
+          <div class="mb-1.5 h-1.5 overflow-hidden rounded-full bg-app-surface-alt">
+            <div
+              class="h-full rounded-full bg-app-accent"
+              :style="{ width: `${run.progressPct}%` }"
+            />
           </div>
           <div class="truncate text-[13px] text-app-muted">
             {{
