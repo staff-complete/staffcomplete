@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { SUPPORTED_LOCALES, TRIAL_LENGTH_DAYS, type Locale } from '@staffcomplete/shared'
+import { TRIAL_LENGTH_DAYS } from '@staffcomplete/shared'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { initialsFor } from '../lib/avatarColors'
@@ -64,24 +64,6 @@ async function logout() {
   await authClient.signOut()
   await router.push('/sign-in')
 }
-
-const activeOrganization = authClient.useActiveOrganization()
-const changingLocale = ref(false)
-const localeError = ref('')
-
-async function changeLocale(locale: Locale) {
-  if (locale === activeOrganization.value.data?.locale || changingLocale.value) return
-  localeError.value = ''
-  changingLocale.value = true
-  try {
-    const { error } = await authClient.organization.update({ data: { locale } })
-    if (error) localeError.value = t('shell.languageError')
-  } catch {
-    localeError.value = t('shell.languageError')
-  } finally {
-    changingLocale.value = false
-  }
-}
 </script>
 
 <template>
@@ -140,24 +122,6 @@ async function changeLocale(locale: Locale) {
       >
         <OrgSwitcher />
         <div class="flex-1"></div>
-        <div
-          class="flex shrink-0 items-center gap-0.5 rounded-full bg-app-bg p-1"
-          :title="t('shell.languageError')"
-        >
-          <button
-            v-for="loc in SUPPORTED_LOCALES"
-            :key="loc"
-            type="button"
-            :disabled="changingLocale"
-            class="rounded-full px-3 py-1.5 text-[12.5px] font-extrabold"
-            :class="
-              activeOrganization.data?.locale === loc ? 'bg-white text-app-ink' : 'text-app-muted'
-            "
-            @click="changeLocale(loc)"
-          >
-            {{ t(`locale.${loc}`) }}
-          </button>
-        </div>
         <div class="flex w-[180px] shrink items-center gap-2 rounded-full bg-app-bg px-4.5 py-2.5">
           <svg
             width="16"
