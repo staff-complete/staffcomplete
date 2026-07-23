@@ -3,6 +3,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { organization } from 'better-auth/plugins/organization'
 import { Resend } from 'resend'
+import { DEFAULT_LOCALE } from '@staffcomplete/shared'
 import { startTrialIfNeeded } from './billing/start-trial.js'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
@@ -137,6 +138,18 @@ export const auth = betterAuth({
   plugins: [
     organization({
       invitationExpiresIn: SEVENTY_TWO_HOURS_IN_SECONDS,
+      schema: {
+        organization: {
+          additionalFields: {
+            locale: {
+              type: 'string',
+              required: false,
+              defaultValue: DEFAULT_LOCALE,
+              input: true,
+            },
+          },
+        },
+      },
       sendInvitationEmail: async ({ email, invitation, organization: org }) => {
         const appUrl = process.env.APP_URL ?? 'http://localhost:5173'
         const acceptUrl = `${appUrl}/accept-invite?token=${invitation.id}`

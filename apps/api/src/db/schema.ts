@@ -76,6 +76,9 @@ export const organization = pgTable('organization', {
   slug: text('slug').notNull().unique(),
   logo: text('logo'),
   metadata: text('metadata'),
+  // Org-level UI language (ADR-0016) — every member sees the app in this
+  // language, there is no per-user override.
+  locale: text('locale').notNull().default('en'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 

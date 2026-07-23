@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+export {
+  DEFAULT_LOCALE,
+  isRtlLocale,
+  localeSchema,
+  SUPPORTED_LOCALES,
+  textDirection,
+} from './locale.js'
+export type { Locale } from './locale.js'
 export type { Job, JobHandler, Queue } from './queue.js'
 export { createRunSchema } from './run.js'
 export type { CreateRunInput } from './run.js'
