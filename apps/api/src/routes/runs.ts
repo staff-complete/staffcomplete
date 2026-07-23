@@ -23,32 +23,47 @@ runsRouter.get('/', async (c) => {
       orderBy: (r, { desc }) => [desc(r.createdAt)],
     }),
     steps: await tx.query.runStep.findMany({
-      columns: { runId: true, status: true },
+      columns: { runId: true, status: true, title: true, dueDateOffsetDays: true, position: true },
     }),
   }))
 
-  const stepCounts = new Map<string, number>()
-  const completedStepCounts = new Map<string, number>()
+  const stepsByRun = new Map<string, typeof steps>()
   for (const step of steps) {
-    stepCounts.set(step.runId, (stepCounts.get(step.runId) ?? 0) + 1)
-    if (step.status === 'completed') {
-      completedStepCounts.set(step.runId, (completedStepCounts.get(step.runId) ?? 0) + 1)
+    const existing = stepsByRun.get(step.runId)
+    if (existing) {
+      existing.push(step)
+    } else {
+      stepsByRun.set(step.runId, [step])
     }
   }
 
   return c.json({
-    runs: runs.map((r) => ({
-      id: r.id,
-      type: r.type,
-      employeeName: r.employeeName,
-      employeeEmail: r.employeeEmail,
-      employeeRole: r.employeeRole,
-      eventDate: r.eventDate,
-      status: r.status,
-      stepCount: stepCounts.get(r.id) ?? 0,
-      completedStepCount: completedStepCounts.get(r.id) ?? 0,
-      createdAt: r.createdAt.toISOString(),
-    })),
+    runs: runs.map((r) => {
+      const runSteps = stepsByRun.get(r.id) ?? []
+      const completedStepCount = runSteps.filter((s) => s.status === 'completed').length
+      // Health is derived, not stored — a run is "blocked" iff it has at
+      // least one currently-overdue step, computed the same way as the
+      // detail endpoint below (computeDueDate + isTaskOverdue), so the two
+      // endpoints can't disagree about what's overdue.
+      const overdueSteps = runSteps
+        .filter((s) => isTaskOverdue(computeDueDate(r.eventDate, s.dueDateOffsetDays), s.status))
+        .sort((a, b) => a.position - b.position)
+
+      return {
+        id: r.id,
+        type: r.type,
+        employeeName: r.employeeName,
+        employeeEmail: r.employeeEmail,
+        employeeRole: r.employeeRole,
+        eventDate: r.eventDate,
+        status: r.status,
+        stepCount: runSteps.length,
+        completedStepCount,
+        overdueStepCount: overdueSteps.length,
+        overdueStepTitle: overdueSteps[0]?.title ?? null,
+        createdAt: r.createdAt.toISOString(),
+      }
+    }),
   })
 })
 

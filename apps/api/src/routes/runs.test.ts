@@ -126,8 +126,20 @@ describe('GET /api/runs', () => {
       },
     ])
     mocks.runStepFindManyMock.mockResolvedValue([
-      { runId: 'r1', status: 'completed' },
-      { runId: 'r1', status: 'pending' },
+      {
+        runId: 'r1',
+        status: 'completed',
+        title: 'Order laptop',
+        dueDateOffsetDays: 0,
+        position: 0,
+      },
+      {
+        runId: 'r1',
+        status: 'pending',
+        title: 'Schedule orientation',
+        dueDateOffsetDays: 1,
+        position: 1,
+      },
     ])
 
     const res = await req('/')
@@ -135,7 +147,64 @@ describe('GET /api/runs', () => {
 
     expect(res.status).toBe(200)
     expect(json.runs).toEqual([
-      expect.objectContaining({ id: 'r1', stepCount: 2, completedStepCount: 1 }),
+      expect.objectContaining({
+        id: 'r1',
+        stepCount: 2,
+        completedStepCount: 1,
+        overdueStepCount: 0,
+        overdueStepTitle: null,
+      }),
+    ])
+  })
+
+  it('flags a run as having overdue steps when a pending step is past its due date', async () => {
+    adminSession()
+    mocks.runFindManyMock.mockResolvedValue([
+      {
+        id: 'r1',
+        type: 'offboarding',
+        employeeName: 'Jane Doe',
+        employeeEmail: 'jane@example.com',
+        employeeRole: 'Engineer',
+        eventDate: '2020-01-01',
+        status: 'in_progress',
+        createdAt: new Date(),
+      },
+    ])
+    mocks.runStepFindManyMock.mockResolvedValue([
+      {
+        runId: 'r1',
+        status: 'completed',
+        title: 'Revoke access',
+        dueDateOffsetDays: 0,
+        position: 0,
+      },
+      {
+        runId: 'r1',
+        status: 'pending',
+        title: 'Collect laptop',
+        dueDateOffsetDays: 1,
+        position: 1,
+      },
+      {
+        runId: 'r1',
+        status: 'pending',
+        title: 'Exit interview',
+        dueDateOffsetDays: 2,
+        position: 2,
+      },
+    ])
+
+    const res = await req('/')
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json.runs).toEqual([
+      expect.objectContaining({
+        id: 'r1',
+        overdueStepCount: 2,
+        overdueStepTitle: 'Collect laptop',
+      }),
     ])
   })
 })
