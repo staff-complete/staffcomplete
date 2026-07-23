@@ -25,6 +25,7 @@ const ru = {
     myTasks: 'Мои задачи',
     runs: 'Процессы',
     templates: 'Шаблоны',
+    settings: 'Настройки',
   },
 
   auth: {
@@ -343,6 +344,25 @@ const ru = {
     upgradePlan: 'Улучшить план',
     search: 'Поиск…',
     languageError: 'Не удалось обновить язык. Попробуйте снова.',
+  },
+
+  settings: {
+    subtitle: 'Управление названием, логотипом и языком вашей организации',
+    detailsHeading: 'Данные организации',
+    nameLabel: 'Название организации',
+    namePlaceholder: 'ООО «Компания»',
+    logoLabel: 'Ссылка на логотип',
+    logoPlaceholder: 'https://example.com/logo.png',
+    logoDescription:
+      'Вставьте ссылку на изображение, которое будет использоваться как логотип вашей организации.',
+    save: 'Сохранить изменения',
+    saving: 'Сохранение…',
+    saved: 'Сохранено.',
+    validationName: 'Название организации должно содержать не менее 2 символов',
+    validationLogo: 'Введите корректную ссылку',
+    languageHeading: 'Язык',
+    languageDescription:
+      'Выберите язык, на котором StaffComplete будет отображаться для всей вашей организации.',
   },
 } satisfies MessageSchema
 

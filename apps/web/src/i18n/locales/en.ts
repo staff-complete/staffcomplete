@@ -23,6 +23,7 @@ const en = {
     myTasks: 'My tasks',
     runs: 'Runs',
     templates: 'Templates',
+    settings: 'Settings',
   },
 
   auth: {
@@ -337,6 +338,23 @@ const en = {
     upgradePlan: 'Upgrade plan',
     search: 'Search…',
     languageError: 'Could not update the language. Please try again.',
+  },
+
+  settings: {
+    subtitle: "Manage your organization's name, logo, and language",
+    detailsHeading: 'Organization details',
+    nameLabel: 'Organization name',
+    namePlaceholder: 'Acme Corp',
+    logoLabel: 'Logo URL',
+    logoPlaceholder: 'https://example.com/logo.png',
+    logoDescription: "Paste a link to an image to use as your organization's logo.",
+    save: 'Save changes',
+    saving: 'Saving…',
+    saved: 'Saved.',
+    validationName: 'Organization name must be at least 2 characters',
+    validationLogo: 'Enter a valid URL',
+    languageHeading: 'Language',
+    languageDescription: 'Choose the language everyone in your organization sees StaffComplete in.',
   },
 }
 

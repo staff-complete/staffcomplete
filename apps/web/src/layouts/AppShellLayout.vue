@@ -41,6 +41,7 @@ const navItems = computed<NavItem[]>(() => [
   { routeName: 'runs', to: '/runs', label: t('nav.runs'), adminOnly: true },
   { routeName: 'workflows', to: '/workflows', label: t('nav.templates'), adminOnly: true },
   { routeName: 'team', to: '/team', label: t('team.title'), adminOnly: true },
+  { routeName: 'settings', to: '/settings', label: t('nav.settings'), adminOnly: true },
   { routeName: 'billing', to: '/billing', label: t('billing.title'), adminOnly: true },
 ])
 

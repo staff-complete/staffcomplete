@@ -25,6 +25,7 @@ const he = {
     myTasks: 'המשימות שלי',
     runs: 'תהליכים',
     templates: 'תבניות',
+    settings: 'הגדרות',
   },
 
   auth: {
@@ -335,6 +336,23 @@ const he = {
     upgradePlan: 'שדרוג תוכנית',
     search: 'חיפוש…',
     languageError: 'לא ניתן היה לעדכן את השפה. נסו שוב.',
+  },
+
+  settings: {
+    subtitle: 'ניהול שם הארגון, הלוגו והשפה שלו',
+    detailsHeading: 'פרטי הארגון',
+    nameLabel: 'שם הארגון',
+    namePlaceholder: 'חברה בע"מ',
+    logoLabel: 'קישור ללוגו',
+    logoPlaceholder: 'https://example.com/logo.png',
+    logoDescription: 'הדביקו קישור לתמונה שתשמש כלוגו של הארגון שלכם.',
+    save: 'שמירת שינויים',
+    saving: 'שומר…',
+    saved: 'נשמר.',
+    validationName: 'שם הארגון חייב לכלול לפחות 2 תווים',
+    validationLogo: 'הזינו קישור תקין',
+    languageHeading: 'שפה',
+    languageDescription: 'בחרו את השפה שבה StaffComplete יוצג לכל חברי הארגון שלכם.',
   },
 } satisfies MessageSchema
 
