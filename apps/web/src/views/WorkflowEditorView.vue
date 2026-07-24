@@ -8,14 +8,13 @@ import type { AutomatedActionKey } from '@staffcomplete/shared'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
-import type { WorkflowTemplateStep } from '../composables/useWorkflowTemplates'
 import { moveStep } from '../lib/reorderSteps'
 
 type Member = { id: string; user: { name: string; email: string } }
 
 // Manual and automated steps collect genuinely different fields, but share
 // one form/one add-step button per phase — see packages/shared/src/workflow.ts.
-// emailSubject/emailBody are specific to the email.send_welcome action; a
+// emailTo/emailSubject/emailBody are specific to the email.send action; a
 // second registered action with different config would need its own fields
 // here rather than reusing these.
 interface StepFormState {
@@ -24,6 +23,7 @@ interface StepFormState {
   assigneeId: string
   dueDateOffsetDays: string | number
   action: AutomatedActionKey | ''
+  emailTo: string
   emailSubject: string
   emailBody: string
 }
@@ -34,14 +34,11 @@ const { t } = useI18n()
 // same class of string as typeManual/typeAutomated — so it's translated via
 // i18n rather than shown as the English fallback stored in the shared
 // registry (see packages/shared/src/automation.ts). Action keys use dots
-// (e.g. 'email.send_welcome'), which map directly onto a nested i18n path.
+// (e.g. 'email.send'), which map directly onto a nested i18n path.
 function automatedActionLabel(key: AutomatedActionKey) {
   return t(`workflows.automatedActions.${key}`)
 }
 
-function stepDisplayTitle(step: WorkflowTemplateStep) {
-  return step.type === 'automated' && step.action ? automatedActionLabel(step.action) : step.title
-}
 const route = useRoute()
 const id = computed(() => route.params.id as string)
 
@@ -196,6 +193,7 @@ function emptyStepForm(): StepFormState {
     assigneeId: '',
     dueDateOffsetDays: '',
     action: '',
+    emailTo: '',
     emailSubject: '',
     emailBody: '',
   }
@@ -208,12 +206,24 @@ function stepFormFor(phaseId: string): StepFormState {
   return stepForms[phaseId]
 }
 
+// Prefills the title from the action's label when an action is first picked
+// — a nice default, since most steps just want the action's name — but
+// never overwrites a title the admin already typed, since a template can
+// have several steps using the same action (e.g. two "Send email" steps to
+// different recipients) that need distinguishing.
+function onActionSelected(phaseId: string) {
+  const form = stepFormFor(phaseId)
+  if (form.title.trim() === '' && form.action !== '') {
+    form.title = automatedActionLabel(form.action)
+  }
+}
+
 async function addStep(phaseId: string) {
   if (isReadOnly.value) return
   const form = stepFormFor(phaseId)
   stepErrors[phaseId] = ''
 
-  if (form.type === 'manual' && form.title.trim().length < 2) {
+  if (form.title.trim().length < 2) {
     stepErrors[phaseId] = t('workflows.editor.validationTitle')
     return
   }
@@ -223,8 +233,8 @@ async function addStep(phaseId: string) {
   }
   if (
     form.type === 'automated' &&
-    form.action === 'email.send_welcome' &&
-    (form.emailSubject.trim() === '' || form.emailBody.trim() === '')
+    form.action === 'email.send' &&
+    (form.emailTo.trim() === '' || form.emailSubject.trim() === '' || form.emailBody.trim() === '')
   ) {
     stepErrors[phaseId] = t('workflows.editor.validationEmailConfig')
     return
@@ -242,8 +252,9 @@ async function addStep(phaseId: string) {
       : {
           phaseId,
           type: 'automated' as const,
+          title: form.title,
           action: form.action,
-          config: { subject: form.emailSubject, body: form.emailBody },
+          config: { to: form.emailTo, subject: form.emailSubject, body: form.emailBody },
         }
 
   addingStepPhaseId.value = phaseId
@@ -416,7 +427,7 @@ async function reorderStep(
               class="flex items-center justify-between gap-3 border-b border-app-surface-alt py-4 last:border-0"
             >
               <div class="min-w-0">
-                <p class="truncate text-[15.5px] font-bold">{{ stepDisplayTitle(step) }}</p>
+                <p class="truncate text-[15.5px] font-bold">{{ step.title }}</p>
                 <p class="mt-0.5 text-[13px] text-app-muted">
                   {{
                     step.type === 'manual'
@@ -429,6 +440,9 @@ async function reorderStep(
                       {{ t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays }) }}
                     </template>
                   </template>
+                  <template v-else-if="step.action"
+                    >· {{ automatedActionLabel(step.action) }}</template
+                  >
                 </p>
               </div>
               <div class="flex shrink-0 items-center gap-1.5">
@@ -499,22 +513,22 @@ async function reorderStep(
               </select>
             </div>
 
-            <template v-if="stepFormFor(phase.id).type === 'manual'">
-              <div>
-                <label
-                  class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                  :for="`step-title-${phase.id}`"
-                  >{{ t('workflows.editor.titleLabel') }}</label
-                >
-                <input
-                  :id="`step-title-${phase.id}`"
-                  v-model="stepFormFor(phase.id).title"
-                  type="text"
-                  :placeholder="t('workflows.editor.titlePlaceholder')"
-                  class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                />
-              </div>
+            <div>
+              <label
+                class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                :for="`step-title-${phase.id}`"
+                >{{ t('workflows.editor.titleLabel') }}</label
+              >
+              <input
+                :id="`step-title-${phase.id}`"
+                v-model="stepFormFor(phase.id).title"
+                type="text"
+                :placeholder="t('workflows.editor.titlePlaceholder')"
+                class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+              />
+            </div>
 
+            <template v-if="stepFormFor(phase.id).type === 'manual'">
               <div class="flex flex-wrap gap-3">
                 <div class="min-w-[180px] flex-1">
                   <label
@@ -563,6 +577,7 @@ async function reorderStep(
                   :id="`step-action-${phase.id}`"
                   v-model="stepFormFor(phase.id).action"
                   class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                  @change="onActionSelected(phase.id)"
                 >
                   <option value="" disabled>{{ t('workflows.editor.actionPlaceholder') }}</option>
                   <option v-for="key in automatedActionKeys" :key="key" :value="key">
@@ -571,7 +586,21 @@ async function reorderStep(
                 </select>
               </div>
 
-              <template v-if="stepFormFor(phase.id).action === 'email.send_welcome'">
+              <template v-if="stepFormFor(phase.id).action === 'email.send'">
+                <div>
+                  <label
+                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                    :for="`step-email-to-${phase.id}`"
+                    >{{ t('workflows.editor.emailToLabel') }}</label
+                  >
+                  <input
+                    :id="`step-email-to-${phase.id}`"
+                    v-model="stepFormFor(phase.id).emailTo"
+                    type="text"
+                    :placeholder="t('workflows.editor.emailToPlaceholder')"
+                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                  />
+                </div>
                 <div>
                   <label
                     class="mb-1.5 block text-[13px] font-bold text-app-slate"

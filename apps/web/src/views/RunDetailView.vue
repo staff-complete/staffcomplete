@@ -52,14 +52,12 @@ function memberLabel(memberId: string | null) {
 }
 
 // An automated step's action is fixed system vocabulary, not user-authored
-// content, so it's translated via i18n rather than shown as the stored
-// title (which is the server-side English fallback — see
-// packages/shared/src/automation.ts and WorkflowEditorView.vue's matching
-// helper).
-function stepDisplayTitle(step: { type: string; action: string | null; title: string }) {
-  return step.type === 'automated' && step.action
-    ? t(`workflows.automatedActions.${step.action}`)
-    : step.title
+// content, so its label is translated via i18n — but the step's own title
+// is real content now (a template can have several steps using the same
+// action, distinguished by title), so it's shown as-is, same as a manual
+// step's title.
+function automatedActionLabel(action: string) {
+  return t(`workflows.automatedActions.${action}`)
 }
 
 function stepStatusLabel(step: { status: string; isOverdue: boolean }) {
@@ -194,7 +192,7 @@ const typeLabel = computed(() =>
                   class="truncate text-[15.5px] font-bold"
                   :class="step.status === 'completed' ? 'text-app-muted line-through' : ''"
                 >
-                  {{ stepDisplayTitle(step) }}
+                  {{ step.title }}
                 </p>
                 <p class="mt-1 text-[13px] text-app-muted">
                   <template v-if="step.type === 'manual'">
@@ -203,7 +201,9 @@ const typeLabel = computed(() =>
                       t('runs.detail.dueLabel', { date: step.dueDate })
                     }}</template>
                   </template>
-                  <template v-else>{{ t('workflows.editor.typeAutomated') }}</template>
+                  <template v-else-if="step.action">{{
+                    automatedActionLabel(step.action)
+                  }}</template>
                 </p>
               </div>
               <span
