@@ -6,8 +6,10 @@ import {
   parseAutomatedActionConfig,
 } from './automation.js'
 
+const VALID_WELCOME_CONFIG = { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' }
+
 describe('getAutomatedAction', () => {
-  it('registers the welcome email action with an empty config schema', () => {
+  it('registers the welcome email action with a subject/body config schema', () => {
     expect(automatedActionKeys).toContain('email.send_welcome')
     expect(getAutomatedAction('email.send_welcome').label).toBe('Send welcome email')
   })
@@ -24,18 +26,26 @@ describe('isAutomatedActionKey', () => {
 })
 
 describe('parseAutomatedActionConfig', () => {
-  it('accepts an empty config for an action with no parameters', () => {
-    const result = parseAutomatedActionConfig('email.send_welcome', {})
+  it('accepts a config with a subject and body', () => {
+    const result = parseAutomatedActionConfig('email.send_welcome', VALID_WELCOME_CONFIG)
     expect(result.success).toBe(true)
   })
 
-  it('defaults a missing config to {} rather than failing', () => {
+  it('rejects a missing config, since subject/body are required', () => {
     const result = parseAutomatedActionConfig('email.send_welcome', undefined)
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
   })
 
-  it('rejects an unexpected parameter for an action with an empty schema', () => {
-    const result = parseAutomatedActionConfig('email.send_welcome', { extra: 'nope' })
+  it('rejects an empty subject or body', () => {
+    const result = parseAutomatedActionConfig('email.send_welcome', { subject: '', body: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an unexpected parameter', () => {
+    const result = parseAutomatedActionConfig('email.send_welcome', {
+      ...VALID_WELCOME_CONFIG,
+      extra: 'nope',
+    })
     expect(result.success).toBe(false)
   })
 })

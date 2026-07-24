@@ -404,7 +404,7 @@ describe('POST /api/runs', () => {
         assigneeId: null,
         dueDateOffsetDays: null,
         action: 'email.send_welcome',
-        config: {},
+        config: { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' },
         position: 1,
       },
     ])
@@ -442,7 +442,7 @@ describe('POST /api/runs', () => {
           assigneeId: null,
           dueDateOffsetDays: null,
           action: 'email.send_welcome',
-          config: {},
+          config: { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' },
           position: 1,
         },
       ])
@@ -483,7 +483,7 @@ describe('POST /api/runs', () => {
         phaseId: generatedPhaseId,
         title: 'Send welcome email',
         action: 'email.send_welcome',
-        config: {},
+        config: { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' },
         position: 1,
       }),
     ])

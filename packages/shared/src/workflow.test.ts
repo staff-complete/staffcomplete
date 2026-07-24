@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createStepSchema, updateStepSchema } from './workflow.js'
 
+const VALID_WELCOME_CONFIG = { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' }
+
 describe('createStepSchema', () => {
   it('accepts a manual step with a title and no action', () => {
     const result = createStepSchema.safeParse({
@@ -28,7 +30,7 @@ describe('createStepSchema', () => {
       phaseId: 'p1',
       type: 'automated',
       action: 'email.send_welcome',
-      config: {},
+      config: VALID_WELCOME_CONFIG,
     })
 
     expect(result.success).toBe(true)
@@ -60,6 +62,7 @@ describe('createStepSchema', () => {
       phaseId: 'p1',
       type: 'automated',
       action: 'email.send_welcome',
+      config: VALID_WELCOME_CONFIG,
       title: 'Send welcome email',
     })
 
@@ -80,7 +83,7 @@ describe('updateStepSchema', () => {
   it('accepts updating an automated step to a different registered action', () => {
     const result = updateStepSchema.safeParse({
       action: 'email.send_welcome',
-      config: {},
+      config: VALID_WELCOME_CONFIG,
     })
 
     expect(result.success).toBe(true)

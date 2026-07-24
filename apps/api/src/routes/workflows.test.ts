@@ -59,6 +59,7 @@ const { workflowsRouter } = await import('./workflows.js')
 const app = new Hono().route('/api/workflows', workflowsRouter)
 
 const ADMIN_ORG_ID = 'org-admin'
+const VALID_WELCOME_CONFIG = { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' }
 
 function adminSession(role: 'admin' | 'owner' = 'admin') {
   mocks.getSessionMock.mockResolvedValue({
@@ -482,7 +483,7 @@ describe('POST /api/workflows/:id/steps', () => {
         assigneeId: null,
         dueDateOffsetDays: null,
         action: 'email.send_welcome',
-        config: {},
+        config: VALID_WELCOME_CONFIG,
         position: 0,
       },
     ])
@@ -491,6 +492,7 @@ describe('POST /api/workflows/:id/steps', () => {
       phaseId: 'p1',
       type: 'automated',
       action: 'email.send_welcome',
+      config: VALID_WELCOME_CONFIG,
     })
     const json = await res.json()
 
@@ -502,7 +504,7 @@ describe('POST /api/workflows/:id/steps', () => {
         assigneeId: null,
         dueDateOffsetDays: null,
         action: 'email.send_welcome',
-        config: {},
+        config: VALID_WELCOME_CONFIG,
       }),
     )
   })
@@ -615,7 +617,10 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
       type: 'manual',
     })
 
-    const res = await patchJson('/t1/steps/s1', { action: 'email.send_welcome', config: {} })
+    const res = await patchJson('/t1/steps/s1', {
+      action: 'email.send_welcome',
+      config: VALID_WELCOME_CONFIG,
+    })
 
     expect(res.status).toBe(400)
     expect((await res.json()).code).toBe('TYPE_MISMATCH')
@@ -638,18 +643,21 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
         assigneeId: null,
         dueDateOffsetDays: null,
         action: 'email.send_welcome',
-        config: {},
+        config: VALID_WELCOME_CONFIG,
         position: 0,
       },
     ])
 
-    const res = await patchJson('/t1/steps/s1', { action: 'email.send_welcome', config: {} })
+    const res = await patchJson('/t1/steps/s1', {
+      action: 'email.send_welcome',
+      config: VALID_WELCOME_CONFIG,
+    })
     const json = await res.json()
 
     expect(res.status).toBe(200)
     expect(json.title).toBe('Send welcome email')
     expect(mocks.updateSetMock).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Send welcome email', config: {} }),
+      expect.objectContaining({ title: 'Send welcome email', config: VALID_WELCOME_CONFIG }),
     )
   })
 })

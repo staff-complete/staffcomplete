@@ -4,12 +4,30 @@ import { z } from 'zod'
 // the discussion on workflow.ts's createStepSchema. Each entry's configSchema
 // is deliberately per-action rather than one shared shape, since different
 // actions need different parameters (or none at all).
-export const emailSendWelcomeConfigSchema = z.strictObject({})
+//
+// subject/body are the actual email content, filled in per-step when the
+// action is added to a template — there's no baked-in copy, since "welcome
+// to the team" text is org-specific. body may reference [employeeName],
+// [employeeRole], and [eventDate] (the run fields of the same name) —
+// square brackets rather than {{mustache}} so the token syntax doesn't
+// collide with vue-i18n's own {named} interpolation wherever this gets
+// surfaced as UI hint text. Substituting them is the job of whatever
+// eventually executes this action, not this schema.
+export const emailSendWelcomeConfigSchema = z.strictObject({
+  subject: z.string().min(1, 'Subject is required'),
+  body: z.string().min(1, 'Body is required'),
+})
 export type EmailSendWelcomeConfig = z.infer<typeof emailSendWelcomeConfigSchema>
 
 export type AutomatedActionKey = 'email.send_welcome'
 
 interface AutomatedActionDefinition {
+  // English fallback for contexts that can't reach vue-i18n (server-side
+  // step title default, activity feed, non-UI logging) — the UI itself
+  // should prefer t(`workflows.automatedActions.${key}`) instead of this,
+  // same as any other UI vocabulary (see apps/web's locale files). Unlike a
+  // manual step's title, this label isn't user-authored content, so it gets
+  // translated like other chrome rather than stored as free text.
   label: string
   configSchema: z.ZodType
 }
