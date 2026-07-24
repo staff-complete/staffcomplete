@@ -419,11 +419,13 @@ describe('POST /api/runs', () => {
           createdAt: new Date(),
         },
       ])
-      .mockResolvedValueOnce([{ id: 'rp1', name: 'Steps', position: 0 }])
+      // Only two .returning() calls now: run phases are inserted with a
+      // client-generated id and never read back (see the comment on
+      // runPhaseIdByTemplatePhaseId in runs.ts).
       .mockResolvedValueOnce([
         {
           id: 'rs1',
-          phaseId: 'rp1',
+          phaseId: 'generated-phase-id',
           title: 'Order laptop',
           type: 'manual',
           assigneeId: 'm1',
@@ -432,7 +434,7 @@ describe('POST /api/runs', () => {
         },
         {
           id: 'rs2',
-          phaseId: 'rp1',
+          phaseId: 'generated-phase-id',
           title: 'Create Slack account',
           type: 'automated',
           assigneeId: null,
@@ -455,11 +457,26 @@ describe('POST /api/runs', () => {
     expect(mocks.insertValuesMock).toHaveBeenCalledWith([
       expect.objectContaining({ runId: 'r1', name: 'Steps', position: 0 }),
     ])
+
+    // The phase insert's generated id is a fresh crypto.randomUUID(), not a
+    // fixture — recover it from the call so the step insert's phaseId can be
+    // asserted against the real value instead of a hardcoded one.
+    const phaseInsertValues = mocks.insertValuesMock.mock.calls.find(
+      ([values]) => Array.isArray(values) && values[0]?.name === 'Steps',
+    )?.[0] as [{ id: string }]
+    const generatedPhaseId = phaseInsertValues[0].id
+    expect(generatedPhaseId).toEqual(expect.any(String))
+
     expect(mocks.insertValuesMock).toHaveBeenCalledWith([
-      expect.objectContaining({ runId: 'r1', phaseId: 'rp1', title: 'Order laptop', position: 0 }),
       expect.objectContaining({
         runId: 'r1',
-        phaseId: 'rp1',
+        phaseId: generatedPhaseId,
+        title: 'Order laptop',
+        position: 0,
+      }),
+      expect.objectContaining({
+        runId: 'r1',
+        phaseId: generatedPhaseId,
         title: 'Create Slack account',
         position: 1,
       }),
