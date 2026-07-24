@@ -9,24 +9,32 @@ export {
 } from './locale.js'
 export type { Locale } from './locale.js'
 export type { Job, JobHandler, Queue } from './queue.js'
+export { computeUnlockedPhaseIds, isStepLocked } from './phase.js'
+export type { PhaseOrder, PhaseScopedStep } from './phase.js'
 export { createRunSchema } from './run.js'
 export type { CreateRunInput } from './run.js'
 export { computeDueDate, isTaskOverdue } from './task.js'
 export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'
 export type { TrialState } from './trial.js'
 export {
+  createPhaseSchema,
   createStepSchema,
   createWorkflowTemplateSchema,
+  reorderPhasesSchema,
   reorderStepsSchema,
   stepTypeSchema,
+  updatePhaseSchema,
   updateStepSchema,
   updateWorkflowTemplateSchema,
   workflowTypeSchema,
 } from './workflow.js'
 export type {
+  CreatePhaseInput,
   CreateStepInput,
   CreateWorkflowTemplateInput,
+  ReorderPhasesInput,
   ReorderStepsInput,
+  UpdatePhaseInput,
   UpdateStepInput,
   UpdateWorkflowTemplateInput,
 } from './workflow.js'

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   runStepFindFirstMock: vi.fn(),
   runStepFindManyMock: vi.fn(),
   runFindManyMock: vi.fn(),
+  runPhaseFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
   updateMock: vi.fn(),
   updateSetMock: vi.fn(),
@@ -19,6 +20,7 @@ function tx() {
     query: {
       runStep: { findFirst: mocks.runStepFindFirstMock, findMany: mocks.runStepFindManyMock },
       run: { findMany: mocks.runFindManyMock },
+      runPhase: { findMany: mocks.runPhaseFindManyMock },
       subscription: { findFirst: mocks.subscriptionFindFirstMock },
     },
     update: mocks.updateMock,
@@ -63,6 +65,7 @@ beforeEach(() => {
   mocks.runStepFindFirstMock.mockReset()
   mocks.runStepFindManyMock.mockReset()
   mocks.runFindManyMock.mockReset()
+  mocks.runPhaseFindManyMock.mockReset().mockResolvedValue([])
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
     status: 'trialing',
     trialEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -102,6 +105,7 @@ describe('GET /api/tasks/mine', () => {
       {
         id: 'rs1',
         runId: 'r1',
+        phaseId: 'p1',
         title: 'Order laptop',
         status: 'pending',
         dueDateOffsetDays: 1,
@@ -110,6 +114,7 @@ describe('GET /api/tasks/mine', () => {
     mocks.runFindManyMock.mockResolvedValue([
       { id: 'r1', type: 'onboarding', employeeName: 'Jane Doe', eventDate: '2026-08-01' },
     ])
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', runId: 'r1', position: 0 }])
 
     const res = await req('/mine')
     const json = await res.json()
@@ -121,9 +126,44 @@ describe('GET /api/tasks/mine', () => {
         title: 'Order laptop',
         dueDate: '2026-08-02',
         isOverdue: expect.any(Boolean),
+        isLocked: false,
         run: expect.objectContaining({ id: 'r1', employeeName: 'Jane Doe' }),
       }),
     ])
+  })
+
+  it('flags a task as locked when its phase is not yet unlocked', async () => {
+    memberSession()
+    // The route issues two runStep.findMany calls in this order: the
+    // caller's assigned steps first, then every step across the run(s) to
+    // compute phase completeness — both go through the same mock.
+    mocks.runStepFindManyMock
+      .mockResolvedValueOnce([
+        {
+          id: 'rs2',
+          runId: 'r1',
+          phaseId: 'revocation',
+          title: 'Confirm handover',
+          status: 'pending',
+          dueDateOffsetDays: 2,
+        },
+      ])
+      .mockResolvedValueOnce([
+        { runId: 'r1', phaseId: 'notice', status: 'pending' },
+        { runId: 'r1', phaseId: 'revocation', status: 'pending' },
+      ])
+    mocks.runFindManyMock.mockResolvedValue([
+      { id: 'r1', type: 'offboarding', employeeName: 'Jane Doe', eventDate: '2026-08-01' },
+    ])
+    mocks.runPhaseFindManyMock.mockResolvedValue([
+      { id: 'notice', runId: 'r1', position: 0 },
+      { id: 'revocation', runId: 'r1', position: 1 },
+    ])
+
+    const res = await req('/mine')
+    const json = await res.json()
+
+    expect(json.tasks).toEqual([expect.objectContaining({ id: 'rs2', isLocked: true })])
   })
 })
 
@@ -171,16 +211,49 @@ describe('POST /api/tasks/:id/complete', () => {
     expect(mocks.runStepFindFirstMock).not.toHaveBeenCalled()
   })
 
+  it('rejects completing a step whose phase is still locked', async () => {
+    memberSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 'rs2',
+      runId: 'r1',
+      phaseId: 'revocation',
+      assigneeId: MEMBER_ID,
+      title: 'Disable Slack',
+      dueDateOffsetDays: null,
+    })
+    mocks.runPhaseFindManyMock.mockResolvedValue([
+      { id: 'notice', position: 0 },
+      { id: 'revocation', position: 1 },
+    ])
+    mocks.runStepFindManyMock.mockResolvedValue([
+      { phaseId: 'notice', status: 'pending' },
+      { phaseId: 'revocation', status: 'pending' },
+    ])
+
+    const res = await post('/rs2/complete')
+
+    expect(res.status).toBe(403)
+    expect((await res.json()).code).toBe('PHASE_LOCKED')
+    expect(mocks.updateMock).not.toHaveBeenCalled()
+  })
+
   it('completes the task and flips run.status to in_progress when steps remain pending', async () => {
     memberSession()
     mocks.runStepFindFirstMock.mockResolvedValue({
       id: 'rs1',
       runId: 'r1',
+      phaseId: 'p1',
       assigneeId: MEMBER_ID,
       title: 'Order laptop',
       dueDateOffsetDays: 1,
     })
-    mocks.runStepFindManyMock.mockResolvedValue([{ status: 'completed' }, { status: 'pending' }])
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
+    mocks.runStepFindManyMock
+      .mockResolvedValueOnce([
+        { phaseId: 'p1', status: 'pending' },
+        { phaseId: 'p1', status: 'pending' },
+      ])
+      .mockResolvedValueOnce([{ status: 'completed' }, { status: 'pending' }])
     mocks.updateReturningMock
       .mockResolvedValueOnce([
         {
@@ -218,11 +291,15 @@ describe('POST /api/tasks/:id/complete', () => {
     mocks.runStepFindFirstMock.mockResolvedValue({
       id: 'rs1',
       runId: 'r1',
+      phaseId: 'p1',
       assigneeId: MEMBER_ID,
       title: 'Order laptop',
       dueDateOffsetDays: 1,
     })
-    mocks.runStepFindManyMock.mockResolvedValue([{ status: 'completed' }])
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
+    mocks.runStepFindManyMock
+      .mockResolvedValueOnce([{ phaseId: 'p1', status: 'pending' }])
+      .mockResolvedValueOnce([{ status: 'completed' }])
     mocks.updateReturningMock
       .mockResolvedValueOnce([
         {

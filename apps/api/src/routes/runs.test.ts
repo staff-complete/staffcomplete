@@ -5,9 +5,11 @@ const mocks = vi.hoisted(() => ({
   getSessionMock: vi.fn(),
   memberFindFirstMock: vi.fn(),
   templateFindFirstMock: vi.fn(),
+  templatePhaseFindManyMock: vi.fn(),
   templateStepFindManyMock: vi.fn(),
   runFindManyMock: vi.fn(),
   runFindFirstMock: vi.fn(),
+  runPhaseFindManyMock: vi.fn(),
   runStepFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
   insertMock: vi.fn(),
@@ -19,8 +21,10 @@ function tx() {
   return {
     query: {
       workflowTemplate: { findFirst: mocks.templateFindFirstMock },
+      workflowTemplatePhase: { findMany: mocks.templatePhaseFindManyMock },
       workflowTemplateStep: { findMany: mocks.templateStepFindManyMock },
       run: { findMany: mocks.runFindManyMock, findFirst: mocks.runFindFirstMock },
+      runPhase: { findMany: mocks.runPhaseFindManyMock },
       runStep: { findMany: mocks.runStepFindManyMock },
       subscription: { findFirst: mocks.subscriptionFindFirstMock },
     },
@@ -75,9 +79,11 @@ beforeEach(() => {
   mocks.getSessionMock.mockReset()
   mocks.memberFindFirstMock.mockReset()
   mocks.templateFindFirstMock.mockReset()
+  mocks.templatePhaseFindManyMock.mockReset().mockResolvedValue([])
   mocks.templateStepFindManyMock.mockReset()
   mocks.runFindManyMock.mockReset()
   mocks.runFindFirstMock.mockReset()
+  mocks.runPhaseFindManyMock.mockReset().mockResolvedValue([])
   mocks.runStepFindManyMock.mockReset()
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
     status: 'trialing',
@@ -227,7 +233,7 @@ describe('GET /api/runs/:id', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns the run with its steps, due dates, and overdue flags', async () => {
+  it('returns the run with its phases, steps, due dates, and overdue flags', async () => {
     adminSession()
     mocks.runFindFirstMock.mockResolvedValue({
       id: 'r1',
@@ -239,9 +245,11 @@ describe('GET /api/runs/:id', () => {
       status: 'in_progress',
       createdAt: new Date(),
     })
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', name: 'Steps', position: 0 }])
     mocks.runStepFindManyMock.mockResolvedValue([
       {
         id: 'rs1',
+        phaseId: 'p1',
         title: 'Order laptop',
         type: 'manual',
         assigneeId: 'm1',
@@ -251,6 +259,7 @@ describe('GET /api/runs/:id', () => {
       },
       {
         id: 'rs2',
+        phaseId: 'p1',
         title: 'Create Slack account',
         type: 'automated',
         assigneeId: null,
@@ -268,22 +277,77 @@ describe('GET /api/runs/:id', () => {
       expect.objectContaining({
         id: 'r1',
         status: 'in_progress',
+        phases: [expect.objectContaining({ id: 'p1', isLocked: false })],
         steps: [
           expect.objectContaining({
             id: 'rs1',
             status: 'pending',
             dueDate: '2020-01-02',
             isOverdue: true,
+            isLocked: false,
           }),
           expect.objectContaining({
             id: 'rs2',
             status: 'completed',
             dueDate: null,
             isOverdue: false,
+            isLocked: false,
           }),
         ],
       }),
     )
+  })
+
+  it('locks a later phase until every step in the earlier phase is completed', async () => {
+    adminSession()
+    mocks.runFindFirstMock.mockResolvedValue({
+      id: 'r1',
+      type: 'offboarding',
+      employeeName: 'Jane Doe',
+      employeeEmail: 'jane@example.com',
+      employeeRole: 'Engineer',
+      eventDate: '2026-07-24',
+      status: 'in_progress',
+      createdAt: new Date(),
+    })
+    mocks.runPhaseFindManyMock.mockResolvedValue([
+      { id: 'notice', name: 'Notice received', position: 0 },
+      { id: 'revocation', name: 'Access revocation', position: 1 },
+    ])
+    mocks.runStepFindManyMock.mockResolvedValue([
+      {
+        id: 'rs1',
+        phaseId: 'notice',
+        title: 'Notify manager',
+        type: 'automated',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        status: 'pending',
+        position: 0,
+      },
+      {
+        id: 'rs2',
+        phaseId: 'revocation',
+        title: 'Disable GitHub',
+        type: 'automated',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        status: 'pending',
+        position: 0,
+      },
+    ])
+
+    const res = await req('/r1')
+    const json = await res.json()
+
+    expect(json.phases).toEqual([
+      expect.objectContaining({ id: 'notice', isLocked: false }),
+      expect.objectContaining({ id: 'revocation', isLocked: true }),
+    ])
+    expect(json.steps).toEqual([
+      expect.objectContaining({ id: 'rs1', isLocked: false }),
+      expect.objectContaining({ id: 'rs2', isLocked: true }),
+    ])
   })
 })
 
@@ -318,12 +382,14 @@ describe('POST /api/runs', () => {
     expect(mocks.templateFindFirstMock).not.toHaveBeenCalled()
   })
 
-  it('creates a run and copies the template steps onto it', async () => {
+  it('creates a run and copies the template phases and steps onto it', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({ id: 't1', type: 'onboarding' })
+    mocks.templatePhaseFindManyMock.mockResolvedValue([{ id: 'p1', name: 'Steps', position: 0 }])
     mocks.templateStepFindManyMock.mockResolvedValue([
       {
         id: 'ts1',
+        phaseId: 'p1',
         title: 'Order laptop',
         type: 'manual',
         assigneeId: 'm1',
@@ -332,6 +398,7 @@ describe('POST /api/runs', () => {
       },
       {
         id: 'ts2',
+        phaseId: 'p1',
         title: 'Create Slack account',
         type: 'automated',
         assigneeId: null,
@@ -352,9 +419,11 @@ describe('POST /api/runs', () => {
           createdAt: new Date(),
         },
       ])
+      .mockResolvedValueOnce([{ id: 'rp1', name: 'Steps', position: 0 }])
       .mockResolvedValueOnce([
         {
           id: 'rs1',
+          phaseId: 'rp1',
           title: 'Order laptop',
           type: 'manual',
           assigneeId: 'm1',
@@ -363,6 +432,7 @@ describe('POST /api/runs', () => {
         },
         {
           id: 'rs2',
+          phaseId: 'rp1',
           title: 'Create Slack account',
           type: 'automated',
           assigneeId: null,
@@ -383,15 +453,24 @@ describe('POST /api/runs', () => {
       }),
     )
     expect(mocks.insertValuesMock).toHaveBeenCalledWith([
-      expect.objectContaining({ runId: 'r1', title: 'Order laptop', position: 0 }),
-      expect.objectContaining({ runId: 'r1', title: 'Create Slack account', position: 1 }),
+      expect.objectContaining({ runId: 'r1', name: 'Steps', position: 0 }),
+    ])
+    expect(mocks.insertValuesMock).toHaveBeenCalledWith([
+      expect.objectContaining({ runId: 'r1', phaseId: 'rp1', title: 'Order laptop', position: 0 }),
+      expect.objectContaining({
+        runId: 'r1',
+        phaseId: 'rp1',
+        title: 'Create Slack account',
+        position: 1,
+      }),
     ])
     expect(json.steps).toHaveLength(2)
   })
 
-  it('creates a run with no steps when the template has none', async () => {
+  it('creates a run with no phases or steps when the template has none', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({ id: 't1', type: 'onboarding' })
+    mocks.templatePhaseFindManyMock.mockResolvedValue([])
     mocks.templateStepFindManyMock.mockResolvedValue([])
     mocks.insertReturningMock.mockResolvedValueOnce([
       {

@@ -1,8 +1,13 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { computeDueDate, isTaskOverdue } from '@staffcomplete/shared'
+import {
+  computeDueDate,
+  computeUnlockedPhaseIds,
+  isStepLocked,
+  isTaskOverdue,
+} from '@staffcomplete/shared'
 import { db, withTenant } from '../db/index.js'
-import { member, run, runStep } from '../db/schema.js'
+import { member, run, runPhase, runStep } from '../db/schema.js'
 import { resolveOrgSession } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
 
@@ -18,7 +23,11 @@ async function resolveMemberId(userId: string, organizationId: string): Promise<
   return membership?.id ?? null
 }
 
-function serializeTask(step: typeof runStep.$inferSelect, parentRun: typeof run.$inferSelect) {
+function serializeTask(
+  step: typeof runStep.$inferSelect,
+  parentRun: typeof run.$inferSelect,
+  isLocked: boolean,
+) {
   const dueDate = computeDueDate(parentRun.eventDate, step.dueDateOffsetDays)
   return {
     id: step.id,
@@ -26,6 +35,7 @@ function serializeTask(step: typeof runStep.$inferSelect, parentRun: typeof run.
     status: step.status,
     dueDate,
     isOverdue: isTaskOverdue(dueDate, step.status),
+    isLocked,
     run: {
       id: parentRun.id,
       type: parentRun.type,
@@ -55,12 +65,36 @@ tasksRouter.get('/mine', async (c) => {
     }
 
     const runIds = [...new Set(steps.map((step) => step.runId))]
-    const runs = await tx.query.run.findMany({ where: inArray(run.id, runIds) })
+    const [runs, phases, allSteps] = await Promise.all([
+      tx.query.run.findMany({ where: inArray(run.id, runIds) }),
+      tx.query.runPhase.findMany({
+        where: inArray(runPhase.runId, runIds),
+        columns: { id: true, runId: true, position: true },
+      }),
+      // Every step of each run, not just the caller's — locking a phase
+      // depends on sibling steps assigned to other people too.
+      tx.query.runStep.findMany({
+        where: inArray(runStep.runId, runIds),
+        columns: { runId: true, phaseId: true, status: true },
+      }),
+    ])
     const runsById = new Map(runs.map((r) => [r.id, r]))
+
+    const unlockedPhaseIdsByRun = new Map<string, Set<string>>()
+    for (const runId of runIds) {
+      unlockedPhaseIdsByRun.set(
+        runId,
+        computeUnlockedPhaseIds(
+          phases.filter((p) => p.runId === runId),
+          allSteps.filter((s) => s.runId === runId),
+        ),
+      )
+    }
 
     return steps.flatMap((step) => {
       const parentRun = runsById.get(step.runId)
-      return parentRun ? [serializeTask(step, parentRun)] : []
+      const unlockedPhaseIds = unlockedPhaseIdsByRun.get(step.runId) ?? new Set<string>()
+      return parentRun ? [serializeTask(step, parentRun, isStepLocked(step, unlockedPhaseIds))] : []
     })
   })
 
@@ -87,6 +121,21 @@ tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
     }
     if (step.assigneeId !== memberId) {
       return 'FORBIDDEN' as const
+    }
+
+    const [phases, siblingStepsForLockCheck] = await Promise.all([
+      tx.query.runPhase.findMany({
+        where: eq(runPhase.runId, step.runId),
+        columns: { id: true, position: true },
+      }),
+      tx.query.runStep.findMany({
+        where: eq(runStep.runId, step.runId),
+        columns: { phaseId: true, status: true },
+      }),
+    ])
+    const unlockedPhaseIds = computeUnlockedPhaseIds(phases, siblingStepsForLockCheck)
+    if (isStepLocked(step, unlockedPhaseIds)) {
+      return 'PHASE_LOCKED' as const
     }
 
     const [updatedStep] = await tx
@@ -118,6 +167,12 @@ tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
   if (result === 'FORBIDDEN') {
     return c.json({ code: 'FORBIDDEN', message: 'This task is not assigned to you.' }, 403)
   }
+  if (result === 'PHASE_LOCKED') {
+    return c.json(
+      { code: 'PHASE_LOCKED', message: 'Earlier steps must be completed before this one.' },
+      403,
+    )
+  }
 
-  return c.json(serializeTask(result.updatedStep, result.updatedRun))
+  return c.json(serializeTask(result.updatedStep, result.updatedRun, false))
 })

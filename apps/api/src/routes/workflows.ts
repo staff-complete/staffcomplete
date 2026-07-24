@@ -1,19 +1,43 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import {
+  createPhaseSchema,
   createStepSchema,
   createWorkflowTemplateSchema,
+  reorderPhasesSchema,
   reorderStepsSchema,
+  updatePhaseSchema,
   updateStepSchema,
   updateWorkflowTemplateSchema,
 } from '@staffcomplete/shared'
 import { db, withTenant } from '../db/index.js'
-import { member, workflowTemplate, workflowTemplateStep } from '../db/schema.js'
+import {
+  member,
+  workflowTemplate,
+  workflowTemplatePhase,
+  workflowTemplateStep,
+} from '../db/schema.js'
 import { requireAdmin } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
 
 export const workflowsRouter = new Hono()
+
+function serializePhase(phase: typeof workflowTemplatePhase.$inferSelect) {
+  return { id: phase.id, name: phase.name, position: phase.position }
+}
+
+function serializeStep(step: typeof workflowTemplateStep.$inferSelect) {
+  return {
+    id: step.id,
+    phaseId: step.phaseId,
+    title: step.title,
+    type: step.type,
+    assigneeId: step.assigneeId,
+    dueDateOffsetDays: step.dueDateOffsetDays,
+    position: step.position,
+  }
+}
 
 async function assertValidAssignee(assigneeId: string, organizationId: string): Promise<boolean> {
   const assignee = await db.query.member.findFirst({
@@ -105,15 +129,32 @@ workflowsRouter.get('/:id', async (c) => {
     if (!template) {
       return null
     }
+    const phases = await tx.query.workflowTemplatePhase.findMany({
+      where: eq(workflowTemplatePhase.workflowTemplateId, id),
+      orderBy: [asc(workflowTemplatePhase.position)],
+    })
     const steps = await tx.query.workflowTemplateStep.findMany({
       where: eq(workflowTemplateStep.workflowTemplateId, id),
       orderBy: [asc(workflowTemplateStep.position)],
     })
-    return { template, steps }
+    return { template, phases, steps }
   })
 
   if (!result) {
     return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
+  }
+
+  const stepsByPhase = new Map<string, (typeof result.steps)[number][]>()
+  for (const step of result.steps) {
+    if (step.phaseId === null) {
+      continue
+    }
+    const existing = stepsByPhase.get(step.phaseId)
+    if (existing) {
+      existing.push(step)
+    } else {
+      stepsByPhase.set(step.phaseId, [step])
+    }
   }
 
   return c.json({
@@ -122,13 +163,9 @@ workflowsRouter.get('/:id', async (c) => {
     type: result.template.type,
     createdAt: result.template.createdAt.toISOString(),
     updatedAt: result.template.updatedAt.toISOString(),
-    steps: result.steps.map((s) => ({
-      id: s.id,
-      title: s.title,
-      type: s.type,
-      assigneeId: s.assigneeId,
-      dueDateOffsetDays: s.dueDateOffsetDays,
-      position: s.position,
+    phases: result.phases.map((phase) => ({
+      ...serializePhase(phase),
+      steps: (stepsByPhase.get(phase.id) ?? []).map(serializeStep),
     })),
   })
 })
@@ -205,6 +242,179 @@ workflowsRouter.delete('/:id', blockMutationsWhenExpired(), async (c) => {
 })
 
 workflowsRouter.post(
+  '/:id/phases',
+  zValidator('json', createPhaseSchema),
+  blockMutationsWhenExpired(),
+  async (c) => {
+    const session = await requireAdmin(c)
+    if (!session) {
+      return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
+    }
+
+    const workflowTemplateId = c.req.param('id')
+    const { name } = c.req.valid('json')
+
+    const created = await withTenant(session.organizationId, async (tx) => {
+      const template = await tx.query.workflowTemplate.findFirst({
+        where: eq(workflowTemplate.id, workflowTemplateId),
+        columns: { id: true },
+      })
+      if (!template) {
+        return null
+      }
+
+      const existingPhases = await tx.query.workflowTemplatePhase.findMany({
+        where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
+        columns: { position: true },
+      })
+      const nextPosition = existingPhases.reduce((max, p) => Math.max(max, p.position), -1) + 1
+
+      const [row] = await tx
+        .insert(workflowTemplatePhase)
+        .values({
+          id: crypto.randomUUID(),
+          workflowTemplateId,
+          organizationId: session.organizationId,
+          name,
+          position: nextPosition,
+        })
+        .returning()
+      return row
+    })
+
+    if (!created) {
+      return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
+    }
+
+    return c.json(serializePhase(created), 201)
+  },
+)
+
+workflowsRouter.patch(
+  '/:id/phases/:phaseId',
+  zValidator('json', updatePhaseSchema),
+  blockMutationsWhenExpired(),
+  async (c) => {
+    const session = await requireAdmin(c)
+    if (!session) {
+      return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
+    }
+
+    const workflowTemplateId = c.req.param('id')
+    const phaseId = c.req.param('phaseId')
+    const updates = c.req.valid('json')
+
+    const updated = await withTenant(session.organizationId, async (tx) => {
+      const existing = await tx.query.workflowTemplatePhase.findFirst({
+        where: eq(workflowTemplatePhase.id, phaseId),
+        columns: { id: true, workflowTemplateId: true },
+      })
+      if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
+        return null
+      }
+      const [row] = await tx
+        .update(workflowTemplatePhase)
+        .set(updates)
+        .where(eq(workflowTemplatePhase.id, phaseId))
+        .returning()
+      return row
+    })
+
+    if (!updated) {
+      return c.json({ code: 'NOT_FOUND', message: 'Phase not found.' }, 404)
+    }
+
+    return c.json(serializePhase(updated))
+  },
+)
+
+workflowsRouter.delete('/:id/phases/:phaseId', blockMutationsWhenExpired(), async (c) => {
+  const session = await requireAdmin(c)
+  if (!session) {
+    return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
+  }
+
+  const workflowTemplateId = c.req.param('id')
+  const phaseId = c.req.param('phaseId')
+
+  const deleted = await withTenant(session.organizationId, async (tx) => {
+    const existing = await tx.query.workflowTemplatePhase.findFirst({
+      where: eq(workflowTemplatePhase.id, phaseId),
+      columns: { id: true, workflowTemplateId: true },
+    })
+    if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
+      return false
+    }
+    // Steps cascade via the workflow_template_step FK's ON DELETE CASCADE.
+    await tx.delete(workflowTemplatePhase).where(eq(workflowTemplatePhase.id, phaseId))
+    return true
+  })
+
+  if (!deleted) {
+    return c.json({ code: 'NOT_FOUND', message: 'Phase not found.' }, 404)
+  }
+
+  return c.json({ status: 'deleted' })
+})
+
+// Named /phase-order rather than the more consistent /phases/order:
+// alongside /phases/:phaseId/steps/order, a literal "order" segment and a
+// :phaseId param both sitting at the same depth under the same PUT method
+// is a route shape Hono's RegExpRouter can't compile — it throws
+// UnsupportedPathError building the matcher, which makes SmartRouter fall
+// back to TrieRouter for the whole app, and TrieRouter doesn't resolve the
+// /api/auth/** wildcard mount the same way (broke sign-in/sign-up entirely).
+workflowsRouter.put(
+  '/:id/phase-order',
+  zValidator('json', reorderPhasesSchema),
+  blockMutationsWhenExpired(),
+  async (c) => {
+    const session = await requireAdmin(c)
+    if (!session) {
+      return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
+    }
+
+    const workflowTemplateId = c.req.param('id')
+    const { phaseIds } = c.req.valid('json')
+
+    const result = await withTenant(session.organizationId, async (tx) => {
+      const existingPhases = await tx.query.workflowTemplatePhase.findMany({
+        where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
+        columns: { id: true },
+      })
+      const existingIds = new Set(existingPhases.map((p) => p.id))
+      const requestedIds = new Set(phaseIds)
+      const sameSet =
+        existingIds.size === requestedIds.size &&
+        [...existingIds].every((id) => requestedIds.has(id))
+      if (!sameSet) {
+        return 'MISMATCH' as const
+      }
+
+      for (const [index, phaseId] of phaseIds.entries()) {
+        await tx
+          .update(workflowTemplatePhase)
+          .set({ position: index })
+          .where(eq(workflowTemplatePhase.id, phaseId))
+      }
+      return 'OK' as const
+    })
+
+    if (result === 'MISMATCH') {
+      return c.json(
+        {
+          code: 'VALIDATION_ERROR',
+          message: "phaseIds must match the workflow's existing phases.",
+        },
+        400,
+      )
+    }
+
+    return c.json({ status: 'reordered' })
+  },
+)
+
+workflowsRouter.post(
   '/:id/steps',
   zValidator('json', createStepSchema),
   blockMutationsWhenExpired(),
@@ -215,7 +425,7 @@ workflowsRouter.post(
     }
 
     const workflowTemplateId = c.req.param('id')
-    const { title, type, assigneeId, dueDateOffsetDays } = c.req.valid('json')
+    const { phaseId, title, type, assigneeId, dueDateOffsetDays } = c.req.valid('json')
 
     if (assigneeId && !(await assertValidAssignee(assigneeId, session.organizationId))) {
       return c.json({ code: 'INVALID_ASSIGNEE', message: 'Assignee is not a team member.' }, 400)
@@ -230,8 +440,16 @@ workflowsRouter.post(
         return null
       }
 
+      const phase = await tx.query.workflowTemplatePhase.findFirst({
+        where: eq(workflowTemplatePhase.id, phaseId),
+        columns: { id: true, workflowTemplateId: true },
+      })
+      if (!phase || phase.workflowTemplateId !== workflowTemplateId) {
+        return 'INVALID_PHASE' as const
+      }
+
       const existingSteps = await tx.query.workflowTemplateStep.findMany({
-        where: eq(workflowTemplateStep.workflowTemplateId, workflowTemplateId),
+        where: eq(workflowTemplateStep.phaseId, phaseId),
         columns: { position: true },
       })
       const nextPosition = existingSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
@@ -241,6 +459,7 @@ workflowsRouter.post(
         .values({
           id: crypto.randomUUID(),
           workflowTemplateId,
+          phaseId,
           organizationId: session.organizationId,
           title,
           type,
@@ -252,21 +471,17 @@ workflowsRouter.post(
       return row
     })
 
+    if (created === 'INVALID_PHASE') {
+      return c.json(
+        { code: 'INVALID_PHASE', message: 'Phase does not belong to this workflow.' },
+        400,
+      )
+    }
     if (!created) {
       return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
     }
 
-    return c.json(
-      {
-        id: created.id,
-        title: created.title,
-        type: created.type,
-        assigneeId: created.assigneeId,
-        dueDateOffsetDays: created.dueDateOffsetDays,
-        position: created.position,
-      },
-      201,
-    )
+    return c.json(serializeStep(created), 201)
   },
 )
 
@@ -294,31 +509,50 @@ workflowsRouter.patch(
     const updated = await withTenant(session.organizationId, async (tx) => {
       const existing = await tx.query.workflowTemplateStep.findFirst({
         where: eq(workflowTemplateStep.id, stepId),
-        columns: { id: true, workflowTemplateId: true },
+        columns: { id: true, workflowTemplateId: true, phaseId: true },
       })
       if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
         return null
       }
+
+      // Moving to a different phase: validate it belongs to this workflow
+      // and drop the step at the end of the destination phase, same as a
+      // freshly created step — position is meaningless across phases.
+      let position: number | undefined
+      if (updates.phaseId && updates.phaseId !== existing.phaseId) {
+        const phase = await tx.query.workflowTemplatePhase.findFirst({
+          where: eq(workflowTemplatePhase.id, updates.phaseId),
+          columns: { id: true, workflowTemplateId: true },
+        })
+        if (!phase || phase.workflowTemplateId !== workflowTemplateId) {
+          return 'INVALID_PHASE' as const
+        }
+        const destinationSteps = await tx.query.workflowTemplateStep.findMany({
+          where: eq(workflowTemplateStep.phaseId, updates.phaseId),
+          columns: { position: true },
+        })
+        position = destinationSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
+      }
+
       const [row] = await tx
         .update(workflowTemplateStep)
-        .set(updates)
+        .set(position === undefined ? updates : { ...updates, position })
         .where(eq(workflowTemplateStep.id, stepId))
         .returning()
       return row
     })
 
+    if (updated === 'INVALID_PHASE') {
+      return c.json(
+        { code: 'INVALID_PHASE', message: 'Phase does not belong to this workflow.' },
+        400,
+      )
+    }
     if (!updated) {
       return c.json({ code: 'NOT_FOUND', message: 'Step not found.' }, 404)
     }
 
-    return c.json({
-      id: updated.id,
-      title: updated.title,
-      type: updated.type,
-      assigneeId: updated.assigneeId,
-      dueDateOffsetDays: updated.dueDateOffsetDays,
-      position: updated.position,
-    })
+    return c.json(serializeStep(updated))
   },
 )
 
@@ -351,7 +585,7 @@ workflowsRouter.delete('/:id/steps/:stepId', blockMutationsWhenExpired(), async 
 })
 
 workflowsRouter.put(
-  '/:id/steps/order',
+  '/:id/phases/:phaseId/steps/order',
   zValidator('json', reorderStepsSchema),
   blockMutationsWhenExpired(),
   async (c) => {
@@ -361,11 +595,15 @@ workflowsRouter.put(
     }
 
     const workflowTemplateId = c.req.param('id')
+    const phaseId = c.req.param('phaseId')
     const { stepIds } = c.req.valid('json')
 
     const result = await withTenant(session.organizationId, async (tx) => {
       const existingSteps = await tx.query.workflowTemplateStep.findMany({
-        where: eq(workflowTemplateStep.workflowTemplateId, workflowTemplateId),
+        where: and(
+          eq(workflowTemplateStep.workflowTemplateId, workflowTemplateId),
+          eq(workflowTemplateStep.phaseId, phaseId),
+        ),
         columns: { id: true },
       })
       const existingIds = new Set(existingSteps.map((s) => s.id))

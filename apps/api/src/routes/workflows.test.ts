@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   memberFindFirstMock: vi.fn(),
   templateFindFirstMock: vi.fn(),
   templateFindManyMock: vi.fn(),
+  phaseFindFirstMock: vi.fn(),
+  phaseFindManyMock: vi.fn(),
   stepFindFirstMock: vi.fn(),
   stepFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
@@ -26,6 +28,10 @@ function tx() {
       workflowTemplate: {
         findFirst: mocks.templateFindFirstMock,
         findMany: mocks.templateFindManyMock,
+      },
+      workflowTemplatePhase: {
+        findFirst: mocks.phaseFindFirstMock,
+        findMany: mocks.phaseFindManyMock,
       },
       workflowTemplateStep: {
         findFirst: mocks.stepFindFirstMock,
@@ -95,6 +101,8 @@ beforeEach(() => {
   mocks.memberFindFirstMock.mockReset()
   mocks.templateFindFirstMock.mockReset()
   mocks.templateFindManyMock.mockReset()
+  mocks.phaseFindFirstMock.mockReset()
+  mocks.phaseFindManyMock.mockReset().mockResolvedValue([])
   mocks.stepFindFirstMock.mockReset()
   mocks.stepFindManyMock.mockReset()
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
@@ -226,7 +234,7 @@ describe('GET /api/workflows/:id', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns the template with steps ordered by position', async () => {
+  it('returns the template with phases and their steps ordered by position', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({
       id: 't1',
@@ -235,9 +243,11 @@ describe('GET /api/workflows/:id', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1', name: 'Steps', position: 0 }])
     mocks.stepFindManyMock.mockResolvedValue([
       {
         id: 's1',
+        phaseId: 'p1',
         title: 'Step 1',
         type: 'manual',
         assigneeId: null,
@@ -250,8 +260,10 @@ describe('GET /api/workflows/:id', () => {
     const json = await res.json()
 
     expect(res.status).toBe(200)
-    expect(json.steps).toHaveLength(1)
-    expect(json.steps[0]).toMatchObject({ id: 's1', position: 0 })
+    expect(json.phases).toHaveLength(1)
+    expect(json.phases[0]).toMatchObject({ id: 'p1', name: 'Steps' })
+    expect(json.phases[0].steps).toHaveLength(1)
+    expect(json.phases[0].steps[0]).toMatchObject({ id: 's1', phaseId: 'p1', position: 0 })
   })
 })
 
@@ -306,23 +318,125 @@ describe('DELETE /api/workflows/:id', () => {
   })
 })
 
+describe('POST /api/workflows/:id/phases', () => {
+  it('returns 404 when the workflow does not exist', async () => {
+    adminSession()
+    mocks.templateFindFirstMock.mockResolvedValue(null)
+
+    const res = await postJson('/missing/phases', { name: 'Day 1' })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('appends the phase at the next position', async () => {
+    adminSession()
+    mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
+    mocks.phaseFindManyMock.mockResolvedValue([{ position: 0 }])
+    mocks.insertReturningMock.mockResolvedValue([{ id: 'p2', name: 'Week 1', position: 1 }])
+
+    const res = await postJson('/t1/phases', { name: 'Week 1' })
+
+    expect(res.status).toBe(201)
+    expect(mocks.insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({ position: 1 }))
+  })
+})
+
+describe('PATCH /api/workflows/:id/phases/:phaseId', () => {
+  it('returns 404 when the phase does not belong to the workflow', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+
+    const res = await patchJson('/t1/phases/p1', { name: 'Renamed' })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('renames the phase', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.updateReturningMock.mockResolvedValue([{ id: 'p1', name: 'Renamed', position: 0 }])
+
+    const res = await patchJson('/t1/phases/p1', { name: 'Renamed' })
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).name).toBe('Renamed')
+  })
+})
+
+describe('DELETE /api/workflows/:id/phases/:phaseId', () => {
+  it('returns 404 when the phase does not belong to the workflow', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+
+    const res = await req('/t1/phases/p1', { method: 'DELETE' })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('deletes the phase', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+
+    const res = await req('/t1/phases/p1', { method: 'DELETE' })
+
+    expect(res.status).toBe(200)
+    expect(mocks.deleteWhereMock).toHaveBeenCalled()
+  })
+})
+
+describe('PUT /api/workflows/:id/phase-order', () => {
+  it('rejects a phaseIds set that does not match the existing phases', async () => {
+    adminSession()
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+
+    const res = await putJson('/t1/phase-order', { phaseIds: ['p1', 'p3'] })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('VALIDATION_ERROR')
+  })
+
+  it('reorders phases by the given phaseIds order', async () => {
+    adminSession()
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+
+    const res = await putJson('/t1/phase-order', { phaseIds: ['p2', 'p1'] })
+
+    expect(res.status).toBe(200)
+    expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 0 })
+    expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 1 })
+  })
+})
+
 describe('POST /api/workflows/:id/steps', () => {
   it('returns 404 when the workflow does not exist', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue(null)
 
-    const res = await postJson('/missing/steps', { title: 'Step', type: 'manual' })
+    const res = await postJson('/missing/steps', { phaseId: 'p1', title: 'Step', type: 'manual' })
 
     expect(res.status).toBe(404)
   })
 
-  it('appends the step at the next position', async () => {
+  it('rejects a phase that does not belong to the workflow', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+
+    const res = await postJson('/t1/steps', { phaseId: 'p1', title: 'Step', type: 'manual' })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('INVALID_PHASE')
+  })
+
+  it('appends the step at the next position within the phase', async () => {
+    adminSession()
+    mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
     mocks.stepFindManyMock.mockResolvedValue([{ position: 0 }, { position: 1 }])
     mocks.insertReturningMock.mockResolvedValue([
       {
         id: 's3',
+        phaseId: 'p1',
         title: 'Step 3',
         type: 'manual',
         assigneeId: null,
@@ -331,7 +445,7 @@ describe('POST /api/workflows/:id/steps', () => {
       },
     ])
 
-    const res = await postJson('/t1/steps', { title: 'Step 3', type: 'manual' })
+    const res = await postJson('/t1/steps', { phaseId: 'p1', title: 'Step 3', type: 'manual' })
 
     expect(res.status).toBe(201)
     expect(mocks.insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({ position: 2 }))
@@ -342,7 +456,12 @@ describe('POST /api/workflows/:id/steps', () => {
     mocks.memberFindFirstMock.mockResolvedValueOnce({ role: 'admin', organizationId: ADMIN_ORG_ID })
     mocks.memberFindFirstMock.mockResolvedValueOnce({ id: 'm2', organizationId: 'other-org' })
 
-    const res = await postJson('/t1/steps', { title: 'Step', type: 'manual', assigneeId: 'm2' })
+    const res = await postJson('/t1/steps', {
+      phaseId: 'p1',
+      title: 'Step',
+      type: 'manual',
+      assigneeId: 'm2',
+    })
 
     expect(res.status).toBe(400)
     expect((await res.json()).code).toBe('INVALID_ASSIGNEE')
@@ -362,10 +481,11 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
 
   it('updates the step', async () => {
     adminSession()
-    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1' })
+    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1', phaseId: 'p1' })
     mocks.updateReturningMock.mockResolvedValue([
       {
         id: 's1',
+        phaseId: 'p1',
         title: 'Renamed',
         type: 'manual',
         assigneeId: null,
@@ -378,6 +498,42 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
 
     expect(res.status).toBe(200)
     expect((await res.json()).title).toBe('Renamed')
+  })
+
+  it('rejects moving the step to a phase outside the workflow', async () => {
+    adminSession()
+    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1', phaseId: 'p1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 'other-workflow' })
+
+    const res = await patchJson('/t1/steps/s1', { phaseId: 'p2' })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('INVALID_PHASE')
+  })
+
+  it('moves the step to the end of the destination phase', async () => {
+    adminSession()
+    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1', phaseId: 'p1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.stepFindManyMock.mockResolvedValue([{ position: 0 }, { position: 1 }])
+    mocks.updateReturningMock.mockResolvedValue([
+      {
+        id: 's1',
+        phaseId: 'p2',
+        title: 'Step',
+        type: 'manual',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        position: 2,
+      },
+    ])
+
+    const res = await patchJson('/t1/steps/s1', { phaseId: 'p2' })
+
+    expect(res.status).toBe(200)
+    expect(mocks.updateSetMock).toHaveBeenCalledWith(
+      expect.objectContaining({ phaseId: 'p2', position: 2 }),
+    )
   })
 })
 
@@ -401,12 +557,12 @@ describe('DELETE /api/workflows/:id/steps/:stepId', () => {
   })
 })
 
-describe('PUT /api/workflows/:id/steps/order', () => {
-  it('rejects a stepIds set that does not match the existing steps', async () => {
+describe('PUT /api/workflows/:id/phases/:phaseId/steps/order', () => {
+  it('rejects a stepIds set that does not match the existing steps in the phase', async () => {
     adminSession()
     mocks.stepFindManyMock.mockResolvedValue([{ id: 's1' }, { id: 's2' }])
 
-    const res = await putJson('/t1/steps/order', { stepIds: ['s1', 's3'] })
+    const res = await putJson('/t1/phases/p1/steps/order', { stepIds: ['s1', 's3'] })
 
     expect(res.status).toBe(400)
     expect((await res.json()).code).toBe('VALIDATION_ERROR')
@@ -416,7 +572,7 @@ describe('PUT /api/workflows/:id/steps/order', () => {
     adminSession()
     mocks.stepFindManyMock.mockResolvedValue([{ id: 's1' }, { id: 's2' }])
 
-    const res = await putJson('/t1/steps/order', { stepIds: ['s2', 's1'] })
+    const res = await putJson('/t1/phases/p1/steps/order', { stepIds: ['s2', 's1'] })
 
     expect(res.status).toBe(200)
     expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 0 })
