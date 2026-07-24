@@ -3,6 +3,7 @@ import {
   boolean,
   date,
   integer,
+  jsonb,
   pgPolicy,
   pgRole,
   pgTable,
@@ -224,8 +225,15 @@ export const workflowTemplateStep = pgTable(
       .references(() => organization.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     type: text('type').notNull(), // automated | manual
-    assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }),
+    assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }), // manual steps only
     dueDateOffsetDays: integer('dueDateOffsetDays'), // manual steps only
+    // automated steps only — a key into packages/shared/src/automation.ts's
+    // action registry, plus that action's own parameters. There's no FK to
+    // enforce `action` is a real registry key since the registry lives in
+    // application code, not the database — packages/shared/src/workflow.ts's
+    // createStepSchema is what enforces it at write time.
+    action: text('action'),
+    config: jsonb('config'),
     position: integer('position').notNull(), // order within the phase
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
@@ -319,8 +327,11 @@ export const runStep = pgTable(
       .references(() => organization.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     type: text('type').notNull(), // automated | manual
-    assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }),
+    assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }), // manual steps only
     dueDateOffsetDays: integer('dueDateOffsetDays'), // manual steps only
+    // automated steps only — see the matching comment on workflowTemplateStep.
+    action: text('action'),
+    config: jsonb('config'),
     status: text('status').notNull().default('pending'), // pending | completed
     position: integer('position').notNull(), // order within the phase
     createdAt: timestamp('createdAt').notNull().defaultNow(),
