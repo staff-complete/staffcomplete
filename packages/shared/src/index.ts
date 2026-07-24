@@ -11,12 +11,22 @@ export type { Locale } from './locale.js'
 export type { Job, JobHandler, Queue } from './queue.js'
 export { computeUnlockedPhaseIds, isStepLocked } from './phase.js'
 export type { PhaseOrder, PhaseScopedStep } from './phase.js'
+export {
+  automatedActionKeys,
+  automatedActionKeySchema,
+  automatedActionRegistry,
+  isAutomatedActionKey,
+  parseAutomatedActionConfig,
+} from './automation.js'
+export type { AutomatedActionKey, EmailSendWelcomeConfig } from './automation.js'
 export { createRunSchema } from './run.js'
 export type { CreateRunInput } from './run.js'
 export { computeDueDate, isTaskOverdue } from './task.js'
 export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'
 export type { TrialState } from './trial.js'
 export {
+  createAutomatedStepSchema,
+  createManualStepSchema,
   createPhaseSchema,
   createStepSchema,
   createWorkflowTemplateSchema,
@@ -29,6 +39,8 @@ export {
   workflowTypeSchema,
 } from './workflow.js'
 export type {
+  CreateAutomatedStepInput,
+  CreateManualStepInput,
   CreatePhaseInput,
   CreateStepInput,
   CreateWorkflowTemplateInput,
