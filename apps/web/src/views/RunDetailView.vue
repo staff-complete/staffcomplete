@@ -19,6 +19,18 @@ const completedCount = computed(
   () => run.value?.steps.filter((s) => s.status === 'completed').length ?? 0,
 )
 const overdueCount = computed(() => run.value?.steps.filter((s) => s.isOverdue).length ?? 0)
+
+// Steps within a phase can be worked on in parallel; phases themselves run
+// in order and a locked phase's steps aren't actionable yet (see
+// packages/shared/src/phase.ts). Both arrays already come sorted by position.
+const phasesWithSteps = computed(() => {
+  const phases = run.value?.phases ?? []
+  const steps = run.value?.steps ?? []
+  return phases.map((phase) => ({
+    ...phase,
+    steps: steps.filter((step) => step.phaseId === phase.id),
+  }))
+})
 const statusKey = computed(() =>
   run.value
     ? runHealth({ status: run.value.status, overdueStepCount: overdueCount.value })
@@ -148,33 +160,46 @@ const typeLabel = computed(() =>
         <p v-if="run.steps.length === 0" class="text-sm text-app-muted">
           {{ t('runs.detail.noSteps') }}
         </p>
-        <ol v-else class="flex flex-col">
-          <li
-            v-for="step in run.steps"
-            :key="step.id"
-            class="flex items-center justify-between gap-3 border-b border-app-surface-alt py-4.5 last:border-0"
-          >
-            <div class="min-w-0">
-              <p
-                class="truncate text-[15.5px] font-bold"
-                :class="step.status === 'completed' ? 'text-app-muted line-through' : ''"
-              >
-                {{ step.title }}
-              </p>
-              <p class="mt-1 text-[13px] text-app-muted">
-                {{ memberLabel(step.assigneeId) }}
-                <template v-if="step.dueDate">{{
-                  t('runs.detail.dueLabel', { date: step.dueDate })
-                }}</template>
-              </p>
-            </div>
+        <div v-for="phase in phasesWithSteps" :key="phase.id" class="mb-2 last:mb-0">
+          <div class="mb-1 mt-4 flex items-center gap-2 first:mt-0">
+            <h3 class="text-sm font-extrabold text-app-slate">{{ phase.name }}</h3>
             <span
-              class="shrink-0 rounded-full px-2 py-1 text-xs font-semibold"
-              :class="stepStatusClass(step)"
-              >{{ stepStatusLabel(step) }}</span
+              v-if="phase.isLocked"
+              class="rounded-full bg-app-surface-alt px-2 py-0.5 text-[11px] font-semibold text-app-muted"
+              :title="t('runs.detail.phaseLockedHint')"
             >
-          </li>
-        </ol>
+              {{ t('runs.detail.phaseLocked') }}
+            </span>
+          </div>
+          <ol class="flex flex-col">
+            <li
+              v-for="step in phase.steps"
+              :key="step.id"
+              class="flex items-center justify-between gap-3 border-b border-app-surface-alt py-4.5 last:border-0"
+              :class="step.isLocked ? 'opacity-50' : ''"
+            >
+              <div class="min-w-0">
+                <p
+                  class="truncate text-[15.5px] font-bold"
+                  :class="step.status === 'completed' ? 'text-app-muted line-through' : ''"
+                >
+                  {{ step.title }}
+                </p>
+                <p class="mt-1 text-[13px] text-app-muted">
+                  {{ memberLabel(step.assigneeId) }}
+                  <template v-if="step.dueDate">{{
+                    t('runs.detail.dueLabel', { date: step.dueDate })
+                  }}</template>
+                </p>
+              </div>
+              <span
+                class="shrink-0 rounded-full px-2 py-1 text-xs font-semibold"
+                :class="stepStatusClass(step)"
+                >{{ stepStatusLabel(step) }}</span
+              >
+            </li>
+          </ol>
+        </div>
       </div>
     </template>
 

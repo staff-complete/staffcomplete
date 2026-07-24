@@ -14,11 +14,22 @@ export interface WorkflowTemplateSummary {
 
 export interface WorkflowTemplateStep {
   id: string
+  phaseId: string
   title: string
   type: StepType
   assigneeId: string | null
   dueDateOffsetDays: number | null
   position: number
+}
+
+// Steps within a phase can be worked on in parallel; phases themselves run
+// in order — a phase only unlocks once every step in the previous phase is
+// completed (see packages/shared/src/phase.ts).
+export interface WorkflowTemplatePhase {
+  id: string
+  name: string
+  position: number
+  steps: WorkflowTemplateStep[]
 }
 
 export interface WorkflowTemplateDetail {
@@ -27,7 +38,7 @@ export interface WorkflowTemplateDetail {
   type: WorkflowType
   createdAt: string
   updatedAt: string
-  steps: WorkflowTemplateStep[]
+  phases: WorkflowTemplatePhase[]
 }
 
 export async function fetchWorkflowTemplates(): Promise<WorkflowTemplateSummary[]> {

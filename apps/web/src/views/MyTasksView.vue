@@ -78,7 +78,14 @@ async function markComplete(id: string) {
             >
           </div>
         </div>
+        <span
+          v-if="task.isLocked"
+          class="shrink-0 whitespace-nowrap rounded-full bg-app-surface-alt px-5.5 py-3 text-sm font-bold text-app-muted"
+        >
+          {{ t('myTasks.waitingOnEarlierSteps') }}
+        </span>
         <button
+          v-else
           type="button"
           :disabled="completingId === task.id"
           class="shrink-0 whitespace-nowrap rounded-full bg-app-accent px-5.5 py-3 text-sm font-bold text-white"

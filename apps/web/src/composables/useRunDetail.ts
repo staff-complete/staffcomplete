@@ -2,13 +2,25 @@ import { useQuery } from '@tanstack/vue-query'
 
 export interface RunStepDetail {
   id: string
+  phaseId: string | null
   title: string
   type: 'automated' | 'manual'
   assigneeId: string | null
   status: string
   dueDate: string | null
   isOverdue: boolean
+  isLocked: boolean
   position: number
+}
+
+// A phase unlocks once every step in every earlier phase (by position) is
+// completed — steps within a phase can be worked on in parallel, phases
+// themselves run in order (see packages/shared/src/phase.ts).
+export interface RunPhaseDetail {
+  id: string
+  name: string
+  position: number
+  isLocked: boolean
 }
 
 export interface RunDetail {
@@ -20,6 +32,7 @@ export interface RunDetail {
   eventDate: string
   status: string
   createdAt: string
+  phases: RunPhaseDetail[]
   steps: RunStepDetail[]
 }
 
