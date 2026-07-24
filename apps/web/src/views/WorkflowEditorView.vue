@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { automatedActionKeys, automatedActionRegistry } from '@staffcomplete/shared'
+import { automatedActionKeys, getAutomatedAction } from '@staffcomplete/shared'
 import type { AutomatedActionKey } from '@staffcomplete/shared'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
@@ -525,7 +525,7 @@ async function reorderStep(
               >
                 <option value="" disabled>{{ t('workflows.editor.actionPlaceholder') }}</option>
                 <option v-for="key in automatedActionKeys" :key="key" :value="key">
-                  {{ automatedActionRegistry[key].label }}
+                  {{ getAutomatedAction(key).label }}
                 </option>
               </select>
             </div>

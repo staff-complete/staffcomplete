@@ -2,10 +2,10 @@ import { and, asc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import {
-  automatedActionRegistry,
   createPhaseSchema,
   createStepSchema,
   createWorkflowTemplateSchema,
+  getAutomatedAction,
   reorderPhasesSchema,
   reorderStepsSchema,
   updatePhaseSchema,
@@ -478,7 +478,7 @@ workflowsRouter.post(
               config: null,
             }
           : {
-              title: automatedActionRegistry[body.action].label,
+              title: getAutomatedAction(body.action).label,
               assigneeId: null,
               dueDateOffsetDays: null,
               action: body.action,
@@ -583,7 +583,7 @@ workflowsRouter.patch(
         updates.action !== undefined
           ? {
               ...updates,
-              title: automatedActionRegistry[updates.action].label,
+              title: getAutomatedAction(updates.action).label,
               config: updates.config ?? {},
             }
           : updates

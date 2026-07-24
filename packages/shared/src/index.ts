@@ -14,7 +14,7 @@ export type { PhaseOrder, PhaseScopedStep } from './phase.js'
 export {
   automatedActionKeys,
   automatedActionKeySchema,
-  automatedActionRegistry,
+  getAutomatedAction,
   isAutomatedActionKey,
   parseAutomatedActionConfig,
 } from './automation.js'

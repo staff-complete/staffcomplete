@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   automatedActionKeys,
-  automatedActionRegistry,
+  getAutomatedAction,
   isAutomatedActionKey,
   parseAutomatedActionConfig,
 } from './automation.js'
 
-describe('automatedActionRegistry', () => {
+describe('getAutomatedAction', () => {
   it('registers the welcome email action with an empty config schema', () => {
     expect(automatedActionKeys).toContain('email.send_welcome')
-    expect(automatedActionRegistry['email.send_welcome'].label).toBe('Send welcome email')
+    expect(getAutomatedAction('email.send_welcome').label).toBe('Send welcome email')
   })
 })
 
