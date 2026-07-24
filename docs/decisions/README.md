@@ -24,3 +24,5 @@ Template: [0000-adr-template.md](0000-adr-template.md)
 | [0014](0014-multi-organization-user-accounts.md)  | Multi-Organization User Accounts via Better Auth's Organization Plugin | accepted |
 | [0015](0015-trial-and-subscription-state.md)      | Trial and Subscription State Model                                     | accepted |
 | [0016](0016-multilingual-ui.md)                   | Multilingual UI (English, Russian, Hebrew)                             | accepted |
+| [0017](0017-sequential-phases-parallel-steps.md)  | Sequential Phases with Parallel Steps                                  | accepted |
+| [0018](0018-automated-action-registry.md)         | Automated Action Registry for Workflow Steps                           | accepted |
