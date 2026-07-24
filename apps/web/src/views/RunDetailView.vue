@@ -51,6 +51,17 @@ function memberLabel(memberId: string | null) {
   return member ? member.user.name : t('common.unassigned')
 }
 
+// An automated step's action is fixed system vocabulary, not user-authored
+// content, so it's translated via i18n rather than shown as the stored
+// title (which is the server-side English fallback — see
+// packages/shared/src/automation.ts and WorkflowEditorView.vue's matching
+// helper).
+function stepDisplayTitle(step: { type: string; action: string | null; title: string }) {
+  return step.type === 'automated' && step.action
+    ? t(`workflows.automatedActions.${step.action}`)
+    : step.title
+}
+
 function stepStatusLabel(step: { status: string; isOverdue: boolean }) {
   if (step.status === 'completed') return t('runs.detail.statusStepCompleted')
   if (step.isOverdue) return t('runs.detail.statusStepOverdue')
@@ -183,7 +194,7 @@ const typeLabel = computed(() =>
                   class="truncate text-[15.5px] font-bold"
                   :class="step.status === 'completed' ? 'text-app-muted line-through' : ''"
                 >
-                  {{ step.title }}
+                  {{ stepDisplayTitle(step) }}
                 </p>
                 <p class="mt-1 text-[13px] text-app-muted">
                   <template v-if="step.type === 'manual'">

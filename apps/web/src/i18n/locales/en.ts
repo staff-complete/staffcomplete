@@ -242,6 +242,22 @@ const en = {
       validationName: 'Name must be at least 2 characters',
       validationTitle: 'Title must be at least 2 characters',
       validationAction: 'Choose an action for this step',
+      emailSubjectLabel: 'Email subject',
+      emailBodyLabel: 'Email body',
+      emailBodyPlaceholder: 'Hi [employeeName], welcome to the team!',
+      emailBodyHint: 'Available placeholders: [employeeName], [employeeRole], [eventDate]',
+      validationEmailConfig: 'Subject and body are required',
+    },
+    // Automated action labels — these describe a fixed, system-defined
+    // action (not user-authored content like a manual step's title), so
+    // they're translated like any other UI vocabulary. Keyed to match
+    // packages/shared/src/automation.ts's AutomatedActionKey values exactly
+    // (e.g. 'email.send_welcome' resolves through the nested email/send_welcome
+    // path below) — see WorkflowEditorView.vue's use of this.
+    automatedActions: {
+      email: {
+        send_welcome: 'Send welcome email',
+      },
     },
   },
 

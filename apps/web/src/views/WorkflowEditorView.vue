@@ -3,26 +3,45 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { automatedActionKeys, getAutomatedAction } from '@staffcomplete/shared'
+import { automatedActionKeys } from '@staffcomplete/shared'
 import type { AutomatedActionKey } from '@staffcomplete/shared'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
+import type { WorkflowTemplateStep } from '../composables/useWorkflowTemplates'
 import { moveStep } from '../lib/reorderSteps'
 
 type Member = { id: string; user: { name: string; email: string } }
 
 // Manual and automated steps collect genuinely different fields, but share
 // one form/one add-step button per phase — see packages/shared/src/workflow.ts.
+// emailSubject/emailBody are specific to the email.send_welcome action; a
+// second registered action with different config would need its own fields
+// here rather than reusing these.
 interface StepFormState {
   title: string
   type: 'automated' | 'manual'
   assigneeId: string
   dueDateOffsetDays: string | number
   action: AutomatedActionKey | ''
+  emailSubject: string
+  emailBody: string
 }
 
 const { t } = useI18n()
+
+// An action's label is fixed system vocabulary, not user-authored content —
+// same class of string as typeManual/typeAutomated — so it's translated via
+// i18n rather than shown as the English fallback stored in the shared
+// registry (see packages/shared/src/automation.ts). Action keys use dots
+// (e.g. 'email.send_welcome'), which map directly onto a nested i18n path.
+function automatedActionLabel(key: AutomatedActionKey) {
+  return t(`workflows.automatedActions.${key}`)
+}
+
+function stepDisplayTitle(step: WorkflowTemplateStep) {
+  return step.type === 'automated' && step.action ? automatedActionLabel(step.action) : step.title
+}
 const route = useRoute()
 const id = computed(() => route.params.id as string)
 
@@ -171,7 +190,15 @@ const stepErrors = reactive<Record<string, string>>({})
 const addingStepPhaseId = ref<string | null>(null)
 
 function emptyStepForm(): StepFormState {
-  return { title: '', type: 'manual', assigneeId: '', dueDateOffsetDays: '', action: '' }
+  return {
+    title: '',
+    type: 'manual',
+    assigneeId: '',
+    dueDateOffsetDays: '',
+    action: '',
+    emailSubject: '',
+    emailBody: '',
+  }
 }
 
 function stepFormFor(phaseId: string): StepFormState {
@@ -194,6 +221,14 @@ async function addStep(phaseId: string) {
     stepErrors[phaseId] = t('workflows.editor.validationAction')
     return
   }
+  if (
+    form.type === 'automated' &&
+    form.action === 'email.send_welcome' &&
+    (form.emailSubject.trim() === '' || form.emailBody.trim() === '')
+  ) {
+    stepErrors[phaseId] = t('workflows.editor.validationEmailConfig')
+    return
+  }
 
   const body =
     form.type === 'manual'
@@ -204,7 +239,12 @@ async function addStep(phaseId: string) {
           assigneeId: form.assigneeId || null,
           dueDateOffsetDays: form.dueDateOffsetDays !== '' ? Number(form.dueDateOffsetDays) : null,
         }
-      : { phaseId, type: 'automated' as const, action: form.action }
+      : {
+          phaseId,
+          type: 'automated' as const,
+          action: form.action,
+          config: { subject: form.emailSubject, body: form.emailBody },
+        }
 
   addingStepPhaseId.value = phaseId
   try {
@@ -376,7 +416,7 @@ async function reorderStep(
               class="flex items-center justify-between gap-3 border-b border-app-surface-alt py-4 last:border-0"
             >
               <div class="min-w-0">
-                <p class="truncate text-[15.5px] font-bold">{{ step.title }}</p>
+                <p class="truncate text-[15.5px] font-bold">{{ stepDisplayTitle(step) }}</p>
                 <p class="mt-0.5 text-[13px] text-app-muted">
                   {{
                     step.type === 'manual'
@@ -512,23 +552,58 @@ async function reorderStep(
               </div>
             </template>
 
-            <div v-else class="min-w-[220px]">
-              <label
-                class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                :for="`step-action-${phase.id}`"
-                >{{ t('workflows.editor.actionLabel') }}</label
-              >
-              <select
-                :id="`step-action-${phase.id}`"
-                v-model="stepFormFor(phase.id).action"
-                class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-              >
-                <option value="" disabled>{{ t('workflows.editor.actionPlaceholder') }}</option>
-                <option v-for="key in automatedActionKeys" :key="key" :value="key">
-                  {{ getAutomatedAction(key).label }}
-                </option>
-              </select>
-            </div>
+            <template v-else>
+              <div class="min-w-[220px]">
+                <label
+                  class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                  :for="`step-action-${phase.id}`"
+                  >{{ t('workflows.editor.actionLabel') }}</label
+                >
+                <select
+                  :id="`step-action-${phase.id}`"
+                  v-model="stepFormFor(phase.id).action"
+                  class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                >
+                  <option value="" disabled>{{ t('workflows.editor.actionPlaceholder') }}</option>
+                  <option v-for="key in automatedActionKeys" :key="key" :value="key">
+                    {{ automatedActionLabel(key) }}
+                  </option>
+                </select>
+              </div>
+
+              <template v-if="stepFormFor(phase.id).action === 'email.send_welcome'">
+                <div>
+                  <label
+                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                    :for="`step-email-subject-${phase.id}`"
+                    >{{ t('workflows.editor.emailSubjectLabel') }}</label
+                  >
+                  <input
+                    :id="`step-email-subject-${phase.id}`"
+                    v-model="stepFormFor(phase.id).emailSubject"
+                    type="text"
+                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                    :for="`step-email-body-${phase.id}`"
+                    >{{ t('workflows.editor.emailBodyLabel') }}</label
+                  >
+                  <textarea
+                    :id="`step-email-body-${phase.id}`"
+                    v-model="stepFormFor(phase.id).emailBody"
+                    rows="4"
+                    :placeholder="t('workflows.editor.emailBodyPlaceholder')"
+                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                  />
+                  <p class="mt-1 text-[12px] text-app-muted">
+                    {{ t('workflows.editor.emailBodyHint') }}
+                  </p>
+                </div>
+              </template>
+            </template>
 
             <p
               v-if="stepErrors[phase.id]"

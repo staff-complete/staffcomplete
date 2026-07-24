@@ -248,6 +248,16 @@ const ru = {
       validationName: 'Название должно содержать не менее 2 символов',
       validationTitle: 'Название шага должно содержать не менее 2 символов',
       validationAction: 'Выберите действие для этого шага',
+      emailSubjectLabel: 'Тема письма',
+      emailBodyLabel: 'Текст письма',
+      emailBodyPlaceholder: 'Привет, [employeeName]! Добро пожаловать в команду!',
+      emailBodyHint: 'Доступные плейсхолдеры: [employeeName], [employeeRole], [eventDate]',
+      validationEmailConfig: 'Тема и текст письма обязательны',
+    },
+    automatedActions: {
+      email: {
+        send_welcome: 'Отправить приветственное письмо',
+      },
     },
   },
 

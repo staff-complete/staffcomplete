@@ -241,6 +241,16 @@ const he = {
       validationName: 'השם חייב לכלול לפחות 2 תווים',
       validationTitle: 'כותרת השלב חייבת לכלול לפחות 2 תווים',
       validationAction: 'בחרו פעולה עבור שלב זה',
+      emailSubjectLabel: 'נושא המייל',
+      emailBodyLabel: 'גוף המייל',
+      emailBodyPlaceholder: 'שלום [employeeName], ברוכים הבאים לצוות!',
+      emailBodyHint: 'משתנים זמינים: [employeeName], [employeeRole], [eventDate]',
+      validationEmailConfig: 'נדרשים נושא וגוף המייל',
+    },
+    automatedActions: {
+      email: {
+        send_welcome: 'שליחת מייל קבלת פנים',
+      },
     },
   },
 
