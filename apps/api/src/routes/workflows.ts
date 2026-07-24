@@ -5,7 +5,6 @@ import {
   createPhaseSchema,
   createStepSchema,
   createWorkflowTemplateSchema,
-  getAutomatedAction,
   reorderPhasesSchema,
   reorderStepsSchema,
   updatePhaseSchema,
@@ -462,23 +461,22 @@ workflowsRouter.post(
       })
       const nextPosition = existingSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
 
-      // Manual and automated steps store genuinely different things: a
-      // manual step is free-text + who's doing it; an automated step is a
-      // registered action + its own parameters — see
-      // packages/shared/src/automation.ts. Title is derived from the
-      // action's label rather than accepted as free text, since it's meant
-      // to describe what the action actually does.
+      // Manual and automated steps store genuinely different things beyond
+      // title: a manual step is free-text + who's doing it; an automated
+      // step is a registered action + its own parameters — see
+      // packages/shared/src/automation.ts. Both kinds keep their own
+      // user-given title, since a template can have several automated steps
+      // sharing one action (e.g. two "Send email" steps to different
+      // recipients) that need distinguishing.
       const kindValues =
         body.type === 'manual'
           ? {
-              title: body.title,
               assigneeId: body.assigneeId ?? null,
               dueDateOffsetDays: body.dueDateOffsetDays ?? null,
               action: null,
               config: null,
             }
           : {
-              title: getAutomatedAction(body.action).label,
               assigneeId: null,
               dueDateOffsetDays: null,
               action: body.action,
@@ -493,6 +491,7 @@ workflowsRouter.post(
           phaseId,
           organizationId: session.organizationId,
           type: body.type,
+          title: body.title,
           ...kindValues,
           position: nextPosition,
         })
@@ -576,21 +575,9 @@ workflowsRouter.patch(
         position = destinationSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
       }
 
-      // Changing the action re-derives the title from its label, same as on
-      // create — title describes what the action does, it isn't free text
-      // for automated steps.
-      const setValues =
-        updates.action !== undefined
-          ? {
-              ...updates,
-              title: getAutomatedAction(updates.action).label,
-              config: updates.config ?? {},
-            }
-          : updates
-
       const [row] = await tx
         .update(workflowTemplateStep)
-        .set(position === undefined ? setValues : { ...setValues, position })
+        .set(position === undefined ? updates : { ...updates, position })
         .where(eq(workflowTemplateStep.id, stepId))
         .returning()
       return row

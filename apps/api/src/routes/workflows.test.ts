@@ -59,7 +59,11 @@ const { workflowsRouter } = await import('./workflows.js')
 const app = new Hono().route('/api/workflows', workflowsRouter)
 
 const ADMIN_ORG_ID = 'org-admin'
-const VALID_WELCOME_CONFIG = { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' }
+const VALID_EMAIL_CONFIG = {
+  to: '[employeeEmail]',
+  subject: 'Welcome!',
+  body: 'Hi [employeeName], welcome aboard.',
+}
 
 function adminSession(role: 'admin' | 'owner' = 'admin') {
   mocks.getSessionMock.mockResolvedValue({
@@ -469,7 +473,7 @@ describe('POST /api/workflows/:id/steps', () => {
     expect(mocks.templateFindFirstMock).not.toHaveBeenCalled()
   })
 
-  it('creates an automated step with the action label as its title and no assignee', async () => {
+  it('creates an automated step with its own title (not derived from the action) and no assignee', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
     mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
@@ -478,12 +482,12 @@ describe('POST /api/workflows/:id/steps', () => {
       {
         id: 's4',
         phaseId: 'p1',
-        title: 'Send welcome email',
+        title: 'Notify IT of new starter',
         type: 'automated',
         assigneeId: null,
         dueDateOffsetDays: null,
-        action: 'email.send_welcome',
-        config: VALID_WELCOME_CONFIG,
+        action: 'email.send',
+        config: VALID_EMAIL_CONFIG,
         position: 0,
       },
     ])
@@ -491,22 +495,37 @@ describe('POST /api/workflows/:id/steps', () => {
     const res = await postJson('/t1/steps', {
       phaseId: 'p1',
       type: 'automated',
-      action: 'email.send_welcome',
-      config: VALID_WELCOME_CONFIG,
+      title: 'Notify IT of new starter',
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
     })
     const json = await res.json()
 
     expect(res.status).toBe(201)
-    expect(json).toMatchObject({ action: 'email.send_welcome', title: 'Send welcome email' })
+    expect(json).toMatchObject({ action: 'email.send', title: 'Notify IT of new starter' })
     expect(mocks.insertValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Send welcome email',
+        title: 'Notify IT of new starter',
         assigneeId: null,
         dueDateOffsetDays: null,
-        action: 'email.send_welcome',
-        config: VALID_WELCOME_CONFIG,
+        action: 'email.send',
+        config: VALID_EMAIL_CONFIG,
       }),
     )
+  })
+
+  it('rejects an automated step with no title', async () => {
+    adminSession()
+
+    const res = await postJson('/t1/steps', {
+      phaseId: 'p1',
+      type: 'automated',
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
+    })
+
+    expect(res.status).toBe(400)
+    expect(mocks.templateFindFirstMock).not.toHaveBeenCalled()
   })
 
   it('rejects an automated step whose config does not match its action', async () => {
@@ -515,7 +534,7 @@ describe('POST /api/workflows/:id/steps', () => {
     const res = await postJson('/t1/steps', {
       phaseId: 'p1',
       type: 'automated',
-      action: 'email.send_welcome',
+      action: 'email.send',
       config: { unexpectedField: 'nope' },
     })
 
@@ -618,15 +637,15 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
     })
 
     const res = await patchJson('/t1/steps/s1', {
-      action: 'email.send_welcome',
-      config: VALID_WELCOME_CONFIG,
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
     })
 
     expect(res.status).toBe(400)
     expect((await res.json()).code).toBe('TYPE_MISMATCH')
   })
 
-  it("re-derives the title from the action's label when the action changes", async () => {
+  it('changes the action without touching the title (title is independent, not derived)', async () => {
     adminSession()
     mocks.stepFindFirstMock.mockResolvedValue({
       id: 's1',
@@ -638,27 +657,58 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
       {
         id: 's1',
         phaseId: 'p1',
-        title: 'Send welcome email',
+        title: 'Notify IT of new starter',
         type: 'automated',
         assigneeId: null,
         dueDateOffsetDays: null,
-        action: 'email.send_welcome',
-        config: VALID_WELCOME_CONFIG,
+        action: 'email.send',
+        config: VALID_EMAIL_CONFIG,
         position: 0,
       },
     ])
 
     const res = await patchJson('/t1/steps/s1', {
-      action: 'email.send_welcome',
-      config: VALID_WELCOME_CONFIG,
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
     })
     const json = await res.json()
 
     expect(res.status).toBe(200)
-    expect(json.title).toBe('Send welcome email')
+    expect(json.title).toBe('Notify IT of new starter')
+    // No title in the update payload above, so .set() shouldn't include one —
+    // the route no longer overwrites title as a side effect of an action change.
     expect(mocks.updateSetMock).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Send welcome email', config: VALID_WELCOME_CONFIG }),
+      expect.not.objectContaining({ title: expect.anything() }),
     )
+  })
+
+  it("updates an automated step's title like any other field", async () => {
+    adminSession()
+    mocks.stepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      workflowTemplateId: 't1',
+      phaseId: 'p1',
+      type: 'automated',
+    })
+    mocks.updateReturningMock.mockResolvedValue([
+      {
+        id: 's1',
+        phaseId: 'p1',
+        title: 'Renamed',
+        type: 'automated',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        action: 'email.send',
+        config: VALID_EMAIL_CONFIG,
+        position: 0,
+      },
+    ])
+
+    const res = await patchJson('/t1/steps/s1', { title: 'Renamed' })
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json.title).toBe('Renamed')
   })
 })
 

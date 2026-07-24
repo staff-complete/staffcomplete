@@ -5,21 +5,24 @@ import { z } from 'zod'
 // is deliberately per-action rather than one shared shape, since different
 // actions need different parameters (or none at all).
 //
-// subject/body are the actual email content, filled in per-step when the
-// action is added to a template — there's no baked-in copy, since "welcome
-// to the team" text is org-specific. body may reference [employeeName],
-// [employeeRole], and [eventDate] (the run fields of the same name) —
-// square brackets rather than {{mustache}} so the token syntax doesn't
-// collide with vue-i18n's own {named} interpolation wherever this gets
-// surfaced as UI hint text. Substituting them is the job of whatever
+// to/subject/body are the actual email content, filled in per-step when the
+// action is added to a template — there's no baked-in copy, since this is a
+// general-purpose "send an email" action (welcome the new hire, notify IT,
+// remind a manager — whoever), not specifically a welcome email. to/body may
+// reference [employeeName], [employeeEmail], [employeeRole], and [eventDate]
+// (the run fields of the same name) — square brackets rather than
+// {{mustache}} so the token syntax doesn't collide with vue-i18n's own
+// {named} interpolation wherever this gets surfaced as UI hint text.
+// Substituting them (and actually sending anything) is the job of whatever
 // eventually executes this action, not this schema.
-export const emailSendWelcomeConfigSchema = z.strictObject({
+export const emailSendConfigSchema = z.strictObject({
+  to: z.string().min(1, 'Recipient is required'),
   subject: z.string().min(1, 'Subject is required'),
   body: z.string().min(1, 'Body is required'),
 })
-export type EmailSendWelcomeConfig = z.infer<typeof emailSendWelcomeConfigSchema>
+export type EmailSendConfig = z.infer<typeof emailSendConfigSchema>
 
-export type AutomatedActionKey = 'email.send_welcome'
+export type AutomatedActionKey = 'email.send'
 
 interface AutomatedActionDefinition {
   // English fallback for contexts that can't reach vue-i18n (server-side
@@ -37,10 +40,7 @@ interface AutomatedActionDefinition {
 // static analysis flags as a generic object injection sink on a plain
 // object; Map.get isn't a property access, so it doesn't trip that check.
 const automatedActionEntries: ReadonlyArray<[AutomatedActionKey, AutomatedActionDefinition]> = [
-  [
-    'email.send_welcome',
-    { label: 'Send welcome email', configSchema: emailSendWelcomeConfigSchema },
-  ],
+  ['email.send', { label: 'Send email', configSchema: emailSendConfigSchema }],
 ]
 
 const automatedActionRegistry = new Map<AutomatedActionKey, AutomatedActionDefinition>(

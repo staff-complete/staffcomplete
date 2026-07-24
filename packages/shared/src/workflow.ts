@@ -50,6 +50,11 @@ export type CreateManualStepInput = z.infer<typeof createManualStepSchema>
 export const createAutomatedStepSchema = z.object({
   ...createStepBaseSchema,
   type: z.literal('automated'),
+  // Free text like a manual step's title, not derived from the action's
+  // registered label — a template can have several steps using the same
+  // action (e.g. two "Send email" steps to different recipients), so the
+  // label alone can't distinguish them.
+  title: z.string().min(2, 'Title must be at least 2 characters'),
   action: automatedActionKeySchema,
   // Validated against the action's own schema in the superRefine below,
   // since what's valid here depends entirely on which action this is.

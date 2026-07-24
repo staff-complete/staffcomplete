@@ -6,18 +6,22 @@ import {
   parseAutomatedActionConfig,
 } from './automation.js'
 
-const VALID_WELCOME_CONFIG = { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' }
+const VALID_EMAIL_CONFIG = {
+  to: '[employeeEmail]',
+  subject: 'Welcome!',
+  body: 'Hi [employeeName], welcome aboard.',
+}
 
 describe('getAutomatedAction', () => {
-  it('registers the welcome email action with a subject/body config schema', () => {
-    expect(automatedActionKeys).toContain('email.send_welcome')
-    expect(getAutomatedAction('email.send_welcome').label).toBe('Send welcome email')
+  it('registers the send-email action with a to/subject/body config schema', () => {
+    expect(automatedActionKeys).toContain('email.send')
+    expect(getAutomatedAction('email.send').label).toBe('Send email')
   })
 })
 
 describe('isAutomatedActionKey', () => {
   it('is true for a registered action', () => {
-    expect(isAutomatedActionKey('email.send_welcome')).toBe(true)
+    expect(isAutomatedActionKey('email.send')).toBe(true)
   })
 
   it('is false for an unregistered string', () => {
@@ -26,24 +30,24 @@ describe('isAutomatedActionKey', () => {
 })
 
 describe('parseAutomatedActionConfig', () => {
-  it('accepts a config with a subject and body', () => {
-    const result = parseAutomatedActionConfig('email.send_welcome', VALID_WELCOME_CONFIG)
+  it('accepts a config with a recipient, subject, and body', () => {
+    const result = parseAutomatedActionConfig('email.send', VALID_EMAIL_CONFIG)
     expect(result.success).toBe(true)
   })
 
-  it('rejects a missing config, since subject/body are required', () => {
-    const result = parseAutomatedActionConfig('email.send_welcome', undefined)
+  it('rejects a missing config, since to/subject/body are required', () => {
+    const result = parseAutomatedActionConfig('email.send', undefined)
     expect(result.success).toBe(false)
   })
 
-  it('rejects an empty subject or body', () => {
-    const result = parseAutomatedActionConfig('email.send_welcome', { subject: '', body: '' })
+  it('rejects an empty recipient, subject, or body', () => {
+    const result = parseAutomatedActionConfig('email.send', { to: '', subject: '', body: '' })
     expect(result.success).toBe(false)
   })
 
   it('rejects an unexpected parameter', () => {
-    const result = parseAutomatedActionConfig('email.send_welcome', {
-      ...VALID_WELCOME_CONFIG,
+    const result = parseAutomatedActionConfig('email.send', {
+      ...VALID_EMAIL_CONFIG,
       extra: 'nope',
     })
     expect(result.success).toBe(false)

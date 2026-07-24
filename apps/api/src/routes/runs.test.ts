@@ -399,12 +399,16 @@ describe('POST /api/runs', () => {
       {
         id: 'ts2',
         phaseId: 'p1',
-        title: 'Send welcome email',
+        title: 'Send email',
         type: 'automated',
         assigneeId: null,
         dueDateOffsetDays: null,
-        action: 'email.send_welcome',
-        config: { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' },
+        action: 'email.send',
+        config: {
+          to: '[employeeEmail]',
+          subject: 'Welcome!',
+          body: 'Hi [employeeName], welcome aboard.',
+        },
         position: 1,
       },
     ])
@@ -437,12 +441,16 @@ describe('POST /api/runs', () => {
         {
           id: 'rs2',
           phaseId: 'generated-phase-id',
-          title: 'Send welcome email',
+          title: 'Send email',
           type: 'automated',
           assigneeId: null,
           dueDateOffsetDays: null,
-          action: 'email.send_welcome',
-          config: { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' },
+          action: 'email.send',
+          config: {
+            to: '[employeeEmail]',
+            subject: 'Welcome!',
+            body: 'Hi [employeeName], welcome aboard.',
+          },
           position: 1,
         },
       ])
@@ -481,9 +489,13 @@ describe('POST /api/runs', () => {
       expect.objectContaining({
         runId: 'r1',
         phaseId: generatedPhaseId,
-        title: 'Send welcome email',
-        action: 'email.send_welcome',
-        config: { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' },
+        title: 'Send email',
+        action: 'email.send',
+        config: {
+          to: '[employeeEmail]',
+          subject: 'Welcome!',
+          body: 'Hi [employeeName], welcome aboard.',
+        },
         position: 1,
       }),
     ])

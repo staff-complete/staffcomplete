@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createStepSchema, updateStepSchema } from './workflow.js'
 
-const VALID_WELCOME_CONFIG = { subject: 'Welcome!', body: 'Hi [employeeName], welcome aboard.' }
+const VALID_EMAIL_CONFIG = {
+  to: '[employeeEmail]',
+  subject: 'Welcome!',
+  body: 'Hi [employeeName], welcome aboard.',
+}
 
 describe('createStepSchema', () => {
   it('accepts a manual step with a title and no action', () => {
@@ -25,21 +29,34 @@ describe('createStepSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('accepts an automated step with a registered action and valid config', () => {
+  it('accepts an automated step with its own title, a registered action, and valid config', () => {
     const result = createStepSchema.safeParse({
       phaseId: 'p1',
       type: 'automated',
-      action: 'email.send_welcome',
-      config: VALID_WELCOME_CONFIG,
+      title: 'Notify IT of new starter',
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
     })
 
     expect(result.success).toBe(true)
+  })
+
+  it('rejects an automated step without a title', () => {
+    const result = createStepSchema.safeParse({
+      phaseId: 'p1',
+      type: 'automated',
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
+    })
+
+    expect(result.success).toBe(false)
   })
 
   it('rejects an automated step with an unregistered action', () => {
     const result = createStepSchema.safeParse({
       phaseId: 'p1',
       type: 'automated',
+      title: 'Notify IT of new starter',
       action: 'github.create_account',
     })
 
@@ -50,25 +67,27 @@ describe('createStepSchema', () => {
     const result = createStepSchema.safeParse({
       phaseId: 'p1',
       type: 'automated',
-      action: 'email.send_welcome',
+      title: 'Notify IT of new starter',
+      action: 'email.send',
       config: { unexpectedField: 'nope' },
     })
 
     expect(result.success).toBe(false)
   })
 
-  it('strips a manual-only field like title from an automated step (not part of its shape)', () => {
+  it('strips a manual-only field like assigneeId from an automated step (not part of its shape)', () => {
     const result = createStepSchema.safeParse({
       phaseId: 'p1',
       type: 'automated',
-      action: 'email.send_welcome',
-      config: VALID_WELCOME_CONFIG,
-      title: 'Send welcome email',
+      title: 'Notify IT of new starter',
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
+      assigneeId: 'm1',
     })
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data).not.toHaveProperty('title')
+      expect(result.data).not.toHaveProperty('assigneeId')
     }
   })
 })
@@ -82,8 +101,8 @@ describe('updateStepSchema', () => {
 
   it('accepts updating an automated step to a different registered action', () => {
     const result = updateStepSchema.safeParse({
-      action: 'email.send_welcome',
-      config: VALID_WELCOME_CONFIG,
+      action: 'email.send',
+      config: VALID_EMAIL_CONFIG,
     })
 
     expect(result.success).toBe(true)
@@ -91,7 +110,7 @@ describe('updateStepSchema', () => {
 
   it("rejects a config update that doesn't match the given action's schema", () => {
     const result = updateStepSchema.safeParse({
-      action: 'email.send_welcome',
+      action: 'email.send',
       config: { unexpectedField: 'nope' },
     })
 

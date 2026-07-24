@@ -18,7 +18,7 @@ export {
   isAutomatedActionKey,
   parseAutomatedActionConfig,
 } from './automation.js'
-export type { AutomatedActionKey, EmailSendWelcomeConfig } from './automation.js'
+export type { AutomatedActionKey, EmailSendConfig } from './automation.js'
 export { createRunSchema } from './run.js'
 export type { CreateRunInput } from './run.js'
 export { computeDueDate, isTaskOverdue } from './task.js'
