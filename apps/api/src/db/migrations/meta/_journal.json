@@ -78,6 +78,13 @@
       "when": 1784904159196,
       "tag": "0010_add_workflow_phases",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784913434452,
+      "tag": "0011_workflow_phases_not_null",
+      "breakpoints": true
     }
   ]
 }

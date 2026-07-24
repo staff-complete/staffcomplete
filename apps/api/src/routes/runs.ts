@@ -226,19 +226,30 @@ runsRouter.post(
         ? await tx
             .insert(runStep)
             .values(
-              templateSteps.map((step) => ({
-                id: crypto.randomUUID(),
-                runId: createdRun.id,
-                phaseId: step.phaseId
-                  ? (runPhaseIdByTemplatePhaseId.get(step.phaseId) ?? null)
-                  : null,
-                organizationId: session.organizationId,
-                title: step.title,
-                type: step.type,
-                assigneeId: step.assigneeId,
-                dueDateOffsetDays: step.dueDateOffsetDays,
-                position: step.position,
-              })),
+              templateSteps.map((step) => {
+                const stepRunPhaseId = runPhaseIdByTemplatePhaseId.get(step.phaseId)
+                if (stepRunPhaseId === undefined) {
+                  // Would mean workflowTemplateStep.phaseId's FK points at a
+                  // phase outside phaseCopies, i.e. outside this same
+                  // template — the FK constraint should make that
+                  // impossible, so surface it loudly rather than writing a
+                  // runStep with a dangling phase reference.
+                  throw new Error(
+                    `workflowTemplateStep ${step.id} references phase ${step.phaseId}, which is not part of workflowTemplate ${workflowTemplateId}`,
+                  )
+                }
+                return {
+                  id: crypto.randomUUID(),
+                  runId: createdRun.id,
+                  phaseId: stepRunPhaseId,
+                  organizationId: session.organizationId,
+                  title: step.title,
+                  type: step.type,
+                  assigneeId: step.assigneeId,
+                  dueDateOffsetDays: step.dueDateOffsetDays,
+                  position: step.position,
+                }
+              }),
             )
             .returning()
         : []

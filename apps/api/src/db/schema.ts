@@ -214,12 +214,9 @@ export const workflowTemplateStep = pgTable(
     workflowTemplateId: text('workflowTemplateId')
       .notNull()
       .references(() => workflowTemplate.id, { onDelete: 'cascade' }),
-    // Nullable for now: this migration backfills existing steps into a
-    // default phase, but NOT NULL can't be set until the routes that create
-    // steps always supply phaseId (old app code may still be running mid
-    // deploy — see apps/api/src/db/migrations for the follow-up migration
-    // that tightens this once that lands).
-    phaseId: text('phaseId').references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
+    phaseId: text('phaseId')
+      .notNull()
+      .references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
     // Denormalized per ADR-0005 ("every tenant-scoped table must have a
     // tenant_id column") — RLS policies can't join through workflowTemplateId.
     organizationId: text('organizationId')
@@ -312,10 +309,9 @@ export const runStep = pgTable(
     runId: text('runId')
       .notNull()
       .references(() => run.id, { onDelete: 'cascade' }),
-    // Nullable for now — see the matching comment on workflowTemplateStep;
-    // this migration backfills existing rows into a default phase and a
-    // follow-up migration adds NOT NULL once the write paths always set it.
-    phaseId: text('phaseId').references(() => runPhase.id, { onDelete: 'cascade' }),
+    phaseId: text('phaseId')
+      .notNull()
+      .references(() => runPhase.id, { onDelete: 'cascade' }),
     // Denormalized per ADR-0005 ("every tenant-scoped table must have a
     // tenant_id column") — RLS policies can't join through runId.
     organizationId: text('organizationId')
