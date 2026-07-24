@@ -197,21 +197,27 @@ runsRouter.post(
       // Copy the template's phases first so runStep.phaseId can point at the
       // run's own copies — a run keeps its own history even if the template
       // is edited or deleted later, same reasoning as runStep vs.
-      // workflowTemplateStep (see the comment on `run` in schema.ts). Ids are
-      // generated up front rather than read back from .returning(), so
-      // mapping a template phase to its run copy doesn't depend on the
-      // insert preserving row order.
+      // workflowTemplateStep (see the comment on `run` in schema.ts). Each
+      // copy's id is generated here, up front, so both the insert values and
+      // the template->run phase-id map can read it directly without a
+      // .returning() round trip or a re-lookup by array index/key.
+      const phaseCopies = templatePhases.map((phase) => ({
+        templatePhaseId: phase.id,
+        runPhaseId: crypto.randomUUID(),
+        name: phase.name,
+        position: phase.position,
+      }))
       const runPhaseIdByTemplatePhaseId = new Map(
-        templatePhases.map((phase) => [phase.id, crypto.randomUUID()]),
+        phaseCopies.map((copy) => [copy.templatePhaseId, copy.runPhaseId]),
       )
-      if (templatePhases.length) {
+      if (phaseCopies.length) {
         await tx.insert(runPhase).values(
-          templatePhases.map((phase) => ({
-            id: runPhaseIdByTemplatePhaseId.get(phase.id)!,
+          phaseCopies.map((copy) => ({
+            id: copy.runPhaseId,
             runId: createdRun.id,
             organizationId: session.organizationId,
-            name: phase.name,
-            position: phase.position,
+            name: copy.name,
+            position: copy.position,
           })),
         )
       }
