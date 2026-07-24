@@ -53,8 +53,10 @@ await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "invitation" TO "staffcomplete
 // listed here, it doesn't pick up new tables automatically).
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "subscription" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template" TO "staffcomplete_tenant"`
+await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template_phase" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template_step" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run" TO "staffcomplete_tenant"`
+await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_phase" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_step" TO "staffcomplete_tenant"`
 
 console.log('staffcomplete_tenant role configured.')

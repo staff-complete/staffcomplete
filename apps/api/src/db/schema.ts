@@ -178,8 +178,11 @@ export const workflowTemplate = pgTable(
   ],
 ).enableRLS()
 
-export const workflowTemplateStep = pgTable(
-  'workflow_template_step',
+// Ordered phases within a template. Steps inside a phase can run in
+// parallel; phases themselves run sequentially by position — a phase only
+// unlocks once every step in the previous phase is completed.
+export const workflowTemplatePhase = pgTable(
+  'workflow_template_phase',
   {
     id: text('id').primaryKey(),
     workflowTemplateId: text('workflowTemplateId')
@@ -190,11 +193,43 @@ export const workflowTemplateStep = pgTable(
     organizationId: text('organizationId')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    position: integer('position').notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => [
+    pgPolicy('workflow_template_phase_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
+export const workflowTemplateStep = pgTable(
+  'workflow_template_step',
+  {
+    id: text('id').primaryKey(),
+    workflowTemplateId: text('workflowTemplateId')
+      .notNull()
+      .references(() => workflowTemplate.id, { onDelete: 'cascade' }),
+    // Nullable for now: this migration backfills existing steps into a
+    // default phase, but NOT NULL can't be set until the routes that create
+    // steps always supply phaseId (old app code may still be running mid
+    // deploy — see apps/api/src/db/migrations for the follow-up migration
+    // that tightens this once that lands).
+    phaseId: text('phaseId').references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
+    // Denormalized per ADR-0005 ("every tenant-scoped table must have a
+    // tenant_id column") — RLS policies can't join through workflowTemplateId.
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     type: text('type').notNull(), // automated | manual
     assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }),
     dueDateOffsetDays: integer('dueDateOffsetDays'), // manual steps only
-    position: integer('position').notNull(),
+    position: integer('position').notNull(), // order within the phase
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
   (table) => [
@@ -241,8 +276,11 @@ export const run = pgTable(
   ],
 ).enableRLS()
 
-export const runStep = pgTable(
-  'run_step',
+// Ordered phases within a run, copied from workflowTemplatePhase at run
+// creation time (same reasoning as why runStep copies workflowTemplateStep —
+// a run must keep its own history even if the template changes later).
+export const runPhase = pgTable(
+  'run_phase',
   {
     id: text('id').primaryKey(),
     runId: text('runId')
@@ -253,12 +291,42 @@ export const runStep = pgTable(
     organizationId: text('organizationId')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    position: integer('position').notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => [
+    pgPolicy('run_phase_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
+export const runStep = pgTable(
+  'run_step',
+  {
+    id: text('id').primaryKey(),
+    runId: text('runId')
+      .notNull()
+      .references(() => run.id, { onDelete: 'cascade' }),
+    // Nullable for now — see the matching comment on workflowTemplateStep;
+    // this migration backfills existing rows into a default phase and a
+    // follow-up migration adds NOT NULL once the write paths always set it.
+    phaseId: text('phaseId').references(() => runPhase.id, { onDelete: 'cascade' }),
+    // Denormalized per ADR-0005 ("every tenant-scoped table must have a
+    // tenant_id column") — RLS policies can't join through runId.
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     type: text('type').notNull(), // automated | manual
     assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }),
     dueDateOffsetDays: integer('dueDateOffsetDays'), // manual steps only
     status: text('status').notNull().default('pending'), // pending | completed
-    position: integer('position').notNull(),
+    position: integer('position').notNull(), // order within the phase
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     // Set only when status flips to 'completed' (issue #86's activity feed
     // needs a real completion timestamp — createdAt is when the run started,
