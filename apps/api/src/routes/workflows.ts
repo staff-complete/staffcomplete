@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import {
+  automatedActionRegistry,
   createPhaseSchema,
   createStepSchema,
   createWorkflowTemplateSchema,
@@ -35,6 +36,8 @@ function serializeStep(step: typeof workflowTemplateStep.$inferSelect) {
     type: step.type,
     assigneeId: step.assigneeId,
     dueDateOffsetDays: step.dueDateOffsetDays,
+    action: step.action,
+    config: step.config,
     position: step.position,
   }
 }
@@ -425,9 +428,14 @@ workflowsRouter.post(
     }
 
     const workflowTemplateId = c.req.param('id')
-    const { phaseId, title, type, assigneeId, dueDateOffsetDays } = c.req.valid('json')
+    const body = c.req.valid('json')
+    const { phaseId } = body
 
-    if (assigneeId && !(await assertValidAssignee(assigneeId, session.organizationId))) {
+    if (
+      body.type === 'manual' &&
+      body.assigneeId &&
+      !(await assertValidAssignee(body.assigneeId, session.organizationId))
+    ) {
       return c.json({ code: 'INVALID_ASSIGNEE', message: 'Assignee is not a team member.' }, 400)
     }
 
@@ -454,6 +462,29 @@ workflowsRouter.post(
       })
       const nextPosition = existingSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
 
+      // Manual and automated steps store genuinely different things: a
+      // manual step is free-text + who's doing it; an automated step is a
+      // registered action + its own parameters — see
+      // packages/shared/src/automation.ts. Title is derived from the
+      // action's label rather than accepted as free text, since it's meant
+      // to describe what the action actually does.
+      const kindValues =
+        body.type === 'manual'
+          ? {
+              title: body.title,
+              assigneeId: body.assigneeId ?? null,
+              dueDateOffsetDays: body.dueDateOffsetDays ?? null,
+              action: null,
+              config: null,
+            }
+          : {
+              title: automatedActionRegistry[body.action].label,
+              assigneeId: null,
+              dueDateOffsetDays: null,
+              action: body.action,
+              config: body.config ?? {},
+            }
+
       const [row] = await tx
         .insert(workflowTemplateStep)
         .values({
@@ -461,10 +492,8 @@ workflowsRouter.post(
           workflowTemplateId,
           phaseId,
           organizationId: session.organizationId,
-          title,
-          type,
-          assigneeId: assigneeId ?? null,
-          dueDateOffsetDays: dueDateOffsetDays ?? null,
+          type: body.type,
+          ...kindValues,
           position: nextPosition,
         })
         .returning()
@@ -509,10 +538,23 @@ workflowsRouter.patch(
     const updated = await withTenant(session.organizationId, async (tx) => {
       const existing = await tx.query.workflowTemplateStep.findFirst({
         where: eq(workflowTemplateStep.id, stepId),
-        columns: { id: true, workflowTemplateId: true, phaseId: true },
+        columns: { id: true, workflowTemplateId: true, phaseId: true, type: true },
       })
       if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
         return null
+      }
+
+      // A step's type is immutable (delete and recreate to change it — see
+      // createStepSchema), so a manual-only or automated-only field showing
+      // up for the other kind means the client mixed up which step this is.
+      if (updates.action !== undefined && existing.type !== 'automated') {
+        return 'TYPE_MISMATCH' as const
+      }
+      if (
+        (updates.assigneeId !== undefined || updates.dueDateOffsetDays !== undefined) &&
+        existing.type !== 'manual'
+      ) {
+        return 'TYPE_MISMATCH' as const
       }
 
       // Moving to a different phase: validate it belongs to this workflow
@@ -534,14 +576,35 @@ workflowsRouter.patch(
         position = destinationSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
       }
 
+      // Changing the action re-derives the title from its label, same as on
+      // create — title describes what the action does, it isn't free text
+      // for automated steps.
+      const setValues =
+        updates.action !== undefined
+          ? {
+              ...updates,
+              title: automatedActionRegistry[updates.action].label,
+              config: updates.config ?? {},
+            }
+          : updates
+
       const [row] = await tx
         .update(workflowTemplateStep)
-        .set(position === undefined ? updates : { ...updates, position })
+        .set(position === undefined ? setValues : { ...setValues, position })
         .where(eq(workflowTemplateStep.id, stepId))
         .returning()
       return row
     })
 
+    if (updated === 'TYPE_MISMATCH') {
+      return c.json(
+        {
+          code: 'TYPE_MISMATCH',
+          message: "This field doesn't apply to the step's type.",
+        },
+        400,
+      )
+    }
     if (updated === 'INVALID_PHASE') {
       return c.json(
         { code: 'INVALID_PHASE', message: 'Phase does not belong to this workflow.' },

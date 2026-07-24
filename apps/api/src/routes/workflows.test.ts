@@ -467,6 +467,59 @@ describe('POST /api/workflows/:id/steps', () => {
     expect((await res.json()).code).toBe('INVALID_ASSIGNEE')
     expect(mocks.templateFindFirstMock).not.toHaveBeenCalled()
   })
+
+  it('creates an automated step with the action label as its title and no assignee', async () => {
+    adminSession()
+    mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.stepFindManyMock.mockResolvedValue([])
+    mocks.insertReturningMock.mockResolvedValue([
+      {
+        id: 's4',
+        phaseId: 'p1',
+        title: 'Send welcome email',
+        type: 'automated',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        action: 'email.send_welcome',
+        config: {},
+        position: 0,
+      },
+    ])
+
+    const res = await postJson('/t1/steps', {
+      phaseId: 'p1',
+      type: 'automated',
+      action: 'email.send_welcome',
+    })
+    const json = await res.json()
+
+    expect(res.status).toBe(201)
+    expect(json).toMatchObject({ action: 'email.send_welcome', title: 'Send welcome email' })
+    expect(mocks.insertValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Send welcome email',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        action: 'email.send_welcome',
+        config: {},
+      }),
+    )
+  })
+
+  it('rejects an automated step whose config does not match its action', async () => {
+    adminSession()
+
+    const res = await postJson('/t1/steps', {
+      phaseId: 'p1',
+      type: 'automated',
+      action: 'email.send_welcome',
+      config: { unexpectedField: 'nope' },
+    })
+
+    expect(res.status).toBe(400)
+    expect(mocks.templateFindFirstMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('PATCH /api/workflows/:id/steps/:stepId', () => {
@@ -533,6 +586,70 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
     expect(res.status).toBe(200)
     expect(mocks.updateSetMock).toHaveBeenCalledWith(
       expect.objectContaining({ phaseId: 'p2', position: 2 }),
+    )
+  })
+
+  it('rejects setting an assignee on an automated step', async () => {
+    adminSession()
+    mocks.memberFindFirstMock.mockResolvedValueOnce({ role: 'admin', organizationId: ADMIN_ORG_ID })
+    mocks.memberFindFirstMock.mockResolvedValueOnce({ id: 'm1', organizationId: ADMIN_ORG_ID })
+    mocks.stepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      workflowTemplateId: 't1',
+      phaseId: 'p1',
+      type: 'automated',
+    })
+
+    const res = await patchJson('/t1/steps/s1', { assigneeId: 'm1' })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('TYPE_MISMATCH')
+  })
+
+  it('rejects setting an action on a manual step', async () => {
+    adminSession()
+    mocks.stepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      workflowTemplateId: 't1',
+      phaseId: 'p1',
+      type: 'manual',
+    })
+
+    const res = await patchJson('/t1/steps/s1', { action: 'email.send_welcome', config: {} })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('TYPE_MISMATCH')
+  })
+
+  it("re-derives the title from the action's label when the action changes", async () => {
+    adminSession()
+    mocks.stepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      workflowTemplateId: 't1',
+      phaseId: 'p1',
+      type: 'automated',
+    })
+    mocks.updateReturningMock.mockResolvedValue([
+      {
+        id: 's1',
+        phaseId: 'p1',
+        title: 'Send welcome email',
+        type: 'automated',
+        assigneeId: null,
+        dueDateOffsetDays: null,
+        action: 'email.send_welcome',
+        config: {},
+        position: 0,
+      },
+    ])
+
+    const res = await patchJson('/t1/steps/s1', { action: 'email.send_welcome', config: {} })
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json.title).toBe('Send welcome email')
+    expect(mocks.updateSetMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Send welcome email', config: {} }),
     )
   })
 })

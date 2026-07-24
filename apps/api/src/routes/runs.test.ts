@@ -399,10 +399,12 @@ describe('POST /api/runs', () => {
       {
         id: 'ts2',
         phaseId: 'p1',
-        title: 'Create Slack account',
+        title: 'Send welcome email',
         type: 'automated',
         assigneeId: null,
         dueDateOffsetDays: null,
+        action: 'email.send_welcome',
+        config: {},
         position: 1,
       },
     ])
@@ -435,10 +437,12 @@ describe('POST /api/runs', () => {
         {
           id: 'rs2',
           phaseId: 'generated-phase-id',
-          title: 'Create Slack account',
+          title: 'Send welcome email',
           type: 'automated',
           assigneeId: null,
           dueDateOffsetDays: null,
+          action: 'email.send_welcome',
+          config: {},
           position: 1,
         },
       ])
@@ -477,7 +481,9 @@ describe('POST /api/runs', () => {
       expect.objectContaining({
         runId: 'r1',
         phaseId: generatedPhaseId,
-        title: 'Create Slack account',
+        title: 'Send welcome email',
+        action: 'email.send_welcome',
+        config: {},
         position: 1,
       }),
     ])
