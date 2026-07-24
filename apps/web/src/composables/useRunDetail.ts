@@ -1,11 +1,16 @@
 import { useQuery } from '@tanstack/vue-query'
+import type { AutomatedActionKey } from '@staffcomplete/shared'
 
 export interface RunStepDetail {
   id: string
   phaseId: string | null
   title: string
   type: 'automated' | 'manual'
+  // Manual steps only.
   assigneeId: string | null
+  // Automated steps only — see packages/shared/src/automation.ts.
+  action: AutomatedActionKey | null
+  config: unknown
   status: string
   dueDate: string | null
   isOverdue: boolean

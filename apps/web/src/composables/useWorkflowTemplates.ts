@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import type { AutomatedActionKey } from '@staffcomplete/shared'
 
 export type WorkflowType = 'onboarding' | 'offboarding'
 export type StepType = 'automated' | 'manual'
@@ -17,8 +18,12 @@ export interface WorkflowTemplateStep {
   phaseId: string
   title: string
   type: StepType
+  // Manual steps only.
   assigneeId: string | null
   dueDateOffsetDays: number | null
+  // Automated steps only — see packages/shared/src/automation.ts.
+  action: AutomatedActionKey | null
+  config: unknown
   position: number
 }
 

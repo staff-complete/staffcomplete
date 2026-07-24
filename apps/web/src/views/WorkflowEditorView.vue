@@ -3,6 +3,8 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { automatedActionKeys, automatedActionRegistry } from '@staffcomplete/shared'
+import type { AutomatedActionKey } from '@staffcomplete/shared'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
@@ -10,11 +12,14 @@ import { moveStep } from '../lib/reorderSteps'
 
 type Member = { id: string; user: { name: string; email: string } }
 
+// Manual and automated steps collect genuinely different fields, but share
+// one form/one add-step button per phase — see packages/shared/src/workflow.ts.
 interface StepFormState {
   title: string
   type: 'automated' | 'manual'
   assigneeId: string
   dueDateOffsetDays: string | number
+  action: AutomatedActionKey | ''
 }
 
 const { t } = useI18n()
@@ -165,9 +170,13 @@ const stepForms = reactive<Record<string, StepFormState>>({})
 const stepErrors = reactive<Record<string, string>>({})
 const addingStepPhaseId = ref<string | null>(null)
 
+function emptyStepForm(): StepFormState {
+  return { title: '', type: 'manual', assigneeId: '', dueDateOffsetDays: '', action: '' }
+}
+
 function stepFormFor(phaseId: string): StepFormState {
   if (!stepForms[phaseId]) {
-    stepForms[phaseId] = { title: '', type: 'manual', assigneeId: '', dueDateOffsetDays: '' }
+    stepForms[phaseId] = emptyStepForm()
   }
   return stepForms[phaseId]
 }
@@ -176,30 +185,37 @@ async function addStep(phaseId: string) {
   if (isReadOnly.value) return
   const form = stepFormFor(phaseId)
   stepErrors[phaseId] = ''
-  if (form.title.trim().length < 2) {
+
+  if (form.type === 'manual' && form.title.trim().length < 2) {
     stepErrors[phaseId] = t('workflows.editor.validationTitle')
     return
   }
+  if (form.type === 'automated' && form.action === '') {
+    stepErrors[phaseId] = t('workflows.editor.validationAction')
+    return
+  }
+
+  const body =
+    form.type === 'manual'
+      ? {
+          phaseId,
+          type: 'manual' as const,
+          title: form.title,
+          assigneeId: form.assigneeId || null,
+          dueDateOffsetDays: form.dueDateOffsetDays !== '' ? Number(form.dueDateOffsetDays) : null,
+        }
+      : { phaseId, type: 'automated' as const, action: form.action }
 
   addingStepPhaseId.value = phaseId
   try {
     const res = await fetch(`/api/workflows/${id.value}/steps`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phaseId,
-        title: form.title,
-        type: form.type,
-        assigneeId: form.assigneeId || null,
-        dueDateOffsetDays:
-          form.type === 'manual' && form.dueDateOffsetDays !== ''
-            ? Number(form.dueDateOffsetDays)
-            : null,
-      }),
+      body: JSON.stringify(body),
     })
 
     if (res.ok) {
-      stepForms[phaseId] = { title: '', type: 'manual', assigneeId: '', dueDateOffsetDays: '' }
+      stepForms[phaseId] = emptyStepForm()
       await invalidate()
       return
     }
@@ -367,9 +383,11 @@ async function reorderStep(
                       ? t('workflows.editor.typeManual')
                       : t('workflows.editor.typeAutomated')
                   }}
-                  · {{ memberLabel(step.assigneeId) }}
-                  <template v-if="step.type === 'manual' && step.dueDateOffsetDays !== null">
-                    {{ t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays }) }}
+                  <template v-if="step.type === 'manual'">
+                    · {{ memberLabel(step.assigneeId) }}
+                    <template v-if="step.dueDateOffsetDays !== null">
+                      {{ t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays }) }}
+                    </template>
                   </template>
                 </p>
               </div>
@@ -424,71 +442,92 @@ async function reorderStep(
             @submit.prevent="addStep(phase.id)"
           >
             <h3 class="text-sm font-extrabold">{{ t('workflows.editor.addStepHeading') }}</h3>
+
             <div>
               <label
                 class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                :for="`step-title-${phase.id}`"
-                >{{ t('workflows.editor.titleLabel') }}</label
+                :for="`step-type-${phase.id}`"
+                >{{ t('workflows.editor.typeLabel') }}</label
               >
-              <input
-                :id="`step-title-${phase.id}`"
-                v-model="stepFormFor(phase.id).title"
-                type="text"
-                :placeholder="t('workflows.editor.titlePlaceholder')"
-                class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-              />
+              <select
+                :id="`step-type-${phase.id}`"
+                v-model="stepFormFor(phase.id).type"
+                class="rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+              >
+                <option value="manual">{{ t('workflows.editor.typeManual') }}</option>
+                <option value="automated">{{ t('workflows.editor.typeAutomated') }}</option>
+              </select>
             </div>
 
-            <div class="flex flex-wrap gap-3">
+            <template v-if="stepFormFor(phase.id).type === 'manual'">
               <div>
                 <label
                   class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                  :for="`step-type-${phase.id}`"
-                  >{{ t('workflows.editor.typeLabel') }}</label
-                >
-                <select
-                  :id="`step-type-${phase.id}`"
-                  v-model="stepFormFor(phase.id).type"
-                  class="rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                >
-                  <option value="manual">{{ t('workflows.editor.typeManual') }}</option>
-                  <option value="automated">{{ t('workflows.editor.typeAutomated') }}</option>
-                </select>
-              </div>
-
-              <div class="min-w-[180px] flex-1">
-                <label
-                  class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                  :for="`step-assignee-${phase.id}`"
-                  >{{ t('workflows.editor.assigneeLabel') }}</label
-                >
-                <select
-                  :id="`step-assignee-${phase.id}`"
-                  v-model="stepFormFor(phase.id).assigneeId"
-                  class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                >
-                  <option value="">{{ t('common.unassigned') }}</option>
-                  <option v-for="member in members" :key="member.id" :value="member.id">
-                    {{ member.user.name }}
-                  </option>
-                </select>
-              </div>
-
-              <div v-if="stepFormFor(phase.id).type === 'manual'">
-                <label
-                  class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                  :for="`step-due-${phase.id}`"
-                  >{{ t('workflows.editor.dueDaysLabel') }}</label
+                  :for="`step-title-${phase.id}`"
+                  >{{ t('workflows.editor.titleLabel') }}</label
                 >
                 <input
-                  :id="`step-due-${phase.id}`"
-                  v-model="stepFormFor(phase.id).dueDateOffsetDays"
-                  type="number"
-                  min="0"
-                  placeholder="2"
-                  class="w-24 rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                  :id="`step-title-${phase.id}`"
+                  v-model="stepFormFor(phase.id).title"
+                  type="text"
+                  :placeholder="t('workflows.editor.titlePlaceholder')"
+                  class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
                 />
               </div>
+
+              <div class="flex flex-wrap gap-3">
+                <div class="min-w-[180px] flex-1">
+                  <label
+                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                    :for="`step-assignee-${phase.id}`"
+                    >{{ t('workflows.editor.assigneeLabel') }}</label
+                  >
+                  <select
+                    :id="`step-assignee-${phase.id}`"
+                    v-model="stepFormFor(phase.id).assigneeId"
+                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                  >
+                    <option value="">{{ t('common.unassigned') }}</option>
+                    <option v-for="member in members" :key="member.id" :value="member.id">
+                      {{ member.user.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                    :for="`step-due-${phase.id}`"
+                    >{{ t('workflows.editor.dueDaysLabel') }}</label
+                  >
+                  <input
+                    :id="`step-due-${phase.id}`"
+                    v-model="stepFormFor(phase.id).dueDateOffsetDays"
+                    type="number"
+                    min="0"
+                    placeholder="2"
+                    class="w-24 rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <div v-else class="min-w-[220px]">
+              <label
+                class="mb-1.5 block text-[13px] font-bold text-app-slate"
+                :for="`step-action-${phase.id}`"
+                >{{ t('workflows.editor.actionLabel') }}</label
+              >
+              <select
+                :id="`step-action-${phase.id}`"
+                v-model="stepFormFor(phase.id).action"
+                class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
+              >
+                <option value="" disabled>{{ t('workflows.editor.actionPlaceholder') }}</option>
+                <option v-for="key in automatedActionKeys" :key="key" :value="key">
+                  {{ automatedActionRegistry[key].label }}
+                </option>
+              </select>
             </div>
 
             <p

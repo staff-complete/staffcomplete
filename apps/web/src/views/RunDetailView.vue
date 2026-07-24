@@ -186,10 +186,13 @@ const typeLabel = computed(() =>
                   {{ step.title }}
                 </p>
                 <p class="mt-1 text-[13px] text-app-muted">
-                  {{ memberLabel(step.assigneeId) }}
-                  <template v-if="step.dueDate">{{
-                    t('runs.detail.dueLabel', { date: step.dueDate })
-                  }}</template>
+                  <template v-if="step.type === 'manual'">
+                    {{ memberLabel(step.assigneeId) }}
+                    <template v-if="step.dueDate">{{
+                      t('runs.detail.dueLabel', { date: step.dueDate })
+                    }}</template>
+                  </template>
+                  <template v-else>{{ t('workflows.editor.typeAutomated') }}</template>
                 </p>
               </div>
               <span
