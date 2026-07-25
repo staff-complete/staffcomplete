@@ -110,22 +110,25 @@ describe('executeAutomatedStep', () => {
     ])
   })
 
+  // This test's fixture and assertions deliberately contain unescaped-
+  // looking markup to prove it gets escaped — static analysis can't tell
+  // that apart from a real vulnerability, hence the nosemgrep comments below.
   it('escapes HTML-special characters an admin typed into the body template, not just the substituted values', async () => {
     mocks.runStepFindFirstMock.mockResolvedValue({
       ...EMAIL_STEP,
       config: {
         to: '[employeeEmail]',
         subject: 'Welcome!',
-        body: '<script>steal()</script> Hi [employeeName] & welcome',
+        body: '<script>steal()</script> Hi [employeeName] & welcome', // nosemgrep
       },
     })
 
     await executeAutomatedStep(PAYLOAD)
 
     const html = mocks.sendAuthEmailMock.mock.calls[0][2] as string
-    expect(html).not.toContain('<script>')
-    expect(html).toContain('&lt;script&gt;steal()&lt;/script&gt;')
-    expect(html).toContain('Hi Jane Doe &amp; welcome')
+    expect(html).not.toContain('<script>') // nosemgrep
+    expect(html).toContain('&lt;script&gt;steal()&lt;/script&gt;') // nosemgrep
+    expect(html).toContain('Hi Jane Doe &amp; welcome') // nosemgrep
   })
 
   it('throws when Resend returns an error, so pg-boss retries', async () => {

@@ -100,15 +100,16 @@ async function sendEmailAction(
   const to = substituteAutomationTokens(config.to, tokenValues)
   const subject = substituteAutomationTokens(config.subject, tokenValues)
   const rawBody = substituteAutomationTokens(config.body, tokenValues)
-  // This rule targets HTML reflected into a browser response (its own fix
-  // suggestion is DOMPurify, a DOM sanitizer) — there's no DOM here, this is
-  // an email body string sent through Resend. escapeHtml() above already
+  // Static analysis flags manually-built HTML strings passed to a
+  // send-email-shaped function as a possible browser-XSS sink, suggesting
+  // DOMPurify (a DOM sanitizer) as the fix. There's no DOM here — this is an
+  // email body sent through Resend, and escapeHtml() above already
   // neutralizes &<>"' the same way auth.ts's transactional emails do.
-  const html = `<p>${escapeHtml(rawBody).replaceAll('\n', '<br>')}</p>` // nosemgrep: javascript.express.security.injection.raw-html-format.raw-html-format
+  const html = `<p>${escapeHtml(rawBody).replaceAll('\n', '<br>')}</p>` // nosemgrep
 
   let result: Awaited<ReturnType<typeof sendAuthEmail>>
   try {
-    result = await sendAuthEmail(to, subject, html)
+    result = await sendAuthEmail(to, subject, html) // nosemgrep
   } catch (err) {
     throw new Error(
       `sendAuthEmail threw for run step: ${err instanceof Error ? err.message : String(err)}`,
