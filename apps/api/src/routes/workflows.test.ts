@@ -148,7 +148,7 @@ describe('admin gate', () => {
 })
 
 describe('GET /api/workflows', () => {
-  it('lists templates with step counts', async () => {
+  it('lists templates with phase and step counts', async () => {
     adminSession()
     mocks.templateFindManyMock.mockResolvedValue([
       {
@@ -166,6 +166,11 @@ describe('GET /api/workflows', () => {
         updatedAt: new Date(),
       },
     ])
+    mocks.phaseFindManyMock.mockResolvedValue([
+      { workflowTemplateId: 't1' },
+      { workflowTemplateId: 't1' },
+      { workflowTemplateId: 't1' },
+    ])
     mocks.stepFindManyMock.mockResolvedValue([
       { workflowTemplateId: 't1' },
       { workflowTemplateId: 't1' },
@@ -176,8 +181,8 @@ describe('GET /api/workflows', () => {
 
     expect(res.status).toBe(200)
     expect(json.workflows).toEqual([
-      expect.objectContaining({ id: 't1', stepCount: 2 }),
-      expect.objectContaining({ id: 't2', stepCount: 0 }),
+      expect.objectContaining({ id: 't1', phaseCount: 3, stepCount: 2 }),
+      expect.objectContaining({ id: 't2', phaseCount: 0, stepCount: 0 }),
     ])
   })
 })

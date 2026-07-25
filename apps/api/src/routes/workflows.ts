@@ -58,14 +58,22 @@ workflowsRouter.get('/', async (c) => {
   // No explicit organizationId filter on either query below: RLS
   // (workflow_template_tenant_isolation / workflow_template_step_tenant_isolation)
   // already scopes both to session.organizationId via withTenant's set_config.
-  const { templates, steps } = await withTenant(session.organizationId, async (tx) => ({
+  const { templates, phases, steps } = await withTenant(session.organizationId, async (tx) => ({
     templates: await tx.query.workflowTemplate.findMany({
       orderBy: (t, { desc }) => [desc(t.createdAt)],
+    }),
+    phases: await tx.query.workflowTemplatePhase.findMany({
+      columns: { workflowTemplateId: true },
     }),
     steps: await tx.query.workflowTemplateStep.findMany({
       columns: { workflowTemplateId: true },
     }),
   }))
+
+  const phaseCounts = new Map<string, number>()
+  for (const phase of phases) {
+    phaseCounts.set(phase.workflowTemplateId, (phaseCounts.get(phase.workflowTemplateId) ?? 0) + 1)
+  }
 
   const stepCounts = new Map<string, number>()
   for (const step of steps) {
@@ -77,6 +85,7 @@ workflowsRouter.get('/', async (c) => {
       id: t.id,
       name: t.name,
       type: t.type,
+      phaseCount: phaseCounts.get(t.id) ?? 0,
       stepCount: stepCounts.get(t.id) ?? 0,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
