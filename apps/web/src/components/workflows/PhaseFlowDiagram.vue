@@ -81,7 +81,10 @@ watch(() => props.phases, renderDiagram, { immediate: true, deep: true })
     <p v-if="renderFailed" class="text-[13px] text-app-danger">
       {{ t('workflows.editor.dependencyGraphError') }}
     </p>
-    <!-- svgMarkup is mermaid's own sanitized SVG output (securityLevel: 'strict'), not raw admin input -->
+    <!-- svgMarkup is mermaid's own sanitized SVG output (securityLevel: 'strict'), not raw
+         admin input — this rule targets raw, un-sanitized HTML reflected into the DOM, which
+         doesn't apply once mermaid has already run it through DOMPurify. -->
+    <!-- nosemgrep -->
     <div class="overflow-x-auto" v-html="svgMarkup"></div>
   </div>
 </template>
