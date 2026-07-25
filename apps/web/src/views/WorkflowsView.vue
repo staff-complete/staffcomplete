@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
+import type { WorkflowTemplateSummary } from '../composables/useWorkflowTemplates'
+import ConfirmDialog from '../components/workflows/ConfirmDialog.vue'
 
 const { t } = useI18n()
 
@@ -18,6 +20,7 @@ const errors = ref<Record<string, string>>({})
 const serverError = ref('')
 const creating = ref(false)
 const showForm = ref(false)
+const deleteTarget = ref<WorkflowTemplateSummary | null>(null)
 
 function typeLabel(type: 'onboarding' | 'offboarding') {
   return type === 'offboarding' ? t('common.offboarding') : t('common.onboarding')
@@ -62,9 +65,10 @@ async function createTemplate() {
   }
 }
 
-async function deleteTemplate(id: string) {
-  if (isReadOnly.value) return
-  await fetch(`/api/workflows/${id}`, { method: 'DELETE' })
+async function confirmDelete() {
+  if (isReadOnly.value || !deleteTarget.value) return
+  await fetch(`/api/workflows/${deleteTarget.value.id}`, { method: 'DELETE' })
+  deleteTarget.value = null
   await invalidate()
 }
 </script>
@@ -81,21 +85,48 @@ async function deleteTemplate(id: string) {
       <button
         type="button"
         :disabled="isReadOnly"
-        class="flex items-center gap-2 whitespace-nowrap rounded-full bg-app-accent px-6 py-3.5 text-sm font-bold text-white"
-        :class="isReadOnly ? 'opacity-60' : ''"
+        class="flex items-center gap-2 whitespace-nowrap rounded-full bg-app-accent px-6 py-3.5 text-sm font-bold text-white disabled:opacity-50"
         @click="showForm = !showForm"
       >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
         {{ t('workflows.list.newTemplateHeading') }}
       </button>
     </div>
 
-    <div v-if="showForm" class="mb-5.5 rounded-3xl bg-white p-7">
-      <p
-        v-if="isReadOnly"
-        class="mb-4 rounded-xl bg-app-warning-bg px-3.5 py-2.5 text-sm text-app-warning"
+    <div
+      v-if="isReadOnly"
+      class="mb-5.5 flex items-center gap-2.5 rounded-[14px] bg-app-warning-bg px-4 py-3 text-[13.5px] font-semibold text-app-warning"
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        class="shrink-0"
       >
-        {{ t('workflows.list.trialExpired') }}
-      </p>
+        <path
+          d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.14A1 1 0 0 0 3 19.5h18a1 1 0 0 0 .89-1.5L13.71 3.86a1 1 0 0 0-1.72 0z"
+        />
+      </svg>
+      {{ t('workflows.list.trialExpired') }}
+    </div>
+
+    <div v-if="showForm" class="mb-5.5 rounded-3xl bg-white p-7">
+      <div class="mb-4 text-[15px] font-extrabold">
+        {{ t('workflows.list.newTemplateHeading') }}
+      </div>
 
       <form class="flex flex-wrap items-end gap-3" @submit.prevent="createTemplate">
         <div class="min-w-[200px] flex-1">
@@ -129,8 +160,7 @@ async function deleteTemplate(id: string) {
         <button
           type="submit"
           :disabled="creating || isReadOnly"
-          class="whitespace-nowrap rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
-          :class="creating || isReadOnly ? 'opacity-60' : ''"
+          class="whitespace-nowrap rounded-lg bg-app-accent px-5.5 py-3 text-sm font-bold text-white disabled:opacity-60"
         >
           {{ creating ? t('workflows.list.submitting') : t('workflows.list.submit') }}
         </button>
@@ -148,30 +178,69 @@ async function deleteTemplate(id: string) {
       {{ t('workflows.list.empty') }}
     </p>
     <div v-else class="grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-3">
-      <div v-for="template in templates" :key="template.id" class="rounded-[22px] bg-white p-6.5">
-        <div class="mb-4.5 flex items-center justify-between">
+      <div
+        v-for="template in templates"
+        :key="template.id"
+        class="rounded-[20px] bg-white p-5.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+      >
+        <div class="mb-3.5 flex items-center justify-between">
           <span
-            class="rounded-full bg-app-surface px-3.5 py-1 text-[12.5px] font-bold text-app-ink"
+            class="rounded-full px-3.5 py-1 text-[12.5px] font-bold"
+            :class="
+              template.type === 'onboarding'
+                ? 'bg-app-surface text-app-ink-deep'
+                : 'bg-app-surface-alt text-app-slate'
+            "
           >
             {{ typeLabel(template.type) }}
           </span>
           <button
             type="button"
             :disabled="isReadOnly"
-            class="text-sm font-bold text-app-danger"
-            :class="isReadOnly ? 'opacity-60' : ''"
-            @click="deleteTemplate(template.id)"
+            class="flex h-7.5 w-7.5 items-center justify-center rounded-lg disabled:opacity-50"
+            :aria-label="t('workflows.list.delete')"
+            :title="t('workflows.list.delete')"
+            @click.stop.prevent="deleteTarget = template"
           >
-            {{ t('workflows.list.delete') }}
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              class="text-app-muted"
+              stroke-width="2.2"
+              stroke-linecap="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
           </button>
         </div>
         <RouterLink :to="`/workflows/${template.id}`">
-          <h3 class="mb-2 text-[17.5px] font-extrabold tracking-tight">{{ template.name }}</h3>
-          <div class="text-[13.5px] text-app-muted">
-            {{ t('common.steps', template.stepCount) }}
+          <h3 class="mb-2 truncate text-[16.5px] font-extrabold tracking-tight">
+            {{ template.name }}
+          </h3>
+          <div class="flex items-center gap-2 text-[12.5px] font-semibold text-app-muted">
+            <span>{{ t('common.phases', template.phaseCount) }}</span>
+            <span class="h-0.75 w-0.75 shrink-0 rounded-full bg-app-border"></span>
+            <span>{{ t('common.steps', template.stepCount) }}</span>
           </div>
         </RouterLink>
       </div>
     </div>
+
+    <ConfirmDialog
+      :open="deleteTarget !== null"
+      :title="t('workflows.list.deleteConfirmTitle', { name: deleteTarget?.name ?? '' })"
+      :body="
+        t('workflows.list.deleteConfirmBody', {
+          phases: t('common.phases', deleteTarget?.phaseCount ?? 0),
+          steps: t('common.steps', deleteTarget?.stepCount ?? 0),
+        })
+      "
+      :confirm-label="t('workflows.list.deleteConfirmSubmit')"
+      @cancel="deleteTarget = null"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

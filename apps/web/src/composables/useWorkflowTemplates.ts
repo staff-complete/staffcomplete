@@ -8,6 +8,7 @@ export interface WorkflowTemplateSummary {
   id: string
   name: string
   type: WorkflowType
+  phaseCount: number
   stepCount: number
   createdAt: string
   updatedAt: string

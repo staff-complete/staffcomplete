@@ -3,30 +3,19 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { automatedActionKeys } from '@staffcomplete/shared'
 import type { AutomatedActionKey } from '@staffcomplete/shared'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
+import type {
+  WorkflowTemplatePhase,
+  WorkflowTemplateStep,
+} from '../composables/useWorkflowTemplates'
 import { moveStep } from '../lib/reorderSteps'
-
-type Member = { id: string; user: { name: string; email: string } }
-
-// Manual and automated steps collect genuinely different fields, but share
-// one form/one add-step button per phase — see packages/shared/src/workflow.ts.
-// emailTo/emailSubject/emailBody are specific to the email.send action; a
-// second registered action with different config would need its own fields
-// here rather than reusing these.
-interface StepFormState {
-  title: string
-  type: 'automated' | 'manual'
-  assigneeId: string
-  dueDateOffsetDays: string | number
-  action: AutomatedActionKey | ''
-  emailTo: string
-  emailSubject: string
-  emailBody: string
-}
+import { emptyStepForm } from '../lib/stepForm'
+import type { Member, StepFormState } from '../lib/stepForm'
+import PhaseCard from '../components/workflows/PhaseCard.vue'
+import ConfirmDialog from '../components/workflows/ConfirmDialog.vue'
 
 const { t } = useI18n()
 
@@ -62,6 +51,19 @@ function memberLabel(memberId: string | null) {
   if (!memberId) return t('common.unassigned')
   const member = members.value.find((m) => m.id === memberId)
   return member ? member.user.name : t('common.unassigned')
+}
+
+function stepMeta(step: WorkflowTemplateStep): string {
+  if (step.type === 'manual') {
+    let meta = `${t('workflows.editor.typeManual')} · ${memberLabel(step.assigneeId)}`
+    if (step.dueDateOffsetDays !== null) {
+      meta += ` ${t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays })}`
+    }
+    return meta
+  }
+  return step.action
+    ? `${t('workflows.editor.typeAutomated')} · ${automatedActionLabel(step.action)}`
+    : t('workflows.editor.typeAutomated')
 }
 
 const nameForm = ref({ name: '', type: 'onboarding' as 'onboarding' | 'offboarding' })
@@ -104,18 +106,6 @@ async function saveName() {
 }
 
 // Phases: ordered sequentially, steps within a phase run in parallel.
-const phaseNameDrafts = reactive<Record<string, string>>({})
-watch(
-  template,
-  (loadedTemplate) => {
-    if (!loadedTemplate) return
-    for (const phase of loadedTemplate.phases) {
-      phaseNameDrafts[phase.id] = phase.name
-    }
-  },
-  { immediate: true },
-)
-
 const newPhaseName = ref('')
 const addingPhase = ref(false)
 const phaseError = ref('')
@@ -146,17 +136,12 @@ async function addPhase() {
   }
 }
 
-async function renamePhase(phaseId: string, currentName: string) {
+async function renamePhase(phaseId: string, newName: string) {
   if (isReadOnly.value) return
-  const draft = phaseNameDrafts[phaseId]?.trim() ?? ''
-  if (draft.length < 2 || draft === currentName) {
-    phaseNameDrafts[phaseId] = currentName
-    return
-  }
   await fetch(`/api/workflows/${id.value}/phases/${phaseId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: draft }),
+    body: JSON.stringify({ name: newName }),
   })
   await invalidate()
 }
@@ -165,6 +150,13 @@ async function deletePhase(phaseId: string) {
   if (isReadOnly.value) return
   await fetch(`/api/workflows/${id.value}/phases/${phaseId}`, { method: 'DELETE' })
   await invalidate()
+}
+
+const deletePhaseTarget = ref<WorkflowTemplatePhase | null>(null)
+async function confirmDeletePhase() {
+  if (!deletePhaseTarget.value) return
+  await deletePhase(deletePhaseTarget.value.id)
+  deletePhaseTarget.value = null
 }
 
 async function reorderPhase(phaseId: string, direction: 'up' | 'down') {
@@ -181,25 +173,29 @@ async function reorderPhase(phaseId: string, direction: 'up' | 'down') {
   await invalidate()
 }
 
-// Steps: one add-step form per phase, keyed by phaseId.
+// Steps: one add-step form per phase, keyed by phaseId. PhaseCard's
+// v-model:step-form binds directly to stepForms[phase.id], so every phase's
+// entry must exist before it renders (unlike stepFormFor's old lazy-create,
+// which only ran from inside an event handler after the template was
+// already up).
 const stepForms = reactive<Record<string, StepFormState>>({})
 const stepErrors = reactive<Record<string, string>>({})
 const addingStepPhaseId = ref<string | null>(null)
 
-function emptyStepForm(): StepFormState {
-  return {
-    title: '',
-    type: 'manual',
-    assigneeId: '',
-    dueDateOffsetDays: '',
-    action: '',
-    emailTo: '',
-    emailSubject: '',
-    emailBody: '',
-  }
-}
+watch(
+  template,
+  (loadedTemplate) => {
+    if (!loadedTemplate) return
+    for (const phase of loadedTemplate.phases) {
+      if (!stepForms[phase.id]) {
+        stepForms[phase.id] = emptyStepForm()
+      }
+    }
+  },
+  { immediate: true },
+)
 
-function stepFormFor(phaseId: string): StepFormState {
+function stepFormFor(phaseId: string) {
   if (!stepForms[phaseId]) {
     stepForms[phaseId] = emptyStepForm()
   }
@@ -284,6 +280,102 @@ async function deleteStep(stepId: string) {
   await invalidate()
 }
 
+function configString(config: unknown, key: string): string {
+  if (config && typeof config === 'object' && key in config) {
+    const value = (config as Record<string, unknown>)[key]
+    return typeof value === 'string' ? value : ''
+  }
+  return ''
+}
+
+const editingStepId = ref<string | null>(null)
+const editStepForm = ref<StepFormState>(emptyStepForm())
+const editStepError = ref('')
+const editSubmitting = ref(false)
+
+function startEditStep(step: WorkflowTemplateStep) {
+  if (isReadOnly.value) return
+  editingStepId.value = step.id
+  editStepError.value = ''
+  editStepForm.value = {
+    title: step.title,
+    type: step.type,
+    assigneeId: step.assigneeId ?? '',
+    dueDateOffsetDays: step.dueDateOffsetDays ?? '',
+    action: step.action ?? '',
+    emailTo: configString(step.config, 'to'),
+    emailSubject: configString(step.config, 'subject'),
+    emailBody: configString(step.config, 'body'),
+  }
+}
+
+function cancelEditStep() {
+  editingStepId.value = null
+  editStepError.value = ''
+}
+
+function onEditActionSelected() {
+  if (editStepForm.value.title.trim() === '' && editStepForm.value.action !== '') {
+    editStepForm.value.title = automatedActionLabel(editStepForm.value.action)
+  }
+}
+
+async function submitEditStep() {
+  if (isReadOnly.value || !editingStepId.value) return
+  const form = editStepForm.value
+  editStepError.value = ''
+
+  if (form.title.trim().length < 2) {
+    editStepError.value = t('workflows.editor.validationTitle')
+    return
+  }
+  if (form.type === 'automated' && form.action === '') {
+    editStepError.value = t('workflows.editor.validationAction')
+    return
+  }
+  if (
+    form.type === 'automated' &&
+    form.action === 'email.send' &&
+    (form.emailTo.trim() === '' || form.emailSubject.trim() === '' || form.emailBody.trim() === '')
+  ) {
+    editStepError.value = t('workflows.editor.validationEmailConfig')
+    return
+  }
+
+  const body =
+    form.type === 'manual'
+      ? {
+          title: form.title,
+          assigneeId: form.assigneeId || null,
+          dueDateOffsetDays: form.dueDateOffsetDays !== '' ? Number(form.dueDateOffsetDays) : null,
+        }
+      : {
+          title: form.title,
+          action: form.action,
+          config: { to: form.emailTo, subject: form.emailSubject, body: form.emailBody },
+        }
+
+  editSubmitting.value = true
+  try {
+    const res = await fetch(`/api/workflows/${id.value}/steps/${editingStepId.value}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    if (res.ok) {
+      editingStepId.value = null
+      await invalidate()
+      return
+    }
+
+    const data = (await res.json()) as { message?: string }
+    editStepError.value = data.message ?? t('common.genericError')
+  } finally {
+    editSubmitting.value = false
+  }
+}
+
 async function reorderStep(
   phaseId: string,
   stepIds: string[],
@@ -309,6 +401,18 @@ async function reorderStep(
       to="/workflows"
       class="mb-5 flex w-fit items-center gap-1.5 text-[14.5px] font-bold text-app-ink"
     >
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
+      </svg>
       {{ t('workflows.editor.backToTemplates') }}
     </RouterLink>
 
@@ -319,15 +423,30 @@ async function reorderStep(
         {{ template.name || t('workflows.editor.fallbackTitle') }}
       </h1>
 
-      <p
+      <div
         v-if="isReadOnly"
-        class="mb-4 rounded-xl bg-app-warning-bg px-3.5 py-2.5 text-sm text-app-warning"
+        class="mb-4.5 flex items-center gap-2.5 rounded-[14px] bg-app-warning-bg px-4 py-3 text-[13.5px] font-semibold text-app-warning"
       >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          class="shrink-0"
+        >
+          <path
+            d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.14A1 1 0 0 0 3 19.5h18a1 1 0 0 0 .89-1.5L13.71 3.86a1 1 0 0 0-1.72 0z"
+          />
+        </svg>
         {{ t('workflows.editor.trialExpired') }}
-      </p>
+      </div>
 
-      <div class="mb-5 rounded-3xl bg-white p-7">
-        <h2 class="mb-4 text-lg font-extrabold">{{ t('workflows.editor.detailsHeading') }}</h2>
+      <div class="mb-4.5 rounded-[20px] bg-white p-5.5">
+        <h2 class="mb-3.5 text-[15px] font-extrabold">
+          {{ t('workflows.editor.detailsHeading') }}
+        </h2>
         <form class="flex flex-wrap items-end gap-3" @submit.prevent="saveName">
           <div class="min-w-[200px] flex-1">
             <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="template-name">{{
@@ -337,6 +456,7 @@ async function reorderStep(
               id="template-name"
               v-model="nameForm.name"
               type="text"
+              :disabled="isReadOnly"
               class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
             />
           </div>
@@ -347,6 +467,7 @@ async function reorderStep(
             <select
               id="template-type"
               v-model="nameForm.type"
+              :disabled="isReadOnly"
               class="rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
             >
               <option value="onboarding">{{ t('common.onboarding') }}</option>
@@ -356,8 +477,7 @@ async function reorderStep(
           <button
             type="submit"
             :disabled="savingName || isReadOnly"
-            class="whitespace-nowrap rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
-            :class="savingName || isReadOnly ? 'opacity-60' : ''"
+            class="whitespace-nowrap rounded-lg bg-app-accent px-5.5 py-3 text-sm font-bold text-white disabled:opacity-60"
           >
             {{ savingName ? t('workflows.editor.saving') : t('workflows.editor.save') }}
           </button>
@@ -365,329 +485,99 @@ async function reorderStep(
         <p v-if="nameError" class="mt-2 text-xs text-app-danger">{{ nameError }}</p>
       </div>
 
-      <div class="mb-5">
-        <h2 class="mb-1 text-lg font-extrabold">{{ t('workflows.editor.phasesHeading') }}</h2>
+      <div class="mb-1.5">
+        <h2 class="mb-1 text-[15px] font-extrabold">{{ t('workflows.editor.phasesHeading') }}</h2>
         <p class="mb-4 text-[13px] text-app-muted">{{ t('workflows.editor.parallelHint') }}</p>
+      </div>
 
-        <p v-if="template.phases.length === 0" class="mb-4 text-sm text-app-muted">
-          {{ t('workflows.editor.noPhases') }}
-        </p>
+      <p v-if="template.phases.length === 0" class="mb-4 text-sm text-app-muted">
+        {{ t('workflows.editor.noPhases') }}
+      </p>
 
-        <div
-          v-for="(phase, phaseIndex) in template.phases"
-          :key="phase.id"
-          class="mb-4 rounded-3xl bg-white p-7"
-        >
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <PhaseCard
+        v-for="(phase, phaseIndex) in template.phases"
+        :key="phase.id"
+        :phase="phase"
+        :index="phaseIndex"
+        :is-first="phaseIndex === 0"
+        :is-last="phaseIndex === template.phases.length - 1"
+        :is-read-only="isReadOnly"
+        :members="members"
+        v-model:step-form="stepForms[phase.id]"
+        :step-error="stepErrors[phase.id] ?? ''"
+        :submitting="addingStepPhaseId === phase.id"
+        :editing-step-id="editingStepId"
+        v-model:edit-step-form="editStepForm"
+        :edit-step-error="editStepError"
+        :edit-submitting="editSubmitting"
+        :step-meta="stepMeta"
+        :automated-action-label="automatedActionLabel"
+        @rename-phase="renamePhase(phase.id, $event)"
+        @move-up="reorderPhase(phase.id, 'up')"
+        @move-down="reorderPhase(phase.id, 'down')"
+        @delete-phase="deletePhaseTarget = phase"
+        @reorder-step="
+          (stepId, direction) =>
+            reorderStep(
+              phase.id,
+              phase.steps.map((s) => s.id),
+              stepId,
+              direction,
+            )
+        "
+        @edit-step="startEditStep"
+        @update-step="submitEditStep"
+        @cancel-edit-step="cancelEditStep"
+        @edit-action-selected="onEditActionSelected"
+        @delete-step="deleteStep"
+        @add-step="addStep(phase.id)"
+        @action-selected="onActionSelected(phase.id)"
+      />
+
+      <div class="rounded-[20px] bg-white p-5.5">
+        <form class="flex flex-wrap items-end gap-3" @submit.prevent="addPhase">
+          <div class="min-w-[200px] flex-1">
+            <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="new-phase-name">{{
+              t('workflows.editor.phaseNameLabel')
+            }}</label>
             <input
-              v-model="phaseNameDrafts[phase.id]"
+              id="new-phase-name"
+              v-model="newPhaseName"
               type="text"
               :disabled="isReadOnly"
-              class="min-w-[160px] flex-1 rounded-xl border border-app-border px-4 py-2.5 text-[15.5px] font-extrabold outline-none"
-              @blur="renamePhase(phase.id, phase.name)"
+              :placeholder="t('workflows.editor.phaseNamePlaceholder')"
+              class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
             />
-            <div class="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                :disabled="isReadOnly || phaseIndex === 0"
-                class="flex h-8.5 w-8.5 items-center justify-center rounded-lg text-app-ink disabled:opacity-30"
-                :aria-label="t('workflows.editor.movePhaseUp')"
-                @click="reorderPhase(phase.id, 'up')"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                :disabled="isReadOnly || phaseIndex === template.phases.length - 1"
-                class="flex h-8.5 w-8.5 items-center justify-center rounded-lg text-app-ink disabled:opacity-30"
-                :aria-label="t('workflows.editor.movePhaseDown')"
-                @click="reorderPhase(phase.id, 'down')"
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                :disabled="isReadOnly"
-                class="text-sm font-bold text-app-danger"
-                :class="isReadOnly ? 'opacity-60' : ''"
-                @click="deletePhase(phase.id)"
-              >
-                {{ t('workflows.editor.deletePhase') }}
-              </button>
-            </div>
           </div>
-
-          <p v-if="phase.steps.length === 0" class="mb-4 text-sm text-app-muted">
-            {{ t('workflows.editor.noSteps') }}
-          </p>
-          <ol v-else class="mb-6 flex flex-col">
-            <li
-              v-for="(step, stepIndex) in phase.steps"
-              :key="step.id"
-              class="flex items-center justify-between gap-3 border-b border-app-surface-alt py-4 last:border-0"
-            >
-              <div class="min-w-0">
-                <p class="truncate text-[15.5px] font-bold">{{ step.title }}</p>
-                <p class="mt-0.5 text-[13px] text-app-muted">
-                  {{
-                    step.type === 'manual'
-                      ? t('workflows.editor.typeManual')
-                      : t('workflows.editor.typeAutomated')
-                  }}
-                  <template v-if="step.type === 'manual'">
-                    · {{ memberLabel(step.assigneeId) }}
-                    <template v-if="step.dueDateOffsetDays !== null">
-                      {{ t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays }) }}
-                    </template>
-                  </template>
-                  <template v-else-if="step.action"
-                    >· {{ automatedActionLabel(step.action) }}</template
-                  >
-                </p>
-              </div>
-              <div class="flex shrink-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  :disabled="isReadOnly || stepIndex === 0"
-                  class="flex h-8.5 w-8.5 items-center justify-center rounded-lg text-app-ink disabled:opacity-30"
-                  :aria-label="t('workflows.editor.moveUp')"
-                  @click="
-                    reorderStep(
-                      phase.id,
-                      phase.steps.map((s) => s.id),
-                      step.id,
-                      'up',
-                    )
-                  "
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  :disabled="isReadOnly || stepIndex === phase.steps.length - 1"
-                  class="flex h-8.5 w-8.5 items-center justify-center rounded-lg text-app-ink disabled:opacity-30"
-                  :aria-label="t('workflows.editor.moveDown')"
-                  @click="
-                    reorderStep(
-                      phase.id,
-                      phase.steps.map((s) => s.id),
-                      step.id,
-                      'down',
-                    )
-                  "
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  :disabled="isReadOnly"
-                  class="text-sm font-bold text-app-danger"
-                  :class="isReadOnly ? 'opacity-60' : ''"
-                  @click="deleteStep(step.id)"
-                >
-                  {{ t('workflows.editor.delete') }}
-                </button>
-              </div>
-            </li>
-          </ol>
-
-          <form
-            class="flex flex-col gap-4 border-t border-app-surface-alt pt-6"
-            @submit.prevent="addStep(phase.id)"
+          <button
+            type="submit"
+            :disabled="addingPhase || isReadOnly"
+            class="whitespace-nowrap rounded-lg bg-app-accent px-5.5 py-3 text-sm font-bold text-white disabled:opacity-60"
           >
-            <h3 class="text-sm font-extrabold">{{ t('workflows.editor.addStepHeading') }}</h3>
-
-            <div>
-              <label
-                class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                :for="`step-type-${phase.id}`"
-                >{{ t('workflows.editor.typeLabel') }}</label
-              >
-              <select
-                :id="`step-type-${phase.id}`"
-                v-model="stepFormFor(phase.id).type"
-                class="rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-              >
-                <option value="manual">{{ t('workflows.editor.typeManual') }}</option>
-                <option value="automated">{{ t('workflows.editor.typeAutomated') }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                :for="`step-title-${phase.id}`"
-                >{{ t('workflows.editor.titleLabel') }}</label
-              >
-              <input
-                :id="`step-title-${phase.id}`"
-                v-model="stepFormFor(phase.id).title"
-                type="text"
-                :placeholder="t('workflows.editor.titlePlaceholder')"
-                class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-              />
-            </div>
-
-            <template v-if="stepFormFor(phase.id).type === 'manual'">
-              <div class="flex flex-wrap gap-3">
-                <div class="min-w-[180px] flex-1">
-                  <label
-                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                    :for="`step-assignee-${phase.id}`"
-                    >{{ t('workflows.editor.assigneeLabel') }}</label
-                  >
-                  <select
-                    :id="`step-assignee-${phase.id}`"
-                    v-model="stepFormFor(phase.id).assigneeId"
-                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                  >
-                    <option value="">{{ t('common.unassigned') }}</option>
-                    <option v-for="member in members" :key="member.id" :value="member.id">
-                      {{ member.user.name }}
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                    :for="`step-due-${phase.id}`"
-                    >{{ t('workflows.editor.dueDaysLabel') }}</label
-                  >
-                  <input
-                    :id="`step-due-${phase.id}`"
-                    v-model="stepFormFor(phase.id).dueDateOffsetDays"
-                    type="number"
-                    min="0"
-                    placeholder="2"
-                    class="w-24 rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                  />
-                </div>
-              </div>
-            </template>
-
-            <template v-else>
-              <div class="min-w-[220px]">
-                <label
-                  class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                  :for="`step-action-${phase.id}`"
-                  >{{ t('workflows.editor.actionLabel') }}</label
-                >
-                <select
-                  :id="`step-action-${phase.id}`"
-                  v-model="stepFormFor(phase.id).action"
-                  class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                  @change="onActionSelected(phase.id)"
-                >
-                  <option value="" disabled>{{ t('workflows.editor.actionPlaceholder') }}</option>
-                  <option v-for="key in automatedActionKeys" :key="key" :value="key">
-                    {{ automatedActionLabel(key) }}
-                  </option>
-                </select>
-              </div>
-
-              <template v-if="stepFormFor(phase.id).action === 'email.send'">
-                <div>
-                  <label
-                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                    :for="`step-email-to-${phase.id}`"
-                    >{{ t('workflows.editor.emailToLabel') }}</label
-                  >
-                  <input
-                    :id="`step-email-to-${phase.id}`"
-                    v-model="stepFormFor(phase.id).emailTo"
-                    type="text"
-                    :placeholder="t('workflows.editor.emailToPlaceholder')"
-                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                    :for="`step-email-subject-${phase.id}`"
-                    >{{ t('workflows.editor.emailSubjectLabel') }}</label
-                  >
-                  <input
-                    :id="`step-email-subject-${phase.id}`"
-                    v-model="stepFormFor(phase.id).emailSubject"
-                    type="text"
-                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                    :for="`step-email-body-${phase.id}`"
-                    >{{ t('workflows.editor.emailBodyLabel') }}</label
-                  >
-                  <textarea
-                    :id="`step-email-body-${phase.id}`"
-                    v-model="stepFormFor(phase.id).emailBody"
-                    rows="4"
-                    :placeholder="t('workflows.editor.emailBodyPlaceholder')"
-                    class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-                  />
-                  <p class="mt-1 text-[12px] text-app-muted">
-                    {{ t('workflows.editor.emailBodyHint') }}
-                  </p>
-                </div>
-              </template>
-            </template>
-
-            <p
-              v-if="stepErrors[phase.id]"
-              class="rounded-xl bg-app-danger-bg px-3.5 py-2.5 text-sm text-app-danger"
-            >
-              {{ stepErrors[phase.id] }}
-            </p>
-
-            <button
-              type="submit"
-              :disabled="addingStepPhaseId === phase.id || isReadOnly"
-              class="w-fit whitespace-nowrap rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
-              :class="addingStepPhaseId === phase.id || isReadOnly ? 'opacity-60' : ''"
-            >
-              {{
-                addingStepPhaseId === phase.id
-                  ? t('workflows.editor.submitting')
-                  : t('workflows.editor.submit')
-              }}
-            </button>
-          </form>
-        </div>
-
-        <div class="rounded-3xl bg-white p-7">
-          <form class="flex flex-wrap items-end gap-3" @submit.prevent="addPhase">
-            <div class="min-w-[200px] flex-1">
-              <label
-                class="mb-1.5 block text-[13px] font-bold text-app-slate"
-                for="new-phase-name"
-                >{{ t('workflows.editor.phaseNameLabel') }}</label
-              >
-              <input
-                id="new-phase-name"
-                v-model="newPhaseName"
-                type="text"
-                :placeholder="t('workflows.editor.phaseNamePlaceholder')"
-                class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
-              />
-            </div>
-            <button
-              type="submit"
-              :disabled="addingPhase || isReadOnly"
-              class="whitespace-nowrap rounded-full bg-app-accent px-6 py-3 text-sm font-bold text-white"
-              :class="addingPhase || isReadOnly ? 'opacity-60' : ''"
-            >
-              {{
-                addingPhase
-                  ? t('workflows.editor.addPhaseSubmitting')
-                  : t('workflows.editor.addPhaseSubmit')
-              }}
-            </button>
-          </form>
-          <p v-if="phaseError" class="mt-2 text-xs text-app-danger">{{ phaseError }}</p>
-        </div>
+            {{
+              addingPhase
+                ? t('workflows.editor.addPhaseSubmitting')
+                : t('workflows.editor.addPhaseSubmit')
+            }}
+          </button>
+        </form>
+        <p v-if="phaseError" class="mt-2 text-xs text-app-danger">{{ phaseError }}</p>
       </div>
+
+      <ConfirmDialog
+        :open="deletePhaseTarget !== null"
+        :title="
+          t('workflows.editor.deletePhaseConfirmTitle', { name: deletePhaseTarget?.name ?? '' })
+        "
+        :body="
+          t('workflows.editor.deletePhaseConfirmBody', {
+            steps: t('common.steps', deletePhaseTarget?.steps.length ?? 0),
+          })
+        "
+        :confirm-label="t('workflows.editor.deletePhaseConfirmSubmit')"
+        @cancel="deletePhaseTarget = null"
+        @confirm="confirmDeletePhase"
+      />
     </template>
 
     <p v-else class="text-sm text-app-muted">{{ t('workflows.editor.notFound') }}</p>
