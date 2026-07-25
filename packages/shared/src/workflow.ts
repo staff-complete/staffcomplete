@@ -26,6 +26,15 @@ export const reorderPhasesSchema = z.object({
 })
 export type ReorderPhasesInput = z.infer<typeof reorderPhasesSchema>
 
+// Replaces the *full* set of phases a phase depends on, same pattern as
+// reorderPhasesSchema/reorderStepsSchema above (an absolute set, not an
+// incremental add/remove) — see ADR-0019. An empty array is valid: it makes
+// the phase a root with no dependencies.
+export const setPhaseDependenciesSchema = z.object({
+  dependsOnPhaseIds: z.array(z.string()),
+})
+export type SetPhaseDependenciesInput = z.infer<typeof setPhaseDependenciesSchema>
+
 // Manual and automated steps are different enough in shape that they get
 // separate schemas rather than one with every field optional: a manual step
 // is a free-text task assigned to a person; an automated step is a specific,

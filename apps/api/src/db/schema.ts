@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
 } from 'drizzle-orm/pg-core'
 
 // Non-superuser role used for tenant-scoped queries (see ADR-0012). LOGIN and
@@ -208,6 +209,38 @@ export const workflowTemplatePhase = pgTable(
   ],
 ).enableRLS()
 
+// Explicit phase→phase dependency edges (ADR-0019, extending ADR-0017's
+// position-based sequential locking). A phase with no outgoing edges here is
+// a root — unlocked as soon as the template/run starts. `position` above is
+// kept for display order only; it no longer drives locking.
+export const workflowTemplatePhaseDependency = pgTable(
+  'workflow_template_phase_dependency',
+  {
+    id: text('id').primaryKey(),
+    phaseId: text('phaseId')
+      .notNull()
+      .references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
+    dependsOnPhaseId: text('dependsOnPhaseId')
+      .notNull()
+      .references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
+    // Denormalized per ADR-0005 ("every tenant-scoped table must have a
+    // tenant_id column") — RLS policies can't join through phaseId.
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => [
+    unique().on(table.phaseId, table.dependsOnPhaseId),
+    pgPolicy('workflow_template_phase_dependency_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
 export const workflowTemplateStep = pgTable(
   'workflow_template_step',
   {
@@ -302,6 +335,38 @@ export const runPhase = pgTable(
   },
   (table) => [
     pgPolicy('run_phase_tenant_isolation', {
+      for: 'all',
+      to: tenantRole,
+      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
+    }),
+  ],
+).enableRLS()
+
+// Run-side mirror of workflowTemplatePhaseDependency (ADR-0019), copied from
+// it at run creation time — same reasoning as runPhase vs.
+// workflowTemplatePhase: a run keeps its own history even if the template's
+// dependencies are edited or deleted later.
+export const runPhaseDependency = pgTable(
+  'run_phase_dependency',
+  {
+    id: text('id').primaryKey(),
+    phaseId: text('phaseId')
+      .notNull()
+      .references(() => runPhase.id, { onDelete: 'cascade' }),
+    dependsOnPhaseId: text('dependsOnPhaseId')
+      .notNull()
+      .references(() => runPhase.id, { onDelete: 'cascade' }),
+    // Denormalized per ADR-0005 ("every tenant-scoped table must have a
+    // tenant_id column") — RLS policies can't join through phaseId.
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => [
+    unique().on(table.phaseId, table.dependsOnPhaseId),
+    pgPolicy('run_phase_dependency_tenant_isolation', {
       for: 'all',
       to: tenantRole,
       using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,

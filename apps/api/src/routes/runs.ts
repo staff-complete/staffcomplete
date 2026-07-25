@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
+import { asc, eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import {
@@ -12,9 +12,11 @@ import { withTenant } from '../db/index.js'
 import {
   run,
   runPhase,
+  runPhaseDependency,
   runStep,
   workflowTemplate,
   workflowTemplatePhase,
+  workflowTemplatePhaseDependency,
   workflowTemplateStep,
 } from '../db/schema.js'
 import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'
@@ -101,22 +103,30 @@ runsRouter.get('/:id', async (c) => {
       where: eq(runPhase.runId, runId),
       orderBy: [asc(runPhase.position)],
     })
+    const dependencies = phases.length
+      ? await tx.query.runPhaseDependency.findMany({
+          where: inArray(
+            runPhaseDependency.phaseId,
+            phases.map((p) => p.id),
+          ),
+        })
+      : []
     const steps = await tx.query.runStep.findMany({
       where: eq(runStep.runId, runId),
       orderBy: [asc(runStep.position)],
     })
-    return { foundRun, phases, steps }
+    return { foundRun, phases, dependencies, steps }
   })
 
   if (!result) {
     return c.json({ code: 'NOT_FOUND', message: 'Run not found.' }, 404)
   }
 
-  const { foundRun, phases, steps } = result
+  const { foundRun, phases, dependencies, steps } = result
   // Phase gating: steps in a phase can be completed in any order (parallel),
-  // but a phase only becomes actionable once every step in every earlier
-  // phase is done — see packages/shared/src/phase.ts.
-  const unlockedPhaseIds = computeUnlockedPhaseIds(phases, steps)
+  // but a phase only becomes actionable once every phase it explicitly
+  // depends on is done — see packages/shared/src/phase.ts (ADR-0019).
+  const unlockedPhaseIds = computeUnlockedPhaseIds(phases, dependencies, steps)
 
   return c.json({
     id: foundRun.id,
@@ -178,6 +188,14 @@ runsRouter.post(
         where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
         orderBy: [asc(workflowTemplatePhase.position)],
       })
+      const templateDependencies = templatePhases.length
+        ? await tx.query.workflowTemplatePhaseDependency.findMany({
+            where: inArray(
+              workflowTemplatePhaseDependency.phaseId,
+              templatePhases.map((p) => p.id),
+            ),
+          })
+        : []
       const templateSteps = await tx.query.workflowTemplateStep.findMany({
         where: eq(workflowTemplateStep.workflowTemplateId, workflowTemplateId),
         orderBy: [asc(workflowTemplateStep.position)],
@@ -225,6 +243,32 @@ runsRouter.post(
         )
       }
 
+      // Copy the template's dependency edges onto the run's own phase
+      // copies (ADR-0019), same "run keeps its own history" reasoning as
+      // the phase/step copies above. Dangling-reference handling mirrors
+      // the runStep loop below — the FK on workflowTemplatePhaseDependency
+      // should make an edge outside this template's phases impossible.
+      const dependencyCopies = templateDependencies.map((edge) => {
+        const runPhaseId = runPhaseIdByTemplatePhaseId.get(edge.phaseId)
+        const dependsOnRunPhaseId = runPhaseIdByTemplatePhaseId.get(edge.dependsOnPhaseId)
+        if (runPhaseId === undefined || dependsOnRunPhaseId === undefined) {
+          throw new Error(
+            `workflowTemplatePhaseDependency ${edge.id} references a phase outside workflowTemplate ${workflowTemplateId}`,
+          )
+        }
+        return { phaseId: runPhaseId, dependsOnPhaseId: dependsOnRunPhaseId }
+      })
+      if (dependencyCopies.length) {
+        await tx.insert(runPhaseDependency).values(
+          dependencyCopies.map((copy) => ({
+            id: crypto.randomUUID(),
+            phaseId: copy.phaseId,
+            dependsOnPhaseId: copy.dependsOnPhaseId,
+            organizationId: session.organizationId,
+          })),
+        )
+      }
+
       const createdSteps = templateSteps.length
         ? await tx
             .insert(runStep)
@@ -266,6 +310,7 @@ runsRouter.post(
           id: copy.runPhaseId,
           position: copy.position,
         })),
+        createdDependencies: dependencyCopies,
       }
     })
 
@@ -273,15 +318,16 @@ runsRouter.post(
       return c.json({ code: 'NOT_FOUND', message: 'Checklist template not found.' }, 404)
     }
 
-    const { createdRun, createdSteps, createdPhases } = result
+    const { createdRun, createdSteps, createdPhases, createdDependencies } = result
 
-    // Only the first phase is ever unlocked on a brand-new run (zero steps
-    // completed anywhere yet) — dispatch its automated steps now that the
-    // creating transaction has committed. See lib/run-steps.ts for why
-    // dispatch happens post-commit rather than inside the transaction above.
+    // Only root phases (no dependencies) are ever unlocked on a brand-new
+    // run (zero steps completed anywhere yet) — dispatch their automated
+    // steps now that the creating transaction has committed. See
+    // lib/run-steps.ts for why dispatch happens post-commit rather than
+    // inside the transaction above.
     await dispatchAutomatedSteps(
       session.organizationId,
-      selectStepsToDispatch(createdPhases, createdSteps),
+      selectStepsToDispatch(createdPhases, createdDependencies, createdSteps),
     )
 
     return c.json(

@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { computeUnlockedPhaseIds, isStepLocked } from '@staffcomplete/shared'
+import type { PhaseDependencyEdge } from '@staffcomplete/shared'
 import type { Tx } from '../db/index.js'
-import { run, runPhase, runStep } from '../db/schema.js'
+import { run, runPhase, runPhaseDependency, runStep } from '../db/schema.js'
 import { queue } from '../queue/index.js'
 
 // Queue name shared between dispatchAutomatedSteps (enqueue) and the job
@@ -20,10 +21,11 @@ export interface DispatchableStep {
 // freshly-queried rows or steps already held in memory (e.g. right after
 // run creation, where the created rows are already on hand).
 export function selectStepsToDispatch(
-  phases: Array<{ id: string; position: number }>,
+  phases: Array<{ id: string }>,
+  dependencies: PhaseDependencyEdge[],
   steps: DispatchableStep[],
 ): DispatchableStep[] {
-  const unlockedPhaseIds = computeUnlockedPhaseIds(phases, steps)
+  const unlockedPhaseIds = computeUnlockedPhaseIds(phases, dependencies, steps)
   return steps.filter(
     (step) =>
       step.type === 'automated' &&
@@ -84,9 +86,18 @@ export async function completeRunStep(
 
   const phases = await tx.query.runPhase.findMany({
     where: eq(runPhase.runId, updatedStep.runId),
-    columns: { id: true, position: true },
+    columns: { id: true },
   })
-  const stepsToDispatch = selectStepsToDispatch(phases, siblingSteps)
+  const dependencies = phases.length
+    ? await tx.query.runPhaseDependency.findMany({
+        where: inArray(
+          runPhaseDependency.phaseId,
+          phases.map((p) => p.id),
+        ),
+        columns: { phaseId: true, dependsOnPhaseId: true },
+      })
+    : []
+  const stepsToDispatch = selectStepsToDispatch(phases, dependencies, siblingSteps)
 
   return { updatedStep, updatedRun, stepsToDispatch }
 }

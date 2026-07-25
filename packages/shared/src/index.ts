@@ -9,8 +9,8 @@ export {
 } from './locale.js'
 export type { Locale } from './locale.js'
 export type { EnqueueOptions, Job, JobHandler, Queue } from './queue.js'
-export { computeUnlockedPhaseIds, isStepLocked } from './phase.js'
-export type { PhaseOrder, PhaseScopedStep } from './phase.js'
+export { computeUnlockedPhaseIds, isStepLocked, wouldCreateCycle } from './phase.js'
+export type { PhaseDependencyEdge, PhaseNode, PhaseScopedStep } from './phase.js'
 export {
   automatedActionKeys,
   automatedActionKeySchema,
@@ -33,6 +33,7 @@ export {
   createWorkflowTemplateSchema,
   reorderPhasesSchema,
   reorderStepsSchema,
+  setPhaseDependenciesSchema,
   stepTypeSchema,
   updatePhaseSchema,
   updateStepSchema,
@@ -47,6 +48,7 @@ export type {
   CreateWorkflowTemplateInput,
   ReorderPhasesInput,
   ReorderStepsInput,
+  SetPhaseDependenciesInput,
   UpdatePhaseInput,
   UpdateStepInput,
   UpdateWorkflowTemplateInput,

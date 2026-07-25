@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { AutomatedActionKey } from '@staffcomplete/shared'
+import type { AutomatedActionKey, PhaseDependencyEdge } from '@staffcomplete/shared'
+import { wouldCreateCycle } from '@staffcomplete/shared'
 import type {
   WorkflowTemplatePhase,
   WorkflowTemplateStep,
@@ -12,6 +13,7 @@ import AddStepPanel from './AddStepPanel.vue'
 
 const props = defineProps<{
   phase: WorkflowTemplatePhase
+  allPhases: WorkflowTemplatePhase[]
   index: number
   isFirst: boolean
   isLast: boolean
@@ -30,6 +32,7 @@ const emit = defineEmits<{
   moveUp: []
   moveDown: []
   deletePhase: []
+  setDependencies: [dependsOnPhaseIds: string[]]
   reorderStep: [stepId: string, direction: 'up' | 'down']
   editStep: [step: WorkflowTemplateStep]
   updateStep: []
@@ -44,6 +47,35 @@ const stepForm = defineModel<StepFormState>('stepForm', { required: true })
 const editStepForm = defineModel<StepFormState>('editStepForm', { required: true })
 
 const { t } = useI18n()
+
+// Every other phase in the template is a candidate dependency. Excludes
+// this phase's own current edges from the cycle check (this control is
+// about to replace them), same "replace the full set" semantics as the
+// PUT .../dependencies endpoint it feeds — see ADR-0019.
+const otherPhases = computed(() => props.allPhases.filter((p) => p.id !== props.phase.id))
+const edgesExcludingSelf = computed<PhaseDependencyEdge[]>(() =>
+  props.allPhases.flatMap((p) =>
+    p.id === props.phase.id
+      ? []
+      : p.dependsOnPhaseIds.map((dependsOnPhaseId) => ({ phaseId: p.id, dependsOnPhaseId })),
+  ),
+)
+function isDependencyChecked(candidateId: string): boolean {
+  return props.phase.dependsOnPhaseIds.includes(candidateId)
+}
+function isDependencyDisabled(candidateId: string): boolean {
+  return (
+    !isDependencyChecked(candidateId) &&
+    wouldCreateCycle(edgesExcludingSelf.value, props.phase.id, candidateId)
+  )
+}
+function toggleDependency(candidateId: string) {
+  if (props.isReadOnly || isDependencyDisabled(candidateId)) return
+  const next = isDependencyChecked(candidateId)
+    ? props.phase.dependsOnPhaseIds.filter((id) => id !== candidateId)
+    : [...props.phase.dependsOnPhaseIds, candidateId]
+  emit('setDependencies', next)
+}
 
 const editing = ref(false)
 const draft = ref('')
@@ -236,6 +268,48 @@ function saveEdit(currentName: string) {
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
+      </div>
+
+      <div class="mb-4.5">
+        <p class="mb-2 text-[12px] font-bold tracking-wide text-app-muted uppercase">
+          {{ t('workflows.editor.dependsOnLabel') }}
+        </p>
+        <p v-if="otherPhases.length === 0" class="text-[13px] text-app-muted">
+          {{ t('workflows.editor.dependsOnNoOtherPhases') }}
+        </p>
+        <template v-else>
+          <div class="flex flex-wrap gap-2">
+            <label
+              v-for="candidate in otherPhases"
+              :key="candidate.id"
+              class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[13px]"
+              :class="[
+                isDependencyChecked(candidate.id)
+                  ? 'border-app-accent bg-app-accent/10 font-bold'
+                  : 'border-app-border',
+                (isReadOnly || isDependencyDisabled(candidate.id)) &&
+                  !isDependencyChecked(candidate.id) &&
+                  'opacity-40',
+              ]"
+              :title="
+                isDependencyDisabled(candidate.id)
+                  ? t('workflows.editor.dependsOnCycleDisabledHint')
+                  : undefined
+              "
+            >
+              <input
+                type="checkbox"
+                :checked="isDependencyChecked(candidate.id)"
+                :disabled="isReadOnly || isDependencyDisabled(candidate.id)"
+                @change="toggleDependency(candidate.id)"
+              />
+              {{ candidate.name }}
+            </label>
+          </div>
+          <p v-if="phase.dependsOnPhaseIds.length === 0" class="mt-1.5 text-[12px] text-app-muted">
+            {{ t('workflows.editor.dependsOnRootHint') }}
+          </p>
+        </template>
       </div>
 
       <template v-if="phase.steps.length > 0">

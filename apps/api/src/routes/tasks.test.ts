@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   runStepFindManyMock: vi.fn(),
   runFindManyMock: vi.fn(),
   runPhaseFindManyMock: vi.fn(),
+  runDependencyFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
   completeRunStepMock: vi.fn(),
   dispatchAutomatedStepsMock: vi.fn(),
@@ -19,6 +20,7 @@ function tx() {
       runStep: { findFirst: mocks.runStepFindFirstMock, findMany: mocks.runStepFindManyMock },
       run: { findMany: mocks.runFindManyMock },
       runPhase: { findMany: mocks.runPhaseFindManyMock },
+      runPhaseDependency: { findMany: mocks.runDependencyFindManyMock },
       subscription: { findFirst: mocks.subscriptionFindFirstMock },
     },
   }
@@ -68,6 +70,7 @@ beforeEach(() => {
   mocks.runStepFindManyMock.mockReset()
   mocks.runFindManyMock.mockReset()
   mocks.runPhaseFindManyMock.mockReset().mockResolvedValue([])
+  mocks.runDependencyFindManyMock.mockReset().mockResolvedValue([])
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
     status: 'trialing',
     trialEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -156,8 +159,11 @@ describe('GET /api/tasks/mine', () => {
       { id: 'r1', type: 'offboarding', employeeName: 'Jane Doe', eventDate: '2026-08-01' },
     ])
     mocks.runPhaseFindManyMock.mockResolvedValue([
-      { id: 'notice', runId: 'r1', position: 0 },
-      { id: 'revocation', runId: 'r1', position: 1 },
+      { id: 'notice', runId: 'r1' },
+      { id: 'revocation', runId: 'r1' },
+    ])
+    mocks.runDependencyFindManyMock.mockResolvedValue([
+      { phaseId: 'revocation', dependsOnPhaseId: 'notice' },
     ])
 
     const res = await req('/mine')
@@ -221,9 +227,9 @@ describe('POST /api/tasks/:id/complete', () => {
       title: 'Disable Slack',
       dueDateOffsetDays: null,
     })
-    mocks.runPhaseFindManyMock.mockResolvedValue([
-      { id: 'notice', position: 0 },
-      { id: 'revocation', position: 1 },
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'notice' }, { id: 'revocation' }])
+    mocks.runDependencyFindManyMock.mockResolvedValue([
+      { phaseId: 'revocation', dependsOnPhaseId: 'notice' },
     ])
     mocks.runStepFindManyMock.mockResolvedValue([
       { phaseId: 'notice', status: 'pending' },

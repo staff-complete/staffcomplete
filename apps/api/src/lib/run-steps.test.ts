@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   updateReturningMock: vi.fn(),
   runStepFindManyMock: vi.fn(),
   runPhaseFindManyMock: vi.fn(),
+  runPhaseDependencyFindManyMock: vi.fn(),
 }))
 
 vi.mock('../queue/index.js', () => ({
@@ -19,6 +20,7 @@ function tx() {
     query: {
       runStep: { findMany: mocks.runStepFindManyMock },
       runPhase: { findMany: mocks.runPhaseFindManyMock },
+      runPhaseDependency: { findMany: mocks.runPhaseDependencyFindManyMock },
     },
     update: mocks.updateMock,
   }
@@ -39,21 +41,22 @@ beforeEach(() => {
   mocks.updateMock.mockReset().mockReturnValue({ set: mocks.updateSetMock })
   mocks.runStepFindManyMock.mockReset()
   mocks.runPhaseFindManyMock.mockReset()
+  mocks.runPhaseDependencyFindManyMock.mockReset()
 })
 
 describe('selectStepsToDispatch', () => {
-  const phases = [
-    { id: 'p1', position: 0 },
-    { id: 'p2', position: 1 },
-  ]
+  const phases = [{ id: 'p1' }, { id: 'p2' }]
+  // p2 depends on p1 — same shape as ADR-0017's sequential chain, expressed
+  // as an explicit edge (ADR-0019).
+  const dependencies = [{ phaseId: 'p2', dependsOnPhaseId: 'p1' }]
 
-  it('includes automated, pending steps in an unlocked phase', () => {
+  it('includes automated, pending steps in an unlocked (root) phase', () => {
     const steps = [
       { id: 's1', phaseId: 'p1', type: 'automated', status: 'pending' },
       { id: 's2', phaseId: 'p1', type: 'manual', status: 'pending' },
     ]
 
-    expect(selectStepsToDispatch(phases, steps)).toEqual([
+    expect(selectStepsToDispatch(phases, dependencies, steps)).toEqual([
       { id: 's1', phaseId: 'p1', type: 'automated', status: 'pending' },
     ])
   })
@@ -61,7 +64,7 @@ describe('selectStepsToDispatch', () => {
   it('excludes an automated step that is already completed', () => {
     const steps = [{ id: 's1', phaseId: 'p1', type: 'automated', status: 'completed' }]
 
-    expect(selectStepsToDispatch(phases, steps)).toEqual([])
+    expect(selectStepsToDispatch(phases, dependencies, steps)).toEqual([])
   })
 
   it('excludes an automated step sitting in a still-locked phase', () => {
@@ -70,16 +73,16 @@ describe('selectStepsToDispatch', () => {
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
     ]
 
-    expect(selectStepsToDispatch(phases, steps)).toEqual([])
+    expect(selectStepsToDispatch(phases, dependencies, steps)).toEqual([])
   })
 
-  it('includes an automated step in phase 2 once phase 1 is fully complete', () => {
+  it('includes an automated step in phase 2 once phase 1 (its dependency) is fully complete', () => {
     const steps = [
       { id: 's1', phaseId: 'p1', type: 'manual', status: 'completed' },
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
     ]
 
-    expect(selectStepsToDispatch(phases, steps)).toEqual([
+    expect(selectStepsToDispatch(phases, dependencies, steps)).toEqual([
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
     ])
   })
@@ -116,7 +119,8 @@ describe('completeRunStep', () => {
       { id: 's1', phaseId: 'p1', type: 'manual', status: 'completed' },
       { id: 's2', phaseId: 'p1', type: 'manual', status: 'pending' },
     ])
-    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1' }])
+    mocks.runPhaseDependencyFindManyMock.mockResolvedValue([])
 
     const result = await completeRunStep(tx() as never, 's1')
 
@@ -144,7 +148,8 @@ describe('completeRunStep', () => {
       { id: 's1', phaseId: 'p1', type: 'manual', status: 'completed' },
       { id: 's2', phaseId: 'p1', type: 'automated', status: 'pending' },
     ])
-    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1' }])
+    mocks.runPhaseDependencyFindManyMock.mockResolvedValue([])
 
     const result = await completeRunStep(tx() as never, 's1')
 
@@ -161,9 +166,9 @@ describe('completeRunStep', () => {
       { id: 's1', phaseId: 'p1', type: 'manual', status: 'completed' },
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
     ])
-    mocks.runPhaseFindManyMock.mockResolvedValue([
-      { id: 'p1', position: 0 },
-      { id: 'p2', position: 1 },
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+    mocks.runPhaseDependencyFindManyMock.mockResolvedValue([
+      { phaseId: 'p2', dependsOnPhaseId: 'p1' },
     ])
 
     const result = await completeRunStep(tx() as never, 's1')

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   templateFindManyMock: vi.fn(),
   phaseFindFirstMock: vi.fn(),
   phaseFindManyMock: vi.fn(),
+  dependencyFindManyMock: vi.fn(),
   stepFindFirstMock: vi.fn(),
   stepFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
@@ -32,6 +33,9 @@ function tx() {
       workflowTemplatePhase: {
         findFirst: mocks.phaseFindFirstMock,
         findMany: mocks.phaseFindManyMock,
+      },
+      workflowTemplatePhaseDependency: {
+        findMany: mocks.dependencyFindManyMock,
       },
       workflowTemplateStep: {
         findFirst: mocks.stepFindFirstMock,
@@ -108,6 +112,7 @@ beforeEach(() => {
   mocks.templateFindManyMock.mockReset()
   mocks.phaseFindFirstMock.mockReset()
   mocks.phaseFindManyMock.mockReset().mockResolvedValue([])
+  mocks.dependencyFindManyMock.mockReset().mockResolvedValue([])
   mocks.stepFindFirstMock.mockReset()
   mocks.stepFindManyMock.mockReset()
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
@@ -253,7 +258,11 @@ describe('GET /api/workflows/:id', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1', name: 'Steps', position: 0 }])
+    mocks.phaseFindManyMock.mockResolvedValue([
+      { id: 'p1', name: 'Documents', position: 0 },
+      { id: 'p2', name: 'Payroll', position: 1 },
+    ])
+    mocks.dependencyFindManyMock.mockResolvedValue([{ phaseId: 'p2', dependsOnPhaseId: 'p1' }])
     mocks.stepFindManyMock.mockResolvedValue([
       {
         id: 's1',
@@ -270,8 +279,9 @@ describe('GET /api/workflows/:id', () => {
     const json = await res.json()
 
     expect(res.status).toBe(200)
-    expect(json.phases).toHaveLength(1)
-    expect(json.phases[0]).toMatchObject({ id: 'p1', name: 'Steps' })
+    expect(json.phases).toHaveLength(2)
+    expect(json.phases[0]).toMatchObject({ id: 'p1', name: 'Documents', dependsOnPhaseIds: [] })
+    expect(json.phases[1]).toMatchObject({ id: 'p2', name: 'Payroll', dependsOnPhaseIds: ['p1'] })
     expect(json.phases[0].steps).toHaveLength(1)
     expect(json.phases[0].steps[0]).toMatchObject({ id: 's1', phaseId: 'p1', position: 0 })
   })
@@ -414,6 +424,97 @@ describe('PUT /api/workflows/:id/phase-order', () => {
     expect(res.status).toBe(200)
     expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 0 })
     expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 1 })
+  })
+})
+
+describe('PUT /api/workflows/:id/phases/:phaseId/dependencies', () => {
+  it('returns 404 when the phase does not belong to the workflow', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+
+    const res = await putJson('/t1/phases/p1/dependencies', { dependsOnPhaseIds: [] })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('rejects a dependsOnPhaseId that is not a phase in this workflow', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+
+    const res = await putJson('/t1/phases/p2/dependencies', {
+      dependsOnPhaseIds: ['not-in-template'],
+    })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('INVALID_PHASE')
+  })
+
+  it('rejects an edge that would close a cycle', async () => {
+    adminSession()
+    // p2 already depends on p1 — making p1 depend on p2 would close a loop.
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+    mocks.dependencyFindManyMock.mockResolvedValue([{ phaseId: 'p2', dependsOnPhaseId: 'p1' }])
+
+    const res = await putJson('/t1/phases/p1/dependencies', { dependsOnPhaseIds: ['p2'] })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('CYCLE_DETECTED')
+  })
+
+  it('replaces the full dependency set for the phase', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({
+      id: 'p3',
+      workflowTemplateId: 't1',
+      name: 'Payroll',
+      position: 2,
+    })
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }])
+    mocks.dependencyFindManyMock.mockResolvedValue([{ phaseId: 'p3', dependsOnPhaseId: 'p1' }])
+
+    const res = await putJson('/t1/phases/p3/dependencies', { dependsOnPhaseIds: ['p1', 'p2'] })
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json.dependsOnPhaseIds).toEqual(['p1', 'p2'])
+    expect(mocks.deleteWhereMock).toHaveBeenCalled()
+    expect(mocks.insertValuesMock).toHaveBeenCalledWith([
+      expect.objectContaining({ phaseId: 'p3', dependsOnPhaseId: 'p1' }),
+      expect.objectContaining({ phaseId: 'p3', dependsOnPhaseId: 'p2' }),
+    ])
+  })
+
+  it('clears dependencies for an empty set without inserting', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+
+    const res = await putJson('/t1/phases/p2/dependencies', { dependsOnPhaseIds: [] })
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json.dependsOnPhaseIds).toEqual([])
+    expect(mocks.deleteWhereMock).toHaveBeenCalled()
+    expect(mocks.insertMock).not.toHaveBeenCalled()
+  })
+
+  it('deduplicates repeated ids in the request', async () => {
+    adminSession()
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+
+    const res = await putJson('/t1/phases/p2/dependencies', {
+      dependsOnPhaseIds: ['p1', 'p1'],
+    })
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json.dependsOnPhaseIds).toEqual(['p1'])
+    expect(mocks.insertValuesMock).toHaveBeenCalledWith([
+      expect.objectContaining({ phaseId: 'p2', dependsOnPhaseId: 'p1' }),
+    ])
   })
 })
 

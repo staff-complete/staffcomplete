@@ -54,9 +54,14 @@ await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "invitation" TO "staffcomplete
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "subscription" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template_phase" TO "staffcomplete_tenant"`
+// workflow_template_phase_dependency / run_phase_dependency (ADR-0019) —
+// same class of miss as subscription above: a new tenant-scoped table needs
+// its GRANT listed here explicitly, ALTER ROLE doesn't discover it on its own.
+await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template_phase_dependency" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "workflow_template_step" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_phase" TO "staffcomplete_tenant"`
+await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_phase_dependency" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_step" TO "staffcomplete_tenant"`
 
 console.log('staffcomplete_tenant role configured.')

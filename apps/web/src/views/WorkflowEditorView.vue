@@ -152,6 +152,19 @@ async function deletePhase(phaseId: string) {
   await invalidate()
 }
 
+// Replaces the full set of phases :phaseId depends on (ADR-0019) — PhaseCard
+// already runs the same cycle check client-side before emitting, so this
+// only round-trips to the server for the authoritative write.
+async function setPhaseDependencies(phaseId: string, dependsOnPhaseIds: string[]) {
+  if (isReadOnly.value) return
+  await fetch(`/api/workflows/${id.value}/phases/${phaseId}/dependencies`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dependsOnPhaseIds }),
+  })
+  await invalidate()
+}
+
 const deletePhaseTarget = ref<WorkflowTemplatePhase | null>(null)
 async function confirmDeletePhase() {
   if (!deletePhaseTarget.value) return
@@ -498,6 +511,7 @@ async function reorderStep(
         v-for="(phase, phaseIndex) in template.phases"
         :key="phase.id"
         :phase="phase"
+        :all-phases="template.phases"
         :index="phaseIndex"
         :is-first="phaseIndex === 0"
         :is-last="phaseIndex === template.phases.length - 1"
@@ -516,6 +530,7 @@ async function reorderStep(
         @move-up="reorderPhase(phase.id, 'up')"
         @move-down="reorderPhase(phase.id, 'down')"
         @delete-phase="deletePhaseTarget = phase"
+        @set-dependencies="setPhaseDependencies(phase.id, $event)"
         @reorder-step="
           (stepId, direction) =>
             reorderStep(

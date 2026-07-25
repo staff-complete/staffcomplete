@@ -28,13 +28,16 @@ export interface WorkflowTemplateStep {
   position: number
 }
 
-// Steps within a phase can be worked on in parallel; phases themselves run
-// in order — a phase only unlocks once every step in the previous phase is
-// completed (see packages/shared/src/phase.ts).
+// Steps within a phase can be worked on in parallel; a phase only unlocks
+// once every phase in dependsOnPhaseIds is fully complete (ADR-0019).
+// `position` is display order only — it no longer implies a dependency.
+// An empty dependsOnPhaseIds means this phase is a root, unlocked
+// immediately (see packages/shared/src/phase.ts).
 export interface WorkflowTemplatePhase {
   id: string
   name: string
   position: number
+  dependsOnPhaseIds: string[]
   steps: WorkflowTemplateStep[]
 }
 

@@ -7,7 +7,7 @@ import {
   isTaskOverdue,
 } from '@staffcomplete/shared'
 import { db, withTenant } from '../db/index.js'
-import { member, run, runPhase, runStep } from '../db/schema.js'
+import { member, run, runPhase, runPhaseDependency, runStep } from '../db/schema.js'
 import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'
 import { resolveOrgSession } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
@@ -70,7 +70,7 @@ tasksRouter.get('/mine', async (c) => {
       tx.query.run.findMany({ where: inArray(run.id, runIds) }),
       tx.query.runPhase.findMany({
         where: inArray(runPhase.runId, runIds),
-        columns: { id: true, runId: true, position: true },
+        columns: { id: true, runId: true },
       }),
       // Every step of each run, not just the caller's — locking a phase
       // depends on sibling steps assigned to other people too.
@@ -79,14 +79,32 @@ tasksRouter.get('/mine', async (c) => {
         columns: { runId: true, phaseId: true, status: true },
       }),
     ])
+    const phaseIds = phases.map((p) => p.id)
+    const dependencies = phaseIds.length
+      ? await tx.query.runPhaseDependency.findMany({
+          where: inArray(runPhaseDependency.phaseId, phaseIds),
+          columns: { phaseId: true, dependsOnPhaseId: true },
+        })
+      : []
     const runsById = new Map(runs.map((r) => [r.id, r]))
+    const phaseIdsByRun = new Map<string, Set<string>>()
+    for (const phase of phases) {
+      const existing = phaseIdsByRun.get(phase.runId)
+      if (existing) {
+        existing.add(phase.id)
+      } else {
+        phaseIdsByRun.set(phase.runId, new Set([phase.id]))
+      }
+    }
 
     const unlockedPhaseIdsByRun = new Map<string, Set<string>>()
     for (const runId of runIds) {
+      const runPhaseIds = phaseIdsByRun.get(runId) ?? new Set<string>()
       unlockedPhaseIdsByRun.set(
         runId,
         computeUnlockedPhaseIds(
           phases.filter((p) => p.runId === runId),
+          dependencies.filter((d) => runPhaseIds.has(d.phaseId)),
           allSteps.filter((s) => s.runId === runId),
         ),
       )
@@ -127,14 +145,23 @@ tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
     const [phases, siblingStepsForLockCheck] = await Promise.all([
       tx.query.runPhase.findMany({
         where: eq(runPhase.runId, step.runId),
-        columns: { id: true, position: true },
+        columns: { id: true },
       }),
       tx.query.runStep.findMany({
         where: eq(runStep.runId, step.runId),
         columns: { phaseId: true, status: true },
       }),
     ])
-    const unlockedPhaseIds = computeUnlockedPhaseIds(phases, siblingStepsForLockCheck)
+    const dependencies = phases.length
+      ? await tx.query.runPhaseDependency.findMany({
+          where: inArray(
+            runPhaseDependency.phaseId,
+            phases.map((p) => p.id),
+          ),
+          columns: { phaseId: true, dependsOnPhaseId: true },
+        })
+      : []
+    const unlockedPhaseIds = computeUnlockedPhaseIds(phases, dependencies, siblingStepsForLockCheck)
     if (isStepLocked(step, unlockedPhaseIds)) {
       return 'PHASE_LOCKED' as const
     }

@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import {
@@ -7,15 +7,18 @@ import {
   createWorkflowTemplateSchema,
   reorderPhasesSchema,
   reorderStepsSchema,
+  setPhaseDependenciesSchema,
   updatePhaseSchema,
   updateStepSchema,
   updateWorkflowTemplateSchema,
+  wouldCreateCycle,
 } from '@staffcomplete/shared'
 import { db, withTenant } from '../db/index.js'
 import {
   member,
   workflowTemplate,
   workflowTemplatePhase,
+  workflowTemplatePhaseDependency,
   workflowTemplateStep,
 } from '../db/schema.js'
 import { requireAdmin } from '../lib/session.js'
@@ -23,8 +26,11 @@ import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
 
 export const workflowsRouter = new Hono()
 
-function serializePhase(phase: typeof workflowTemplatePhase.$inferSelect) {
-  return { id: phase.id, name: phase.name, position: phase.position }
+function serializePhase(
+  phase: typeof workflowTemplatePhase.$inferSelect,
+  dependsOnPhaseIds: string[],
+) {
+  return { id: phase.id, name: phase.name, position: phase.position, dependsOnPhaseIds }
 }
 
 function serializeStep(step: typeof workflowTemplateStep.$inferSelect) {
@@ -144,11 +150,19 @@ workflowsRouter.get('/:id', async (c) => {
       where: eq(workflowTemplatePhase.workflowTemplateId, id),
       orderBy: [asc(workflowTemplatePhase.position)],
     })
+    const dependencies = phases.length
+      ? await tx.query.workflowTemplatePhaseDependency.findMany({
+          where: inArray(
+            workflowTemplatePhaseDependency.phaseId,
+            phases.map((p) => p.id),
+          ),
+        })
+      : []
     const steps = await tx.query.workflowTemplateStep.findMany({
       where: eq(workflowTemplateStep.workflowTemplateId, id),
       orderBy: [asc(workflowTemplateStep.position)],
     })
-    return { template, phases, steps }
+    return { template, phases, dependencies, steps }
   })
 
   if (!result) {
@@ -168,6 +182,16 @@ workflowsRouter.get('/:id', async (c) => {
     }
   }
 
+  const dependsOnByPhase = new Map<string, string[]>()
+  for (const edge of result.dependencies) {
+    const existing = dependsOnByPhase.get(edge.phaseId)
+    if (existing) {
+      existing.push(edge.dependsOnPhaseId)
+    } else {
+      dependsOnByPhase.set(edge.phaseId, [edge.dependsOnPhaseId])
+    }
+  }
+
   return c.json({
     id: result.template.id,
     name: result.template.name,
@@ -175,7 +199,7 @@ workflowsRouter.get('/:id', async (c) => {
     createdAt: result.template.createdAt.toISOString(),
     updatedAt: result.template.updatedAt.toISOString(),
     phases: result.phases.map((phase) => ({
-      ...serializePhase(phase),
+      ...serializePhase(phase, dependsOnByPhase.get(phase.id) ?? []),
       steps: (stepsByPhase.get(phase.id) ?? []).map(serializeStep),
     })),
   })
@@ -297,7 +321,9 @@ workflowsRouter.post(
       return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
     }
 
-    return c.json(serializePhase(created), 201)
+    // A newly created phase is a root — no dependencies yet (ADR-0019). The
+    // admin sets them explicitly afterwards via the dependencies endpoint.
+    return c.json(serializePhase(created, []), 201)
   },
 )
 
@@ -328,14 +354,110 @@ workflowsRouter.patch(
         .set(updates)
         .where(eq(workflowTemplatePhase.id, phaseId))
         .returning()
-      return row
+      const dependencies = await tx.query.workflowTemplatePhaseDependency.findMany({
+        where: eq(workflowTemplatePhaseDependency.phaseId, phaseId),
+        columns: { dependsOnPhaseId: true },
+      })
+      return { row, dependsOnPhaseIds: dependencies.map((d) => d.dependsOnPhaseId) }
     })
 
     if (!updated) {
       return c.json({ code: 'NOT_FOUND', message: 'Phase not found.' }, 404)
     }
 
-    return c.json(serializePhase(updated))
+    return c.json(serializePhase(updated.row, updated.dependsOnPhaseIds))
+  },
+)
+
+// Replaces the full set of phases :phaseId depends on (ADR-0019) — same
+// "absolute set, not incremental" pattern as /phase-order and
+// /phases/:phaseId/steps/order below. Named .../dependencies rather than
+// nesting further under phases/:phaseId to avoid the same route-shape
+// collision documented on /phase-order (a literal segment and a :param at
+// the same depth breaks Hono's RegExpRouter) — this one doesn't collide,
+// but keeping the flat naming avoids reintroducing that risk later.
+workflowsRouter.put(
+  '/:id/phases/:phaseId/dependencies',
+  zValidator('json', setPhaseDependenciesSchema),
+  blockMutationsWhenExpired(),
+  async (c) => {
+    const session = await requireAdmin(c)
+    if (!session) {
+      return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
+    }
+
+    const workflowTemplateId = c.req.param('id')
+    const phaseId = c.req.param('phaseId')
+    const { dependsOnPhaseIds } = c.req.valid('json')
+    const uniqueDependsOnPhaseIds = [...new Set(dependsOnPhaseIds)]
+
+    const result = await withTenant(session.organizationId, async (tx) => {
+      const phase = await tx.query.workflowTemplatePhase.findFirst({
+        where: eq(workflowTemplatePhase.id, phaseId),
+      })
+      if (!phase || phase.workflowTemplateId !== workflowTemplateId) {
+        return 'NOT_FOUND' as const
+      }
+
+      const templatePhases = await tx.query.workflowTemplatePhase.findMany({
+        where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
+        columns: { id: true },
+      })
+      const templatePhaseIds = new Set(templatePhases.map((p) => p.id))
+      if (uniqueDependsOnPhaseIds.some((depId) => !templatePhaseIds.has(depId))) {
+        return 'INVALID_PHASE' as const
+      }
+
+      // Cycle check against every edge in the template except phaseId's own
+      // current outgoing edges (which this call is about to replace), plus
+      // whichever of the new edges have already been accepted earlier in
+      // this same loop.
+      const existingEdges = await tx.query.workflowTemplatePhaseDependency.findMany({
+        where: inArray(workflowTemplatePhaseDependency.phaseId, [...templatePhaseIds]),
+        columns: { phaseId: true, dependsOnPhaseId: true },
+      })
+      const baselineEdges = existingEdges.filter((edge) => edge.phaseId !== phaseId)
+      const acceptedEdges = [...baselineEdges]
+      for (const dependsOnPhaseId of uniqueDependsOnPhaseIds) {
+        if (wouldCreateCycle(acceptedEdges, phaseId, dependsOnPhaseId)) {
+          return 'CYCLE_DETECTED' as const
+        }
+        acceptedEdges.push({ phaseId, dependsOnPhaseId })
+      }
+
+      await tx
+        .delete(workflowTemplatePhaseDependency)
+        .where(eq(workflowTemplatePhaseDependency.phaseId, phaseId))
+      if (uniqueDependsOnPhaseIds.length) {
+        await tx.insert(workflowTemplatePhaseDependency).values(
+          uniqueDependsOnPhaseIds.map((dependsOnPhaseId) => ({
+            id: crypto.randomUUID(),
+            phaseId,
+            dependsOnPhaseId,
+            organizationId: session.organizationId,
+          })),
+        )
+      }
+      return { row: phase, dependsOnPhaseIds: uniqueDependsOnPhaseIds }
+    })
+
+    if (result === 'NOT_FOUND') {
+      return c.json({ code: 'NOT_FOUND', message: 'Phase not found.' }, 404)
+    }
+    if (result === 'INVALID_PHASE') {
+      return c.json(
+        { code: 'INVALID_PHASE', message: 'A dependency must be a phase in this workflow.' },
+        400,
+      )
+    }
+    if (result === 'CYCLE_DETECTED') {
+      return c.json(
+        { code: 'CYCLE_DETECTED', message: 'That would make two phases depend on each other.' },
+        400,
+      )
+    }
+
+    return c.json(serializePhase(result.row, result.dependsOnPhaseIds))
   },
 )
 

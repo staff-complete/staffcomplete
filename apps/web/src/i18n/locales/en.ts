@@ -224,11 +224,16 @@ const en = {
       editStep: 'Edit step',
       delete: 'Delete',
       phasesHeading: 'Phases',
-      parallelHint: 'Steps in the same phase can be worked on in parallel; phases run in order.',
+      parallelHint:
+        'Steps in the same phase can be worked on in parallel; a phase unlocks once every phase it depends on is complete.',
       noPhases: 'No phases yet — add the first one below.',
       movePhaseUp: 'Move phase up',
       movePhaseDown: 'Move phase down',
       deletePhase: 'Delete phase',
+      dependsOnLabel: 'Depends on',
+      dependsOnNoOtherPhases: 'No other phases yet — this one starts immediately.',
+      dependsOnRootHint: 'No dependencies selected — this phase starts immediately.',
+      dependsOnCycleDisabledHint: 'Choosing this would make two phases depend on each other.',
       deletePhaseConfirmTitle: 'Delete "{name}"?',
       deletePhaseConfirmBody:
         "This also deletes the {steps} inside this phase. This can't be undone.",

@@ -6,10 +6,12 @@ const mocks = vi.hoisted(() => ({
   memberFindFirstMock: vi.fn(),
   templateFindFirstMock: vi.fn(),
   templatePhaseFindManyMock: vi.fn(),
+  templateDependencyFindManyMock: vi.fn(),
   templateStepFindManyMock: vi.fn(),
   runFindManyMock: vi.fn(),
   runFindFirstMock: vi.fn(),
   runPhaseFindManyMock: vi.fn(),
+  runDependencyFindManyMock: vi.fn(),
   runStepFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
   insertMock: vi.fn(),
@@ -23,9 +25,11 @@ function tx() {
     query: {
       workflowTemplate: { findFirst: mocks.templateFindFirstMock },
       workflowTemplatePhase: { findMany: mocks.templatePhaseFindManyMock },
+      workflowTemplatePhaseDependency: { findMany: mocks.templateDependencyFindManyMock },
       workflowTemplateStep: { findMany: mocks.templateStepFindManyMock },
       run: { findMany: mocks.runFindManyMock, findFirst: mocks.runFindFirstMock },
       runPhase: { findMany: mocks.runPhaseFindManyMock },
+      runPhaseDependency: { findMany: mocks.runDependencyFindManyMock },
       runStep: { findMany: mocks.runStepFindManyMock },
       subscription: { findFirst: mocks.subscriptionFindFirstMock },
     },
@@ -86,10 +90,12 @@ beforeEach(() => {
   mocks.memberFindFirstMock.mockReset()
   mocks.templateFindFirstMock.mockReset()
   mocks.templatePhaseFindManyMock.mockReset().mockResolvedValue([])
+  mocks.templateDependencyFindManyMock.mockReset().mockResolvedValue([])
   mocks.templateStepFindManyMock.mockReset()
   mocks.runFindManyMock.mockReset()
   mocks.runFindFirstMock.mockReset()
   mocks.runPhaseFindManyMock.mockReset().mockResolvedValue([])
+  mocks.runDependencyFindManyMock.mockReset().mockResolvedValue([])
   mocks.runStepFindManyMock.mockReset()
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
     status: 'trialing',
@@ -321,6 +327,9 @@ describe('GET /api/runs/:id', () => {
       { id: 'notice', name: 'Notice received', position: 0 },
       { id: 'revocation', name: 'Access revocation', position: 1 },
     ])
+    mocks.runDependencyFindManyMock.mockResolvedValue([
+      { phaseId: 'revocation', dependsOnPhaseId: 'notice' },
+    ])
     mocks.runStepFindManyMock.mockResolvedValue([
       {
         id: 'rs1',
@@ -530,6 +539,50 @@ describe('POST /api/runs', () => {
     ]
     expect(dispatchedOrgId).toBe(ADMIN_ORG_ID)
     expect(dispatchedSteps).toEqual([expect.objectContaining({ id: 'rs2' })])
+  })
+
+  it("copies the template's phase dependencies onto the run's own phase copies", async () => {
+    adminSession()
+    mocks.templateFindFirstMock.mockResolvedValue({ id: 't1', type: 'onboarding' })
+    mocks.templatePhaseFindManyMock.mockResolvedValue([
+      { id: 'p1', name: 'Documents', position: 0 },
+      { id: 'p2', name: 'Payroll', position: 1 },
+    ])
+    mocks.templateDependencyFindManyMock.mockResolvedValue([
+      { id: 'd1', phaseId: 'p2', dependsOnPhaseId: 'p1' },
+    ])
+    mocks.templateStepFindManyMock.mockResolvedValue([])
+    mocks.insertReturningMock.mockResolvedValueOnce([
+      {
+        id: 'r1',
+        type: 'onboarding',
+        employeeName: 'Jane Doe',
+        employeeEmail: 'jane@example.com',
+        employeeRole: 'Engineer',
+        eventDate: '2026-08-01',
+        status: 'pending',
+        createdAt: new Date(),
+      },
+    ])
+
+    const res = await postJson('/', VALID_RUN_INPUT)
+    expect(res.status).toBe(201)
+
+    // Phase copy ids are fresh crypto.randomUUID()s generated inside the
+    // route — recover them from the runPhase insert call by name, same
+    // pattern as the phase-id recovery above.
+    const phaseInsertValues = mocks.insertValuesMock.mock.calls.find(
+      ([values]) => Array.isArray(values) && values[0]?.name !== undefined,
+    )?.[0] as Array<{ id: string; name: string }>
+    const documentsId = phaseInsertValues.find((p) => p.name === 'Documents')?.id
+    const payrollId = phaseInsertValues.find((p) => p.name === 'Payroll')?.id
+
+    const dependencyInsertValues = mocks.insertValuesMock.mock.calls.find(
+      ([values]) => Array.isArray(values) && values[0]?.dependsOnPhaseId !== undefined,
+    )?.[0] as Array<{ phaseId: string; dependsOnPhaseId: string }>
+    expect(dependencyInsertValues).toEqual([
+      expect.objectContaining({ phaseId: payrollId, dependsOnPhaseId: documentsId }),
+    ])
   })
 
   it('creates a run with no phases or steps when the template has none', async () => {
