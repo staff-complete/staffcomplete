@@ -92,7 +92,8 @@
     "dedup",
     "dedups",
     "EADDRINUSE",
-    "pkill"
+    "pkill",
+    "cutover"
   ],
   "ignoreRegExpList": ["[\\u0400-\\u04FF]+", "[\\u0590-\\u05FF]+"]
 }

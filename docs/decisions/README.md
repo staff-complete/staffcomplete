@@ -26,3 +26,4 @@ Template: [0000-adr-template.md](0000-adr-template.md)
 | [0016](0016-multilingual-ui.md)                   | Multilingual UI (English, Russian, Hebrew)                             | accepted |
 | [0017](0017-sequential-phases-parallel-steps.md)  | Sequential Phases with Parallel Steps                                  | accepted |
 | [0018](0018-automated-action-registry.md)         | Automated Action Registry for Workflow Steps                           | accepted |
+| [0019](0019-phase-level-dependencies.md)          | Phase-Level Dependencies                                               | accepted |
