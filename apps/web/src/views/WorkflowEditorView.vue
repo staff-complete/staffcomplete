@@ -15,6 +15,7 @@ import { moveStep } from '../lib/reorderSteps'
 import { emptyStepForm } from '../lib/stepForm'
 import type { Member, StepFormState } from '../lib/stepForm'
 import PhaseCard from '../components/workflows/PhaseCard.vue'
+import PhaseFlowDiagram from '../components/workflows/PhaseFlowDiagram.vue'
 import ConfirmDialog from '../components/workflows/ConfirmDialog.vue'
 
 const { t } = useI18n()
@@ -506,6 +507,8 @@ async function reorderStep(
       <p v-if="template.phases.length === 0" class="mb-4 text-sm text-app-muted">
         {{ t('workflows.editor.noPhases') }}
       </p>
+
+      <PhaseFlowDiagram :phases="template.phases" />
 
       <PhaseCard
         v-for="(phase, phaseIndex) in template.phases"

@@ -239,6 +239,8 @@ const ru = {
       dependsOnNoOtherPhases: 'Других этапов пока нет — этот начинается сразу.',
       dependsOnRootHint: 'Зависимости не выбраны — этот этап начинается сразу.',
       dependsOnCycleDisabledHint: 'Это создаст взаимную зависимость между этапами.',
+      dependencyGraphHeading: 'Схема зависимостей',
+      dependencyGraphError: 'Не удалось построить схему зависимостей.',
       deletePhaseConfirmTitle: 'Удалить «{name}»?',
       deletePhaseConfirmBody:
         'Это также удалит {steps} внутри этого этапа. Отменить это будет нельзя.',

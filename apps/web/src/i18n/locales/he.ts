@@ -233,6 +233,8 @@ const he = {
       dependsOnNoOtherPhases: 'אין עדיין פאזות אחרות — פאזה זו מתחילה מיד.',
       dependsOnRootHint: 'לא נבחרו תלויות — פאזה זו מתחילה מיד.',
       dependsOnCycleDisabledHint: 'בחירה זו תיצור תלות הדדית בין הפאזות.',
+      dependencyGraphHeading: 'תרשים תלויות',
+      dependencyGraphError: 'לא ניתן היה להציג את תרשים התלויות.',
       deletePhaseConfirmTitle: 'למחוק את "{name}"?',
       deletePhaseConfirmBody: 'פעולה זו תמחק גם את {steps} שבתוך פאזה זו. לא ניתן לבטל פעולה זו.',
       deletePhaseConfirmSubmit: 'מחיקת פאזה',

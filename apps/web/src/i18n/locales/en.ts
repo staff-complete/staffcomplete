@@ -234,6 +234,8 @@ const en = {
       dependsOnNoOtherPhases: 'No other phases yet — this one starts immediately.',
       dependsOnRootHint: 'No dependencies selected — this phase starts immediately.',
       dependsOnCycleDisabledHint: 'Choosing this would make two phases depend on each other.',
+      dependencyGraphHeading: 'Dependency graph',
+      dependencyGraphError: "Couldn't render the dependency graph.",
       deletePhaseConfirmTitle: 'Delete "{name}"?',
       deletePhaseConfirmBody:
         "This also deletes the {steps} inside this phase. This can't be undone.",
