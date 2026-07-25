@@ -92,21 +92,19 @@ async function sendEmailAction(
   }
   // `to` substitutes the raw email address — escaping would corrupt it (e.g.
   // if it ever contained `&`), and it's never interpolated into HTML.
-  // subject isn't HTML either, so it's substituted as-is. `body`, though, is
-  // admin-authored template text that ends up inside an HTML email — escape
-  // the whole template *before* substitution (not just the token values),
-  // so a literal `<`/`&`/etc. the admin typed can't inject markup into the
-  // sent email.
+  // subject isn't HTML either, so it's substituted as-is. `body` is
+  // admin-authored template text that ends up inside an HTML email, so the
+  // fully-substituted result is escaped right where it's interpolated —
+  // same pattern auth.ts already uses for its own transactional emails
+  // (e.g. ${escapeHtml(user.name)}).
   const to = substituteAutomationTokens(config.to, tokenValues)
   const subject = substituteAutomationTokens(config.subject, tokenValues)
-  const escapedBodyTemplate = escapeHtml(config.body)
-  const escapedTokenValues = {
-    ...tokenValues,
-    employeeName: escapeHtml(tokenValues.employeeName),
-    employeeRole: escapeHtml(tokenValues.employeeRole),
-  }
-  const body = substituteAutomationTokens(escapedBodyTemplate, escapedTokenValues)
-  const html = `<p>${body.replaceAll('\n', '<br>')}</p>`
+  const rawBody = substituteAutomationTokens(config.body, tokenValues)
+  // This rule targets HTML reflected into a browser response (its own fix
+  // suggestion is DOMPurify, a DOM sanitizer) — there's no DOM here, this is
+  // an email body string sent through Resend. escapeHtml() above already
+  // neutralizes &<>"' the same way auth.ts's transactional emails do.
+  const html = `<p>${escapeHtml(rawBody).replaceAll('\n', '<br>')}</p>` // nosemgrep: javascript.express.security.injection.raw-html-format.raw-html-format
 
   let result: Awaited<ReturnType<typeof sendAuthEmail>>
   try {
