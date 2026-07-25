@@ -91,18 +91,31 @@ async function sendEmailAction(
     eventDate: foundRun.eventDate,
   }
   // `to` substitutes the raw email address — escaping would corrupt it (e.g.
-  // if it ever contained `&`). subject/body substitute the escaped
-  // name/role, since those land inside an HTML email body.
+  // if it ever contained `&`), and it's never interpolated into HTML.
+  // subject isn't HTML either, so it's substituted as-is. `body`, though, is
+  // admin-authored template text that ends up inside an HTML email — escape
+  // the whole template *before* substitution (not just the token values),
+  // so a literal `<`/`&`/etc. the admin typed can't inject markup into the
+  // sent email.
   const to = substituteAutomationTokens(config.to, tokenValues)
   const subject = substituteAutomationTokens(config.subject, tokenValues)
-  const escapedBody = substituteAutomationTokens(config.body, {
+  const escapedBodyTemplate = escapeHtml(config.body)
+  const escapedTokenValues = {
     ...tokenValues,
     employeeName: escapeHtml(tokenValues.employeeName),
     employeeRole: escapeHtml(tokenValues.employeeRole),
-  })
-  const html = `<p>${escapedBody.replaceAll('\n', '<br>')}</p>`
+  }
+  const body = substituteAutomationTokens(escapedBodyTemplate, escapedTokenValues)
+  const html = `<p>${body.replaceAll('\n', '<br>')}</p>`
 
-  const result = await sendAuthEmail(to, subject, html)
+  let result: Awaited<ReturnType<typeof sendAuthEmail>>
+  try {
+    result = await sendAuthEmail(to, subject, html)
+  } catch (err) {
+    throw new Error(
+      `sendAuthEmail threw for run step: ${err instanceof Error ? err.message : String(err)}`,
+    )
+  }
   if (result.error) {
     // Thrown, not logged-and-returned: this is the transient-failure path
     // (Resend outage, bad API key), so the job handler rejects and pg-boss

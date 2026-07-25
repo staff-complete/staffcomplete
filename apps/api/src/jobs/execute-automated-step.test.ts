@@ -21,9 +21,32 @@ vi.mock('../db/index.js', () => ({
   withTenant: async (_organizationId: string, fn: (t: unknown) => unknown) => fn(tx()),
 }))
 
+// Not a passthrough: real escaping (not auth.ts's own module, which would
+// pull in betterAuth's full init — see the escaping-regression test below,
+// which needs to actually observe `<`/`&`/etc. getting escaped). Mirrors
+// auth.ts's own escapeHtml implementation.
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case '&':
+        return '&amp;'
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '"':
+        return '&quot;'
+      case "'":
+        return '&#39;'
+      default:
+        return char
+    }
+  })
+}
+
 vi.mock('../auth.js', () => ({
   sendAuthEmail: mocks.sendAuthEmailMock,
-  escapeHtml: (value: string) => value,
+  escapeHtml,
 }))
 
 vi.mock('../lib/run-steps.js', () => ({
@@ -87,11 +110,38 @@ describe('executeAutomatedStep', () => {
     ])
   })
 
+  it('escapes HTML-special characters an admin typed into the body template, not just the substituted values', async () => {
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      ...EMAIL_STEP,
+      config: {
+        to: '[employeeEmail]',
+        subject: 'Welcome!',
+        body: '<script>steal()</script> Hi [employeeName] & welcome',
+      },
+    })
+
+    await executeAutomatedStep(PAYLOAD)
+
+    const html = mocks.sendAuthEmailMock.mock.calls[0][2] as string
+    expect(html).not.toContain('<script>')
+    expect(html).toContain('&lt;script&gt;steal()&lt;/script&gt;')
+    expect(html).toContain('Hi Jane Doe &amp; welcome')
+  })
+
   it('throws when Resend returns an error, so pg-boss retries', async () => {
     mocks.runStepFindFirstMock.mockResolvedValue(EMAIL_STEP)
     mocks.sendAuthEmailMock.mockResolvedValue({ data: null, error: { message: 'outage' } })
 
     await expect(executeAutomatedStep(PAYLOAD)).rejects.toThrow('outage')
+
+    expect(mocks.completeRunStepMock).not.toHaveBeenCalled()
+  })
+
+  it('throws a clear error when sendAuthEmail itself rejects, so pg-boss retries', async () => {
+    mocks.runStepFindFirstMock.mockResolvedValue(EMAIL_STEP)
+    mocks.sendAuthEmailMock.mockRejectedValue(new Error('network down'))
+
+    await expect(executeAutomatedStep(PAYLOAD)).rejects.toThrow('network down')
 
     expect(mocks.completeRunStepMock).not.toHaveBeenCalled()
   })
