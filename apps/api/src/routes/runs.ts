@@ -17,6 +17,7 @@ import {
   workflowTemplatePhase,
   workflowTemplateStep,
 } from '../db/schema.js'
+import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'
 import { requireAdmin } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
 
@@ -258,14 +259,30 @@ runsRouter.post(
             .returning()
         : []
 
-      return { createdRun, createdSteps }
+      return {
+        createdRun,
+        createdSteps,
+        createdPhases: phaseCopies.map((copy) => ({
+          id: copy.runPhaseId,
+          position: copy.position,
+        })),
+      }
     })
 
     if (!result) {
       return c.json({ code: 'NOT_FOUND', message: 'Checklist template not found.' }, 404)
     }
 
-    const { createdRun, createdSteps } = result
+    const { createdRun, createdSteps, createdPhases } = result
+
+    // Only the first phase is ever unlocked on a brand-new run (zero steps
+    // completed anywhere yet) — dispatch its automated steps now that the
+    // creating transaction has committed. See lib/run-steps.ts for why
+    // dispatch happens post-commit rather than inside the transaction above.
+    await dispatchAutomatedSteps(
+      session.organizationId,
+      selectStepsToDispatch(createdPhases, createdSteps),
+    )
 
     return c.json(
       {

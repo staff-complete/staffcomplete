@@ -8,6 +8,7 @@ import {
 } from '@staffcomplete/shared'
 import { db, withTenant } from '../db/index.js'
 import { member, run, runPhase, runStep } from '../db/schema.js'
+import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'
 import { resolveOrgSession } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
 
@@ -138,27 +139,12 @@ tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
       return 'PHASE_LOCKED' as const
     }
 
-    const [updatedStep] = await tx
-      .update(runStep)
-      .set({ status: 'completed', completedAt: new Date() })
-      .where(eq(runStep.id, stepId))
-      .returning()
-
-    // Re-derive run.status from its steps rather than trusting a separately
-    // tracked counter, same "compute live, don't trust stale state" approach
-    // as trial expiry (ADR-0015) — see packages/shared/src/task.ts.
-    const siblingSteps = await tx.query.runStep.findMany({
-      where: eq(runStep.runId, step.runId),
-      columns: { status: true },
-    })
-    const allCompleted = siblingSteps.every((s) => s.status === 'completed')
-    const [updatedRun] = await tx
-      .update(run)
-      .set({ status: allCompleted ? 'completed' : 'in_progress', updatedAt: new Date() })
-      .where(eq(run.id, step.runId))
-      .returning()
-
-    return { updatedStep, updatedRun }
+    // Marks the step completed, re-derives run.status (same "compute live,
+    // don't trust stale state" approach as trial expiry, ADR-0015), and
+    // reports whichever automated steps this just unlocked — e.g. this
+    // manual step may have been the last one in its phase, unlocking a
+    // phase whose first step is automated.
+    return completeRunStep(tx, stepId)
   })
 
   if (result === 'NOT_FOUND') {
@@ -173,6 +159,10 @@ tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
       403,
     )
   }
+
+  // Dispatched after the transaction above has committed, not from inside
+  // it — see lib/run-steps.ts.
+  await dispatchAutomatedSteps(session.organizationId, result.stepsToDispatch)
 
   return c.json(serializeTask(result.updatedStep, result.updatedRun, false))
 })

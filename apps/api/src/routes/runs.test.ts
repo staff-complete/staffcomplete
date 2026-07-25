@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   insertMock: vi.fn(),
   insertValuesMock: vi.fn(),
   insertReturningMock: vi.fn(),
+  dispatchAutomatedStepsMock: vi.fn(),
 }))
 
 function tx() {
@@ -40,6 +41,11 @@ vi.mock('../db/index.js', () => ({
 vi.mock('../auth.js', () => ({
   auth: { api: { getSession: mocks.getSessionMock } },
 }))
+
+vi.mock('../lib/run-steps.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/run-steps.js')>()
+  return { ...actual, dispatchAutomatedSteps: mocks.dispatchAutomatedStepsMock }
+})
 
 const { runsRouter } = await import('./runs.js')
 
@@ -92,6 +98,7 @@ beforeEach(() => {
   mocks.insertMock.mockReset().mockReturnValue({ values: mocks.insertValuesMock })
   mocks.insertValuesMock.mockReset().mockReturnValue({ returning: mocks.insertReturningMock })
   mocks.insertReturningMock.mockReset()
+  mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
 })
 
 describe('admin gate', () => {
@@ -427,33 +434,46 @@ describe('POST /api/runs', () => {
       ])
       // Only two .returning() calls now: run phases are inserted with a
       // client-generated id and never read back (see the comment on
-      // runPhaseIdByTemplatePhaseId in runs.ts).
-      .mockResolvedValueOnce([
-        {
-          id: 'rs1',
-          phaseId: 'generated-phase-id',
-          title: 'Order laptop',
-          type: 'manual',
-          assigneeId: 'm1',
-          dueDateOffsetDays: 1,
-          position: 0,
-        },
-        {
-          id: 'rs2',
-          phaseId: 'generated-phase-id',
-          title: 'Send email',
-          type: 'automated',
-          assigneeId: null,
-          dueDateOffsetDays: null,
-          action: 'email.send',
-          config: {
-            to: '[employeeEmail]',
-            subject: 'Welcome!',
-            body: 'Hi [employeeName], welcome aboard.',
+      // runPhaseIdByTemplatePhaseId in runs.ts). The step rows' phaseId must
+      // match that same client-generated id (same as the real DB would echo
+      // back), so this reads it from the phase insert's own values call
+      // rather than hardcoding a placeholder — otherwise the dispatch logic
+      // (which cross-references createdPhases against createdSteps by id)
+      // would see a phantom mismatch that can't happen for real.
+      .mockImplementationOnce(() => {
+        const phaseInsertValues = mocks.insertValuesMock.mock.calls.find(
+          ([values]) => Array.isArray(values) && values[0]?.name === 'Steps',
+        )?.[0] as [{ id: string }]
+        const generatedPhaseId = phaseInsertValues[0].id
+        return Promise.resolve([
+          {
+            id: 'rs1',
+            phaseId: generatedPhaseId,
+            title: 'Order laptop',
+            type: 'manual',
+            assigneeId: 'm1',
+            dueDateOffsetDays: 1,
+            status: 'pending',
+            position: 0,
           },
-          position: 1,
-        },
-      ])
+          {
+            id: 'rs2',
+            phaseId: generatedPhaseId,
+            title: 'Send email',
+            type: 'automated',
+            assigneeId: null,
+            dueDateOffsetDays: null,
+            status: 'pending',
+            action: 'email.send',
+            config: {
+              to: '[employeeEmail]',
+              subject: 'Welcome!',
+              body: 'Hi [employeeName], welcome aboard.',
+            },
+            position: 1,
+          },
+        ])
+      })
 
     const res = await postJson('/', VALID_RUN_INPUT)
     const json = await res.json()
@@ -500,6 +520,16 @@ describe('POST /api/runs', () => {
       }),
     ])
     expect(json.steps).toHaveLength(2)
+
+    // rs2 (automated, email.send) sits in the run's only phase, which is
+    // unlocked by definition on a brand-new run — it should be dispatched.
+    expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledTimes(1)
+    const [dispatchedOrgId, dispatchedSteps] = mocks.dispatchAutomatedStepsMock.mock.calls[0] as [
+      string,
+      Array<{ id: string }>,
+    ]
+    expect(dispatchedOrgId).toBe(ADMIN_ORG_ID)
+    expect(dispatchedSteps).toEqual([expect.objectContaining({ id: 'rs2' })])
   })
 
   it('creates a run with no phases or steps when the template has none', async () => {
@@ -526,5 +556,6 @@ describe('POST /api/runs', () => {
     expect(res.status).toBe(201)
     expect(json.steps).toEqual([])
     expect(mocks.insertMock).toHaveBeenCalledTimes(1)
+    expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledWith(ADMIN_ORG_ID, [])
   })
 })

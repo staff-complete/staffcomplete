@@ -1,5 +1,5 @@
 import type { PgBoss } from 'pg-boss'
-import type { Job, JobHandler, Queue } from '@staffcomplete/shared'
+import type { EnqueueOptions, Job, JobHandler, Queue } from '@staffcomplete/shared'
 
 // pg-boss requires a queue to exist (createQueue) before send/work/schedule
 // will accept it — createQueue is safe to call repeatedly (it's a create-if-
@@ -12,9 +12,9 @@ export class PgBossQueue implements Queue {
     this.#boss = boss
   }
 
-  async enqueue<T>(job: Job<T>): Promise<void> {
+  async enqueue<T>(job: Job<T>, options?: EnqueueOptions): Promise<void> {
     await this.#boss.createQueue(job.name)
-    await this.#boss.send(job.name, (job.data ?? null) as object | null)
+    await this.#boss.send(job.name, (job.data ?? null) as object | null, options)
   }
 
   process<T>(name: string, handler: JobHandler<T>): void {

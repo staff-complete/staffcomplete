@@ -3,7 +3,10 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { auth } from './auth.js'
+import { executeAutomatedStep } from './jobs/execute-automated-step.js'
+import type { ExecuteAutomatedStepPayload } from './jobs/execute-automated-step.js'
 import { runTrialLifecycleScan } from './jobs/trial-lifecycle-scan.js'
+import { AUTOMATED_STEP_EXECUTE_JOB } from './lib/run-steps.js'
 import { queue, startQueue, stopQueue } from './queue/index.js'
 import { activityRouter } from './routes/activity.js'
 import { billingRouter } from './routes/billing.js'
@@ -44,6 +47,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await startQueue()
   queue.process('trial-lifecycle-scan', () => runTrialLifecycleScan())
   await queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)
+  queue.process<ExecuteAutomatedStepPayload>(AUTOMATED_STEP_EXECUTE_JOB, (job) =>
+    executeAutomatedStep(job.data),
+  )
 
   const shutdown = async () => {
     await stopQueue()

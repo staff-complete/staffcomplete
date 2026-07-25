@@ -31,6 +31,11 @@ const tenantSql = postgres(tenantDatabaseUrl, {
 
 export const tenantDb = drizzle(tenantSql, { schema })
 
+// The transaction handle withTenant hands to its callback — exported so
+// helpers that receive an already-open tx as a parameter (rather than
+// opening their own via withTenant) can type it without re-deriving this.
+export type Tx = Parameters<Parameters<typeof tenantDb.transaction>[0]>[0]
+
 /**
  * Runs `fn` inside a transaction with Postgres session var
  * `app.organization_id` set to `organizationId`, so RLS policies scoped to

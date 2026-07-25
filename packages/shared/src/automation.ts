@@ -75,3 +75,26 @@ export function getAutomatedAction(key: AutomatedActionKey): AutomatedActionDefi
 export function parseAutomatedActionConfig(action: AutomatedActionKey, config: unknown) {
   return getAutomatedAction(action).configSchema.safeParse(config ?? {})
 }
+
+export interface AutomationTokenValues {
+  employeeName: string
+  employeeEmail: string
+  employeeRole: string
+  eventDate: string
+}
+
+// Fills in the [employeeName]/[employeeEmail]/[employeeRole]/[eventDate]
+// tokens documented on emailSendConfigSchema above. Pure string substitution
+// only — callers decide whether/how to escape `values` before calling this
+// (e.g. HTML-escaping employeeName but not employeeEmail, since the latter
+// would be corrupted by escaping when substituted into a `to` address).
+export function substituteAutomationTokens(
+  template: string,
+  values: AutomationTokenValues,
+): string {
+  return template
+    .replaceAll('[employeeName]', values.employeeName)
+    .replaceAll('[employeeEmail]', values.employeeEmail)
+    .replaceAll('[employeeRole]', values.employeeRole)
+    .replaceAll('[eventDate]', values.eventDate)
+}

@@ -87,7 +87,12 @@
     "BYPASSRLS",
     "rolbypassrls",
     "Vite",
-    "unstub"
+    "unstub",
+    "dispatchable",
+    "dedup",
+    "dedups",
+    "EADDRINUSE",
+    "pkill"
   ],
   "ignoreRegExpList": ["[\\u0400-\\u04FF]+", "[\\u0590-\\u05FF]+"]
 }

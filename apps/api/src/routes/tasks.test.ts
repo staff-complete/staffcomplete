@@ -9,10 +9,8 @@ const mocks = vi.hoisted(() => ({
   runFindManyMock: vi.fn(),
   runPhaseFindManyMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
-  updateMock: vi.fn(),
-  updateSetMock: vi.fn(),
-  updateWhereMock: vi.fn(),
-  updateReturningMock: vi.fn(),
+  completeRunStepMock: vi.fn(),
+  dispatchAutomatedStepsMock: vi.fn(),
 }))
 
 function tx() {
@@ -23,7 +21,6 @@ function tx() {
       runPhase: { findMany: mocks.runPhaseFindManyMock },
       subscription: { findFirst: mocks.subscriptionFindFirstMock },
     },
-    update: mocks.updateMock,
   }
 }
 
@@ -34,6 +31,11 @@ vi.mock('../db/index.js', () => ({
 
 vi.mock('../auth.js', () => ({
   auth: { api: { getSession: mocks.getSessionMock } },
+}))
+
+vi.mock('../lib/run-steps.js', () => ({
+  completeRunStep: mocks.completeRunStepMock,
+  dispatchAutomatedSteps: mocks.dispatchAutomatedStepsMock,
 }))
 
 const { tasksRouter } = await import('./tasks.js')
@@ -70,10 +72,8 @@ beforeEach(() => {
     status: 'trialing',
     trialEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   })
-  mocks.updateReturningMock.mockReset()
-  mocks.updateWhereMock.mockReset().mockReturnValue({ returning: mocks.updateReturningMock })
-  mocks.updateSetMock.mockReset().mockReturnValue({ where: mocks.updateWhereMock })
-  mocks.updateMock.mockReset().mockReturnValue({ set: mocks.updateSetMock })
+  mocks.completeRunStepMock.mockReset()
+  mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
 })
 
 describe('GET /api/tasks/mine', () => {
@@ -234,7 +234,7 @@ describe('POST /api/tasks/:id/complete', () => {
 
     expect(res.status).toBe(403)
     expect((await res.json()).code).toBe('PHASE_LOCKED')
-    expect(mocks.updateMock).not.toHaveBeenCalled()
+    expect(mocks.completeRunStepMock).not.toHaveBeenCalled()
   })
 
   it('completes the task and flips run.status to in_progress when steps remain pending', async () => {
@@ -248,31 +248,27 @@ describe('POST /api/tasks/:id/complete', () => {
       dueDateOffsetDays: 1,
     })
     mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
-    mocks.runStepFindManyMock
-      .mockResolvedValueOnce([
-        { phaseId: 'p1', status: 'pending' },
-        { phaseId: 'p1', status: 'pending' },
-      ])
-      .mockResolvedValueOnce([{ status: 'completed' }, { status: 'pending' }])
-    mocks.updateReturningMock
-      .mockResolvedValueOnce([
-        {
-          id: 'rs1',
-          runId: 'r1',
-          title: 'Order laptop',
-          status: 'completed',
-          dueDateOffsetDays: 1,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: 'r1',
-          type: 'onboarding',
-          employeeName: 'Jane Doe',
-          eventDate: '2026-08-01',
-          status: 'in_progress',
-        },
-      ])
+    mocks.runStepFindManyMock.mockResolvedValueOnce([
+      { phaseId: 'p1', status: 'pending' },
+      { phaseId: 'p1', status: 'pending' },
+    ])
+    mocks.completeRunStepMock.mockResolvedValue({
+      updatedStep: {
+        id: 'rs1',
+        runId: 'r1',
+        title: 'Order laptop',
+        status: 'completed',
+        dueDateOffsetDays: 1,
+      },
+      updatedRun: {
+        id: 'r1',
+        type: 'onboarding',
+        employeeName: 'Jane Doe',
+        eventDate: '2026-08-01',
+        status: 'in_progress',
+      },
+      stepsToDispatch: [],
+    })
 
     const res = await post('/rs1/complete')
     const json = await res.json()
@@ -280,10 +276,8 @@ describe('POST /api/tasks/:id/complete', () => {
     expect(res.status).toBe(200)
     expect(json.status).toBe('completed')
     expect(json.isOverdue).toBe(false)
-    expect(mocks.updateSetMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ status: 'in_progress' }),
-    )
+    expect(mocks.completeRunStepMock).toHaveBeenCalledWith(expect.anything(), 'rs1')
+    expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledWith(ORG_ID, [])
   })
 
   it('flips run.status to completed when every step is done', async () => {
@@ -297,35 +291,52 @@ describe('POST /api/tasks/:id/complete', () => {
       dueDateOffsetDays: 1,
     })
     mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
-    mocks.runStepFindManyMock
-      .mockResolvedValueOnce([{ phaseId: 'p1', status: 'pending' }])
-      .mockResolvedValueOnce([{ status: 'completed' }])
-    mocks.updateReturningMock
-      .mockResolvedValueOnce([
-        {
-          id: 'rs1',
-          runId: 'r1',
-          title: 'Order laptop',
-          status: 'completed',
-          dueDateOffsetDays: 1,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: 'r1',
-          type: 'onboarding',
-          employeeName: 'Jane Doe',
-          eventDate: '2026-08-01',
-          status: 'completed',
-        },
-      ])
+    mocks.runStepFindManyMock.mockResolvedValueOnce([{ phaseId: 'p1', status: 'pending' }])
+    mocks.completeRunStepMock.mockResolvedValue({
+      updatedStep: {
+        id: 'rs1',
+        runId: 'r1',
+        title: 'Order laptop',
+        status: 'completed',
+        dueDateOffsetDays: 1,
+      },
+      updatedRun: {
+        id: 'r1',
+        type: 'onboarding',
+        employeeName: 'Jane Doe',
+        eventDate: '2026-08-01',
+        status: 'completed',
+      },
+      stepsToDispatch: [],
+    })
 
     const res = await post('/rs1/complete')
 
     expect(res.status).toBe(200)
-    expect(mocks.updateSetMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ status: 'completed' }),
-    )
+    expect((await res.json()).status).toBe('completed')
+  })
+
+  it('dispatches automated steps that a manual completion just unlocked in the next phase', async () => {
+    memberSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 'rs1',
+      runId: 'r1',
+      phaseId: 'p1',
+      assigneeId: MEMBER_ID,
+      title: 'Order laptop',
+      dueDateOffsetDays: 1,
+    })
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
+    mocks.runStepFindManyMock.mockResolvedValueOnce([{ phaseId: 'p1', status: 'pending' }])
+    const dispatchable = { id: 'rs2', phaseId: 'p2', type: 'automated', status: 'pending' }
+    mocks.completeRunStepMock.mockResolvedValue({
+      updatedStep: { id: 'rs1', runId: 'r1', title: 'Order laptop', status: 'completed' },
+      updatedRun: { id: 'r1', type: 'onboarding', employeeName: 'Jane Doe', status: 'in_progress' },
+      stepsToDispatch: [dispatchable],
+    })
+
+    await post('/rs1/complete')
+
+    expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledWith(ORG_ID, [dispatchable])
   })
 })

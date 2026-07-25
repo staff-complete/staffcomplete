@@ -4,6 +4,7 @@ import {
   getAutomatedAction,
   isAutomatedActionKey,
   parseAutomatedActionConfig,
+  substituteAutomationTokens,
 } from './automation.js'
 
 const VALID_EMAIL_CONFIG = {
@@ -51,5 +52,42 @@ describe('parseAutomatedActionConfig', () => {
       extra: 'nope',
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('substituteAutomationTokens', () => {
+  const VALUES = {
+    employeeName: 'Jane Doe',
+    employeeEmail: 'jane@example.com',
+    employeeRole: 'Engineer',
+    eventDate: '2026-08-01',
+  }
+
+  it('fills in all four tokens', () => {
+    const result = substituteAutomationTokens(
+      'Hi [employeeName] ([employeeRole]), starting [eventDate]. Reach us at [employeeEmail].',
+      VALUES,
+    )
+    expect(result).toBe(
+      'Hi Jane Doe (Engineer), starting 2026-08-01. Reach us at jane@example.com.',
+    )
+  })
+
+  it('leaves a template with no tokens unchanged', () => {
+    expect(substituteAutomationTokens('Welcome aboard!', VALUES)).toBe('Welcome aboard!')
+  })
+
+  it('leaves an unrecognized bracketed token alone', () => {
+    expect(substituteAutomationTokens('Hi [firstName]', VALUES)).toBe('Hi [firstName]')
+  })
+
+  it('replaces every occurrence of a repeated token', () => {
+    expect(substituteAutomationTokens('[employeeName], welcome [employeeName]!', VALUES)).toBe(
+      'Jane Doe, welcome Jane Doe!',
+    )
+  })
+
+  it('substitutes a token used as the recipient address', () => {
+    expect(substituteAutomationTokens('[employeeEmail]', VALUES)).toBe('jane@example.com')
   })
 })

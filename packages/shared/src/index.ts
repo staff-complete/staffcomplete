@@ -8,7 +8,7 @@ export {
   textDirection,
 } from './locale.js'
 export type { Locale } from './locale.js'
-export type { Job, JobHandler, Queue } from './queue.js'
+export type { EnqueueOptions, Job, JobHandler, Queue } from './queue.js'
 export { computeUnlockedPhaseIds, isStepLocked } from './phase.js'
 export type { PhaseOrder, PhaseScopedStep } from './phase.js'
 export {
@@ -17,8 +17,9 @@ export {
   getAutomatedAction,
   isAutomatedActionKey,
   parseAutomatedActionConfig,
+  substituteAutomationTokens,
 } from './automation.js'
-export type { AutomatedActionKey, EmailSendConfig } from './automation.js'
+export type { AutomatedActionKey, AutomationTokenValues, EmailSendConfig } from './automation.js'
 export { createRunSchema } from './run.js'
 export type { CreateRunInput } from './run.js'
 export { computeDueDate, isTaskOverdue } from './task.js'
