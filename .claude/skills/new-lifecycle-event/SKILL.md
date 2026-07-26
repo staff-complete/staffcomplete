@@ -1,3 +1,9 @@
+---
+name: new-lifecycle-event
+description: Add a new employee lifecycle event type (beyond onboarding/role_change/offboarding) across every touch point - shared schema, API route, workflow stub, integration handlers, CLAUDE.md. Only invoke when explicitly asked to add a new event type, since it's a multi-file domain expansion.
+disable-model-invocation: true
+---
+
 # Skill: new-lifecycle-event
 
 Add a new lifecycle event type with all required touch points across the codebase.

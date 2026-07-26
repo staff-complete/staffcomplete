@@ -1,3 +1,10 @@
+---
+name: new-feature
+description: Create and check out a new feature/fix/chore branch off main, without a GitHub issue behind it. Only invoke when explicitly asked to start new work, since it creates a branch. For work tied to an existing issue, use start-issue instead.
+disable-model-invocation: true
+allowed-tools: Bash(git fetch origin main), Bash(git checkout -b * origin/main)
+---
+
 # Skill: new-feature
 
 Set up a new feature branch following the project's git strategy.
@@ -27,4 +34,4 @@ Set up a new feature branch following the project's git strategy.
 
 ## Scopes for commit messages
 
-`onboarding`, `offboarding`, `role-change`, `access`, `integrations`, `workflows`, `auth`, `api`, `db`, `config`
+See CLAUDE.md's Commit messages section for the current scope list.

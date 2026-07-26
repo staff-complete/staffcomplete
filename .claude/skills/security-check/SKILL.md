@@ -1,3 +1,9 @@
+---
+name: security-check
+description: Review the current diff for security issues specific to this project — hardcoded credentials, tenant isolation gaps, missing input validation, missing auth middleware, leaked secrets, vulnerable dependencies. Use before merging a PR, or when asked to check for security problems.
+allowed-tools: Bash(git diff *), Bash(pnpm audit *)
+---
+
 # Skill: security-check
 
 Review changed code for security issues specific to this project before merging.
@@ -20,8 +26,8 @@ Flag any strings matching patterns: `sk_`, `ghp_`, `xoxb-`, `AIza`, passwords, c
 
 For every new or modified database query:
 
-- Confirm `tenantId` is used as a filter
-- Confirm RLS policies cover new tables (check `apps/api/src/db/rls.ts`)
+- Confirm `organizationId` is used as a filter
+- Confirm RLS policies cover new tables — there's no separate `rls.ts` file; policies are defined inline per-table in `apps/api/src/db/schema.ts` via `pgPolicy(...)` + `.enableRLS()`
 - Flag any query that could return cross-tenant data
 
 ### 3. Input validation

@@ -1,3 +1,9 @@
+---
+name: new-workflow
+description: Scaffold a new lifecycle workflow module (steps, orchestration, tests) triggered by a lifecycle event, following the project's event-driven pattern. Only invoke when explicitly asked to add a new workflow, since it creates files and registers the module.
+disable-model-invocation: true
+---
+
 # Skill: new-workflow
 
 Scaffold a new lifecycle workflow following the project's event-driven pattern.

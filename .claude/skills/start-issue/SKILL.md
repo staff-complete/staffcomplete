@@ -1,3 +1,10 @@
+---
+name: start-issue
+description: Pick up a GitHub issue - fetch it, create a correctly-named branch, assign it to yourself, and mark it in progress. Only invoke when explicitly asked to start/pick up a specific issue, since it mutates GitHub state (assignee, labels).
+disable-model-invocation: true
+allowed-tools: Bash(gh issue view *), Bash(gh issue edit *), Bash(git fetch origin main), Bash(git checkout -b * origin/main)
+---
+
 # Skill: start-issue
 
 Pick up a GitHub issue and get a branch ready to code on.

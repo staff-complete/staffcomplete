@@ -1,3 +1,9 @@
+---
+name: ci-check
+description: Run spell check, lint, format check, type check, and tests locally in one pass — the same checks that run in GitHub Actions. Use before pushing or opening a PR, or when asked to verify the build is clean.
+allowed-tools: Bash(pnpm cspell), Bash(pnpm lint), Bash(pnpm format:check), Bash(pnpm typecheck), Bash(pnpm test)
+---
+
 # Skill: ci-check
 
 Run all CI checks locally before pushing to catch issues early.

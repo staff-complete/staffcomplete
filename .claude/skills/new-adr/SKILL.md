@@ -1,3 +1,9 @@
+---
+name: new-adr
+description: Create a new numbered Architecture Decision Record in docs/decisions/ and add it to the index. Only invoke when explicitly asked to write up a decision as an ADR, since it creates a file and edits the ADR index.
+disable-model-invocation: true
+---
+
 # Skill: new-adr
 
 Create a new Architecture Decision Record (ADR) for this project.

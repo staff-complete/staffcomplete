@@ -1,3 +1,9 @@
+---
+name: release-check
+description: Verify a feature branch is ready to merge into main — clean git status, rebased onto main, CI checks pass, commit messages follow Conventional Commits, commits are signed, and preview the next semantic-release version bump. Use before opening a PR or asking whether a branch is ready to merge.
+allowed-tools: Bash(git status), Bash(git fetch origin main), Bash(git rebase origin/main --dry-run), Bash(git log origin/main..HEAD*), Bash(git log *--show-signature*)
+---
+
 # Skill: release-check
 
 Verify the codebase is ready for release before merging to `main`.

@@ -1,3 +1,9 @@
+---
+name: new-integration
+description: Scaffold a new external SaaS integration module (client, handlers, types, tests) following the project's integration pattern. Only invoke when explicitly asked to add a new integration, since it creates files and registers the module.
+disable-model-invocation: true
+---
+
 # Skill: new-integration
 
 Scaffold a new external system integration following the project's integration pattern.

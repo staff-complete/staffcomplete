@@ -1,3 +1,10 @@
+---
+name: new-migration
+description: Generate a Drizzle migration for a schema.ts change, with multi-tenancy (organizationId + RLS policy) and statement-ordering checks enforced. Only invoke when explicitly asked to generate a migration, since it writes a migration file and may prompt interactively.
+disable-model-invocation: true
+allowed-tools: Bash(pnpm --filter api db:generate)
+---
+
 # Skill: new-migration
 
 Generate a new Drizzle database migration with multi-tenancy constraints enforced.
