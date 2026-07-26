@@ -1,6 +1,6 @@
 # ADR-0002: Frontend Stack
 
-- **Status:** accepted
+- **Status:** partially superseded by [ADR-0021](0021-plain-tailwind-ui-components.md) (UI component library only)
 - **Date:** 2026-06-27
 
 ## Context

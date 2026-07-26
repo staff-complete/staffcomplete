@@ -323,8 +323,8 @@ market gaps, and the 30–150 employee segment strategy. Used to inform roadmap 
 
 | Status          | Count   |
 | --------------- | ------- |
-| 🟢 MVP          | 29      |
-| 🔵 Post-MVP     | 42      |
-| 🟡 Future       | 61      |
-| ⚪ Out of scope | 10      |
-| **Total**       | **142** |
+| 🟢 MVP          | 32      |
+| 🔵 Post-MVP     | 49      |
+| 🟡 Future       | 78      |
+| ⚪ Out of scope | 11      |
+| **Total**       | **170** |

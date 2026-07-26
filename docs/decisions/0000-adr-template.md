@@ -1,6 +1,6 @@
 # ADR-XXXX: Title
 
-- **Status:** proposed | accepted | deprecated | superseded by [ADR-XXXX](XXXX-title.md)
+- **Status:** proposed | accepted | deprecated | superseded by [ADR-XXXX](XXXX-title.md) | partially superseded by [ADR-XXXX](XXXX-title.md) (scope)
 - **Date:** YYYY-MM-DD
 
 ## Context

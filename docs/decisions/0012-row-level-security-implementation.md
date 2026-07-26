@@ -3,6 +3,8 @@
 - **Status:** accepted
 - **Date:** 2026-07-11
 
+> **Note:** [ADR-0014](0014-multi-organization-user-accounts.md) re-keys everything below off Better Auth's `organization.id` instead of the hand-rolled `tenant.id` this ADR was written against. Every `tenant_id` / `app.tenant_id` / `tenantDb` reference here is now `organizationId` / `app.organization_id` / the same connection under that name — the mechanism (separate non-superuser role, per-transaction context via `set_config`, RLS policies) is unchanged, only the column/setting names are.
+
 ## Context
 
 ADR-0005 decided to use PostgreSQL Row-Level Security with a `tenant_id` column on every tenant-scoped table, so that "a misconfigured query cannot leak cross-tenant data." No RLS policies were ever added, though — the `invitation` table (and `user` before it) enforced tenant isolation entirely in application code (`WHERE tenantId = ?` in each handler).

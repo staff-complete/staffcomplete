@@ -207,12 +207,14 @@ How to contextualise the price on the landing page or in sales conversations:
 
 ## 7. What needs to change
 
+**Status: implemented.** `PricingSection.vue` already ships the flat $99/$299 pricing below — this table records the change that was made, not a still-open proposal.
+
 ### Landing page (PricingSection.vue)
 
-| Field               | Current                       | Recommended                                      |
+| Field               | Before (per-employee)         | Shipped (flat)                                   |
 | ------------------- | ----------------------------- | ------------------------------------------------ |
 | Starter price       | $3/employee/mo                | $99/mo                                           |
-| Starter priceNote   | /employee/mo                  | (remove)                                         |
+| Starter priceNote   | /employee/mo                  | (removed)                                        |
 | Starter billingNote | Billed annually               | Billed monthly · save 2 months annually          |
 | Starter tagline     | For teams up to 50 employees  | Up to 50 employees                               |
 | Growth price        | $6/employee/mo                | $299/mo                                          |
