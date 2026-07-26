@@ -13,6 +13,9 @@ import AppLogo from './AppLogo.vue'
         <a href="#how" class="text-[13.5px] font-medium text-gray-500">How it works</a>
         <a href="#features" class="text-[13.5px] font-medium text-gray-500">Features</a>
         <a href="#pricing" class="text-[13.5px] font-medium text-gray-500">Pricing</a>
+        <RouterLink to="/sign-in" class="text-[13.5px] font-medium text-gray-500"
+          >Sign in</RouterLink
+        >
         <RouterLink
           to="/sign-up"
           class="text-[13.5px] font-semibold text-white bg-brand-teal px-5 py-[9px] rounded-lg"
