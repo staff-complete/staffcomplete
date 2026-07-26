@@ -9,8 +9,11 @@
       "cache": false,
       "persistent": true
     },
-    "test": {},
+    "test": {
+      "dependsOn": ["^build"]
+    },
     "test:coverage": {
+      "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
     "typecheck": {
