@@ -1,315 +1,100 @@
 # CLAUDE.md
 
-This file defines guidance for AI agents working in this repository.
-
-## Project Overview
-
-This project is a SaaS platform for **employee lifecycle management**, including:
-
-- onboarding automation
-- offboarding automation
-- access provisioning and deprovisioning
-- role and permission changes across company systems
-- lifecycle event orchestration across HR + IT systems
-
-The system ensures that employee state changes are consistently reflected across all integrated tools (e.g. Google Workspace, Slack, GitHub, internal systems).
+AI agent guidance for this repository: a SaaS platform for **employee lifecycle management** — onboarding, offboarding, role changes, access provisioning/deprovisioning, and event-driven orchestration across HR + IT systems (Google Workspace, Slack, GitHub, and other integrated tools).
 
 ---
 
-## Development Environment
+## Development environment
 
-All development work — including CLI tools like `gh`, `kamal`, and `ruby`, not just app code — happens inside the devcontainer (`.devcontainer/`), never on the bare host machine. The devcontainer's `Dockerfile` already installs everything this project needs: `gh`, `ruby-full` + `kamal` (for deploy/infra work), Node 24, `pnpm`, `turbo`, and standard git/SSH tooling.
+**All development — including CLI tools like `gh`, `kamal`, `ruby`, not just app code — happens inside the devcontainer (`.devcontainer/`), never on the bare host.** The Dockerfile already installs everything needed: `gh`, `ruby-full` + `kamal`, Node 24, `pnpm`, `turbo`, git/SSH tooling.
 
-**If a tool needed for a task isn't available, that's a signal you're not in the devcontainer — not a reason to `brew install` or `apt-get install` it onto the host.** Installing tooling ad-hoc on the host is easy to get subtly wrong (e.g. a host Postgres role or Ruby version diverging from what the container/CI actually uses) and leaves nothing for the next session or the next person. If something is genuinely missing from the devcontainer itself, add it to `.devcontainer/Dockerfile` so it's versioned and available to everyone, rather than installing it once, locally, ad-hoc.
-
----
-
-## Tech Stack
-
-| Layer              | Choice                                                        |
-| ------------------ | ------------------------------------------------------------- |
-| Monorepo           | pnpm workspaces + Turborepo                                   |
-| Frontend           | Vue 3 + Vite + Tailwind + Pinia + TanStack Query + Vue Router |
-| UI components      | Shadcn/vue                                                    |
-| Backend            | Hono + zod-validator + zod-openapi                            |
-| API layer          | tRPC                                                          |
-| Validation         | Zod                                                           |
-| Database           | PostgreSQL + Drizzle + drizzle-kit                            |
-| Job queue          | pg-boss (abstracted behind interface)                         |
-| Auth               | Better Auth                                                   |
-| Payments           | Stripe (subscriptions, webhooks, customer portal)             |
-| Email              | Resend                                                        |
-| Date/time          | date-fns                                                      |
-| Logging            | Pino + Loki + Grafana                                         |
-| Error tracking     | Grafana Faro                                                  |
-| Testing            | Vitest (unit tests only, no E2E)                              |
-| Linting            | oxlint                                                        |
-| Formatting         | oxfmt                                                         |
-| Spell checking     | cspell                                                        |
-| Type checking      | vue-tsc + tsc                                                 |
-| Code quality       | Codacy                                                        |
-| Security scanning  | CodeQL                                                        |
-| Environment        | dotenv                                                        |
-| Containerization   | Docker (multi-stage build)                                    |
-| Container registry | GHCR                                                          |
-| VPS                | Hetzner                                                       |
-| Reverse proxy      | Traefik                                                       |
-| Deployment         | Kamal                                                         |
-| CI/CD              | GitHub Actions                                                |
-| Commit validation  | commitlint + husky                                            |
-| Releases           | Semantic Release                                              |
+If a tool seems missing, that means you're not in the devcontainer — it is not a reason to `brew`/`apt-get install` it onto the host. If something is genuinely missing from the devcontainer, add it to `.devcontainer/Dockerfile` so it's versioned for everyone.
 
 ---
 
-## Monorepo Structure
+## Architecture
 
-```
-apps/
-  web/          # Vue 3 frontend (SPA)
-  api/          # Hono backend
-packages/
-  shared/       # Zod schemas and shared types — source of truth for both apps
-docs/
-  decisions/    # Architecture Decision Records
+- **Monorepo**: pnpm workspaces + Turborepo. `apps/web` (Vue 3 SPA), `apps/api` (Hono), `packages/shared` (Zod schemas — source of truth for types used by both apps), `docs/decisions` (ADRs).
+- **Non-default tooling** worth knowing before reaching for the usual default: **oxlint**/**oxfmt** (not ESLint/Prettier), **Vitest** for unit tests only (no E2E — don't add Playwright/Cypress), **tRPC** on top of Hono, **Better Auth** (not Auth.js/Passport), **Kamal** deploys to Hetzner via GHCR + Traefik, **Drizzle**/drizzle-kit for Postgres, **pg-boss** behind a `Queue` interface.
+- Full rationale for stack and architecture decisions lives in `docs/decisions/` (ADRs, indexed at `docs/decisions/README.md`). Read the relevant ADR before proposing changes to architecture, integrations, or the core domain model. **ADRs are immutable** — never edit one; create a new one that supersedes it (or use the `new-adr` skill).
+
+### Core Domain Model
+
+**Employee Lifecycle Events**: `onboarding` · `role_change` · `offboarding`
+
+**System Concepts**: Employee, Access Control, Integrations (external SaaS tools), Workflows, Event-driven automation
+
+---
+
+## Multi-tenancy — read before touching the schema
+
+- PostgreSQL **Row-Level Security (RLS)** enforces tenant isolation at the database level — never rely on application-level filtering alone.
+- Every tenant-scoped table needs an **`organizationId`** column (`NOT NULL`, FK to `organization.id`) and an inline RLS policy defined in `apps/api/src/db/schema.ts` (`pgPolicy(...)` + `.enableRLS()`), keyed off `current_setting('app.organization_id', true)`. There's no separate `rls.ts` file.
+- The column is `organizationId`, **not** `tenant_id` — ADR-0005 and ADR-0014 still use "tenant" as the conceptual term, but the actual FK target is Better Auth's `organization` table, not a hand-rolled `tenant` table.
+- Use the `new-migration` skill for schema changes — it enforces this checklist and knows about drizzle-kit's interactive-prompt/statement-ordering pitfalls.
+
+---
+
+## Git workflow
+
+Trunk-based, no `dev` branch or staging environment (ADR-0013). `main` is the only long-lived branch — every merge triggers Semantic Release (changelog + GitHub Release) and a production Kamal deploy.
+
+- **Signed commits required** (SSH signing, not GPG). **Rebase only** — no merge commits; linear history is enforced on `main`.
+- Create branches with the `start-issue` or `new-feature` skill, which apply the right `feat/`·`fix/`·`chore/`·`docs/` prefix.
+- **Never commit directly to `main`.**
+- **A PR must exist before pushing to `main`** — the branch ruleset only fast-forwards commits that belong to an open PR targeting `main`. Create the PR first: `gh pr create --base main`.
+- **Never disable the ruleset** to force through a rejected push — a rejection means one of the rules above was broken; fix the process, not the protection.
+
+**Merging a PR** (the `gh` token here lacks merge permissions, so merge locally):
+
+```sh
+git checkout main && git pull origin main
+git merge <branch>   # fast-forward only, no merge commit
+git push origin main
 ```
 
----
+### Commit messages
 
-## Core Domain Model
+[Conventional Commits](https://www.conventionalcommits.org/), **one type per commit** — never combine multiple `type: ...` concerns in one commit.
 
-### Employee Lifecycle Events
+Types: `feat` `fix` `refactor` `test` `docs` `chore` `ci` `perf` `style` `revert`
+Scopes: `onboarding` `offboarding` `role-change` `access` `integrations` `workflows` `auth` `api` `db` `config` (kebab-case in commits — the `role_change` lifecycle-event enum value itself is snake_case in code)
 
-- `onboarding`
-- `role_change`
-- `offboarding`
-
-### System Concepts
-
-- Employee
-- Access Control
-- Integrations (external SaaS tools)
-- Workflows
-- Event-driven automation
+- Subject ≤ 72 chars, lowercase, imperative mood, no trailing period
+- Breaking change: `!` after type/scope, plus a `BREAKING CHANGE:` footer
+- No `Co-authored-by: Claude` or other AI-attribution trailers
 
 ---
 
-## Multi-Tenancy
+## Issues
 
-The platform is multi-tenant using PostgreSQL Row-Level Security (RLS).
+Tracked as **GitHub Issues** only — no external tool. New issues auto-add to the [project board](https://github.com/orgs/staff-complete/projects/1); closing/updating an issue moves it there automatically, but you must update the issue **label** and board **status** together — one doesn't push to the other.
 
-- **Every tenant-scoped table must have a `tenant_id` column** — this is enforced from day one and cannot be retrofitted cheaply
-- RLS policies enforce isolation at the database level — do not rely solely on application-level filtering
-- See [ADR-0005](docs/decisions/0005-multi-tenancy.md) for full rationale
+| Type         | Template   | Use for                                            |
+| ------------ | ---------- | -------------------------------------------------- |
+| `user-story` | User Story | New capability from the HR user's perspective      |
+| `bug`        | Bug Report | Something broken in production or staging          |
+| `spike`      | Spike      | Time-boxed research with a defined question/output |
+| `chore`      | (none)     | Maintenance, refactoring, tooling                  |
+
+Labels: priority (`P0`–`P3`) · area (`area: <domain>`) · status (`needs-triage` → `status: ready` → `status: in-progress` → `status: blocked`/`wont-fix`/`released`) · severity, bugs only (`severity: critical|high|medium|low`).
+
+An issue is `status: ready` once it has a priority, an area label, and acceptance criteria clear enough to start without more questions (severity too, for bugs). Board status: Backlog = `needs-triage`, Ready = `status: ready`, In progress = `status: in-progress`, Done = closed.
+
+Pick up an issue with `gh issue develop <n> --checkout`, or the `start-issue` skill. PRs reference the issue (`Closes #n`).
+
+---
+
+## Testing & code quality
+
+- **Vitest** — unit/integration tests only, no E2E. Tests live alongside source or in `__tests__`.
+- `pnpm test` / `pnpm test:coverage` · `pnpm lint` (oxlint) · `pnpm format:check` (oxfmt) · `pnpm typecheck` (vue-tsc for `apps/web`, tsc for `apps/api`/`packages/shared`) · `pnpm cspell`
+- All must pass before merging — run the `ci-check` skill locally to catch failures before pushing; Codacy and CodeQL also run automatically on PRs.
 
 ---
 
 ## Skills
 
-Project-specific skills are in `.claude/skills/`. Use them for common tasks:
+`.claude/skills/` covers most recurring workflows — prefer these over doing the equivalent steps by hand:
 
-| Skill                 | Purpose                                                                    |
-| --------------------- | -------------------------------------------------------------------------- |
-| `start-issue`         | Pick up a GitHub issue: create branch, assign yourself, mark in progress   |
-| `new-adr`             | Create a new ADR with correct numbering and update the index               |
-| `new-feature`         | Set up a feature branch with correct naming and reminders                  |
-| `ci-check`            | Run spell check, lint, format, typecheck, and tests locally before pushing |
-| `new-integration`     | Scaffold a new external integration module                                 |
-| `new-workflow`        | Scaffold a new lifecycle workflow                                          |
-| `new-lifecycle-event` | Add a new lifecycle event type across all touch points                     |
-| `new-migration`       | Generate a Drizzle migration with multi-tenancy checks                     |
-| `release-check`       | Verify the branch is ready to merge and open a PR                          |
-| `security-check`      | Review changed code for credentials, tenant isolation, and auth gaps       |
-
----
-
-## Architecture Decision Records (ADRs)
-
-Architectural decisions are documented in `docs/decisions/`. Before proposing changes to the architecture, integrations, or core domain model, read the relevant ADRs to understand prior context and constraints.
-
-- Index: [docs/decisions/README.md](docs/decisions/README.md)
-- Template: [docs/decisions/0000-adr-template.md](docs/decisions/0000-adr-template.md)
-- ADRs are immutable — never edit a past decision; create a new one that supersedes it
-- When a decision you make would be worth recording, suggest creating an ADR
-
----
-
-## Git Strategy
-
-Trunk-based — see [ADR-0013](docs/decisions/0013-trunk-based-single-environment.md) for why there's no `dev` branch or environment.
-
-- **Signed commits required** — all commits must be signed (SSH signing, not GPG)
-- **Rebase only** — no merge commits; rebase feature branches onto `main`
-- **Linear history** — enforced on `main` via branch protection
-- **PR required** — no direct pushes to `main`
-
-### Branch model
-
-```
-feature/* ──► main ──► staffcomplete.io (+ GitHub Release)
-```
-
-- **Feature branches** target `main`. All development goes here — there is no integration branch.
-- **`main`** is the only long-lived branch. Every merge triggers Semantic Release and a production Kamal deploy.
-- Ship small, frequent PRs rather than batching changes — there's no staging environment to catch problems before they're live, and `kamal rollback` is the safety net, not a pre-prod buffer.
-
-### Merging a PR (feature → main)
-
-The `gh` CLI token in this environment lacks merge permissions. Merge PRs locally:
-
-```sh
-git checkout main
-git pull origin main
-git merge <branch>   # fast-forward only; no merge commits
-git push origin main
-```
-
-**Critical rules — the push will be rejected if either is violated:**
-
-1. **Never commit directly to `main`.** All work must be on a `feature/*` or `fix/*` branch.
-2. **A PR must exist before pushing.** The GitHub ruleset allows fast-forward pushes to `main`
-   only when the commits being pushed belong to an open PR targeting `main`. Create the PR with
-   `gh pr create --base main` before running `git push origin main`.
-3. **Never disable rulesets** to work around a rejected push — a rejected push means one of the
-   above rules was broken. Fix the process, not the protection.
-
-Merging to `main` immediately triggers Semantic Release (GitHub release + changelog) and a production Kamal deploy — there's no separate "release" step.
-
----
-
-## Testing
-
-- **Vitest** for unit and integration tests
-- **No E2E tests** — unit tests only
-- Tests live alongside source files or in a `__tests__` directory within each app/package
-
----
-
-## Code Quality
-
-- **oxlint** — linting; run `pnpm lint` to check
-- **oxfmt** — formatting; run `pnpm format:check` to check
-- **vue-tsc** — type checking for `apps/web`
-- **tsc** — type checking for `apps/api` and `packages/shared`
-- All checks must pass before merging; Codacy and CodeQL run automatically on PRs
-
----
-
-## Commit Message Convention
-
-All commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-<type>(<scope>): <short description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-**Types:**
-
-- `feat` — new feature
-- `fix` — bug fix
-- `refactor` — code change that is neither a fix nor a feature
-- `test` — adding or updating tests
-- `docs` — documentation only
-- `chore` — build process, tooling, dependencies
-- `ci` — CI/CD configuration
-- `perf` — performance improvement
-- `style` — formatting, whitespace (no logic change)
-- `revert` — reverts a previous commit
-
-**Scopes** (optional, use the affected domain area):
-
-- `onboarding`, `offboarding`, `role-change`
-- `access`, `integrations`, `workflows`
-- `auth`, `api`, `db`, `config`
-
-> Note: lifecycle event enum values use `snake_case` (e.g. `role_change`) in code, but commit scopes use `kebab-case` (e.g. `role-change`) per Conventional Commits convention.
-
-**Examples:**
-
-```
-feat(onboarding): add Slack workspace provisioning step
-fix(access): correct deprovisioning order for GitHub org removal
-chore(deps): bump @types/node to 20.x
-```
-
-**Rules:**
-
-- Subject line ≤ 72 characters, lowercase, no trailing period
-- Use imperative mood ("add", not "added" or "adds")
-- Breaking changes: append `!` after the type/scope and add a `BREAKING CHANGE:` footer
-- **One type per commit** — never combine multiple `type: ...` lines into a single commit message. If changes span multiple concerns, create separate commits.
-- **No AI co-author trailers** — do not add `Co-authored-by: Claude` or any AI attribution to commit messages.
-
----
-
-## Issue Tracking
-
-All user stories, bugs, and spikes are tracked as **GitHub Issues**. No external tool.
-
-### Issue types
-
-| Type         | Template      | Use for                                                |
-| ------------ | ------------- | ------------------------------------------------------ |
-| `user-story` | User Story    | New capabilities from the HR user's perspective        |
-| `bug`        | Bug Report    | Something broken in production or staging              |
-| `spike`      | Spike         | Time-boxed research with a defined question and output |
-| `chore`      | (plain issue) | Maintenance, refactoring, tooling — no template needed |
-
-### Labels
-
-**Type** — one of: `user-story` · `bug` · `spike` · `chore` · `docs`
-
-**Priority** — one of: `P0` · `P1` · `P2` · `P3`
-
-**Area** — one of: `area: onboarding` · `area: offboarding` · `area: role-change` · `area: access` · `area: integrations` · `area: workflows` · `area: auth` · `area: api` · `area: db` · `area: config` · `area: web`
-
-**Status** — one of: `needs-triage` → `status: ready` → `status: in-progress` → `status: blocked` / `status: wont-fix` / `released`
-
-**Severity** (bugs only) — one of: `severity: critical` · `severity: high` · `severity: medium` · `severity: low`
-
-### Workflow
-
-1. File an issue using the appropriate template
-2. Triage: add priority, area, and severity labels; remove `needs-triage`; add `status: ready`
-3. Pick up: assign to yourself, add `status: in-progress`, create branch with `gh issue develop <n>`
-4. Deliver: open a PR referencing the issue (`Closes #n`); merge via the documented PR process
-5. Close: issue closes automatically when the PR merges; add `released` when shipped to production
-
-### Triage criteria
-
-An issue moves from `needs-triage` to `status: ready` when all three are true:
-
-1. Priority label is set (`P0` / `P1` / `P2` / `P3`)
-2. Area label is set (`area: *`)
-3. Acceptance criteria are clear enough to start without further questions
-
-Remove `needs-triage` and add `status: ready` when triaged. For bugs, severity must also be set.
-
-### Project board
-
-Issues are also tracked in the [GitHub Project board](https://github.com/orgs/staff-complete/projects/1). The board is a view on top of repo issues — closing or updating an issue updates the board automatically. No data is duplicated.
-
-The board has a custom **Priority tier** field (P0 / P1 / P2 / P3) and uses the built-in **Status** column (Backlog → Ready → In progress → In review → Done).
-
-**Auto-add**: the project is configured to add new issues automatically. Any issue opened in this repo lands in the board backlog without manual action.
-
-**Status mapping**:
-
-| Board status | Issue label           |
-| ------------ | --------------------- |
-| Backlog      | `needs-triage`        |
-| Ready        | `status: ready`       |
-| In progress  | `status: in-progress` |
-| Done         | (closed by PR merge)  |
-
-Keep the issue label and the board status in sync when picking up or completing work.
-
-### Branch naming from issues
-
-```sh
-gh issue develop <issue-number> --checkout
-# creates and checks out: <number>-short-issue-title
-```
+`start-issue` · `new-feature` · `new-adr` · `new-integration` · `new-workflow` · `new-lifecycle-event` · `new-migration` · `ci-check` · `release-check` · `security-check`
