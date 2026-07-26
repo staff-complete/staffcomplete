@@ -1,0 +1,38 @@
+name: Coverage
+
+on:
+  workflow_call:
+    secrets:
+      CODACY_PROJECT_TOKEN:
+        required: true
+
+jobs:
+  coverage:
+    name: Upload coverage to Codacy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:coverage
+      - name: Rewrite coverage source paths to be repo-root-relative
+        # vitest writes SF: entries relative to each package's own root
+        # (e.g. `SF:src/auth.ts`), not the monorepo root — Codacy matches
+        # coverage against real repo paths, so apps/api/coverage/lcov.info,
+        # apps/web/coverage/lcov.info, and packages/shared/coverage/lcov.info
+        # all report against a nonexistent top-level `src/`, and their
+        # identically-named files (e.g. every package has a src/index.ts)
+        # would collide if uploaded as-is.
+        run: |
+          sed -i 's|^SF:|SF:apps/api/|' apps/api/coverage/lcov.info
+          sed -i 's|^SF:|SF:apps/web/|' apps/web/coverage/lcov.info
+          sed -i 's|^SF:|SF:packages/shared/|' packages/shared/coverage/lcov.info
+      - name: Upload coverage to Codacy
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: '**/lcov.info'

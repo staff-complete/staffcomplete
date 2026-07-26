@@ -5,6 +5,11 @@ on:
     branches: [main]
 
 jobs:
+  coverage:
+    name: Coverage
+    uses: ./.github/workflows/coverage.yml
+    secrets: inherit
+
   release:
     name: Create release
     runs-on: ubuntu-latest
