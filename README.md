@@ -2,79 +2,22 @@
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/ca00fbb9714f490483fdf1363f8fd8d1)](https://app.codacy.com/gh/staff-complete/staffcomplete/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/ca00fbb9714f490483fdf1363f8fd8d1)](https://app.codacy.com/gh/staff-complete/staffcomplete/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
+
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
+
 A SaaS platform for automating the full employee lifecycle across company systems — from onboarding to offboarding and everything in between.
+
+> Every employee state change should automatically reflect across all company systems — safely, consistently, and with a full audit trail.
 
 ---
 
 ## What this project does
 
-This system helps companies automatically manage:
-
 - Employee onboarding
 - Role and permission changes
 - Offboarding and access removal
-- Cross-system provisioning (Google Workspace, Slack, GitHub, etc.)
-
-It ensures that employee lifecycle changes are consistently applied across all connected tools.
-
----
-
-## Core idea
-
-> Every employee state change should automatically reflect across all company systems — safely, consistently, and auditable.
-
----
-
-## Tech Stack
-
-| Layer         | Choice                                                        |
-| ------------- | ------------------------------------------------------------- |
-| Monorepo      | pnpm workspaces + Turborepo                                   |
-| Frontend      | Vue 3 + Vite + Tailwind + Pinia + TanStack Query + Vue Router |
-| UI components | Shadcn/vue                                                    |
-| Backend       | Hono + tRPC + Zod                                             |
-| Database      | PostgreSQL + Drizzle                                          |
-| Job queue     | pg-boss                                                       |
-| Auth          | Better Auth                                                   |
-| Deployment    | Docker + Kamal + Hetzner                                      |
-| CI/CD         | GitHub Actions                                                |
-
-See [docs/decisions/](docs/decisions/README.md) for the full architecture rationale.
-
----
-
-## Project Structure
-
-```
-apps/
-  web/          # Vue 3 frontend (SPA)
-  api/          # Hono backend
-packages/
-  shared/       # Zod schemas and shared types
-docs/
-  decisions/    # Architecture Decision Records (ADRs)
-```
-
----
-
-## Prerequisites
-
-- [Docker](https://www.docker.com/) — for the devcontainer
-- [VS Code](https://code.visualstudio.com/) + [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-
-All other tools (Node.js, pnpm, etc.) are provided inside the devcontainer.
-
----
-
-## Local Development
-
-1. Clone the repository
-2. Open in VS Code — it will prompt to reopen in the devcontainer
-3. The devcontainer runs `pnpm install` automatically on creation
-4. Start the API: `pnpm --filter api dev`
-5. Start the frontend: `pnpm --filter web dev`
-
----
+- Cross-system provisioning (Google Workspace, Slack, GitHub, and other integrated tools)
 
 ## Key Features
 
@@ -98,30 +41,54 @@ All other tools (Node.js, pnpm, etc.) are provided inside the devcontainer.
 
 ---
 
+## System Architecture
+
+| Layer      | Choice                                                       |
+| ---------- | ------------------------------------------------------------ |
+| Frontend   | Vue 3 + Tailwind + Pinia + TanStack Query                    |
+| Backend    | Hono + tRPC + Zod                                            |
+| Database   | PostgreSQL + Drizzle, tenant-isolated via Row-Level Security |
+| Job queue  | pg-boss                                                      |
+| Auth       | Better Auth                                                  |
+| Deployment | Docker + Kamal on Hetzner                                    |
+
+Full rationale for each choice — including alternatives considered — is recorded in [docs/decisions/](docs/decisions/README.md) (ADRs).
+
+**Data flow:** a lifecycle event (onboarding / role change / offboarding) is raised → queued by the workflow engine (pg-boss) → dispatched to per-system integration handlers (Google Workspace, Slack, GitHub, …) → every step is recorded for audit.
+
 ## Design Principles
 
-- Event-driven architecture
-- Integration-first approach
-- Secure-by-default operations
-- Full audit logging of lifecycle events
-- Idempotent workflows (safe retries)
-- Multi-tenant with PostgreSQL Row-Level Security
+- Event-driven, integration-first architecture
+- Secure by default: least-privilege access, automatic revocation on offboarding, no hardcoded credentials
+- Full audit trail of every lifecycle action
+- Idempotent workflows — safe to retry
+- Multi-tenant, isolated at the database level (PostgreSQL RLS)
 
 ---
 
-## Security
+## Getting Started
 
-- Least privilege access model
-- Automatic revocation on offboarding
-- No hardcoded credentials
-- Full audit trail of all actions
+### Prerequisites
+
+- [Docker](https://www.docker.com/) — for the devcontainer
+- [VS Code](https://code.visualstudio.com/) + [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+All other tooling (Node.js, pnpm, etc.) is provided inside the devcontainer.
+
+### Local Development
+
+1. Clone the repository
+2. Open in VS Code — it will prompt to reopen in the devcontainer
+3. The devcontainer runs `pnpm install` automatically on creation
+4. Start the API: `pnpm --filter api dev`
+5. Start the frontend: `pnpm --filter web dev`
 
 ---
 
 ## Contributing
 
-- Read [CLAUDE.md](CLAUDE.md) for AI agent guidance and coding conventions
-- Read [docs/decisions/](docs/decisions/README.md) before proposing architectural changes
-- All commits must follow [Conventional Commits](https://www.conventionalcommits.org/)
-- All commits must be GPG signed
-- Work in feature branches — rebase onto `main`, open a PR, no direct pushes
+Contributions go through feature-branch PRs against `main`, following [Conventional Commits](https://www.conventionalcommits.org/). For exact branch naming, commit scopes, commit-signing setup, and CI commands, see [CLAUDE.md](CLAUDE.md) — the single source of truth for repo workflow, kept in sync with the skills in `.claude/skills/`.
+
+## License
+
+[Business Source License 1.1](LICENSE.md) — © Andrew Molyuk
