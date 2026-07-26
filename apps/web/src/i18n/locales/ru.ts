@@ -342,6 +342,7 @@ const ru = {
       statusStepPending: 'Ожидает',
       phaseLocked: 'Заблокировано',
       phaseLockedHint: 'Разблокируется после завершения предыдущего этапа',
+      reassignAriaLabel: 'Переназначить ответственного',
       notFound: 'Процесс не найден.',
     },
   },

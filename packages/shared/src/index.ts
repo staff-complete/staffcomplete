@@ -20,8 +20,8 @@ export {
   substituteAutomationTokens,
 } from './automation.js'
 export type { AutomatedActionKey, AutomationTokenValues, EmailSendConfig } from './automation.js'
-export { createRunSchema } from './run.js'
-export type { CreateRunInput } from './run.js'
+export { createRunSchema, reassignRunStepSchema } from './run.js'
+export type { CreateRunInput, ReassignRunStepInput } from './run.js'
 export { computeDueDate, isTaskOverdue } from './task.js'
 export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'
 export type { TrialState } from './trial.js'

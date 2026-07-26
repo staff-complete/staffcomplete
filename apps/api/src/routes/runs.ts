@@ -7,6 +7,7 @@ import {
   createRunSchema,
   isStepLocked,
   isTaskOverdue,
+  reassignRunStepSchema,
 } from '@staffcomplete/shared'
 import { withTenant } from '../db/index.js'
 import {
@@ -19,6 +20,7 @@ import {
   workflowTemplatePhaseDependency,
   workflowTemplateStep,
 } from '../db/schema.js'
+import { assertValidAssignee } from '../lib/assignee.js'
 import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'
 import { requireAdmin } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
@@ -356,5 +358,65 @@ runsRouter.post(
       },
       201,
     )
+  },
+)
+
+// Reassigns who's responsible for a manual step on an already-started run.
+// Mirrors workflowsRouter's PATCH .../steps/:stepId (template-step editing)
+// but scoped to what a run actually needs: only assigneeId can change here —
+// a run's steps are a frozen copy of the template (see the `run` comment in
+// schema.ts), so title/phase/action/config are fixed once the run starts.
+runsRouter.patch(
+  '/:id/steps/:stepId',
+  zValidator('json', reassignRunStepSchema),
+  blockMutationsWhenExpired(),
+  async (c) => {
+    const session = await requireAdmin(c)
+    if (!session) {
+      return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
+    }
+
+    const runId = c.req.param('id')
+    const stepId = c.req.param('stepId')
+    const { assigneeId } = c.req.valid('json')
+
+    if (assigneeId && !(await assertValidAssignee(assigneeId, session.organizationId))) {
+      return c.json({ code: 'INVALID_ASSIGNEE', message: 'Assignee is not a team member.' }, 400)
+    }
+
+    const updated = await withTenant(session.organizationId, async (tx) => {
+      const existing = await tx.query.runStep.findFirst({
+        where: eq(runStep.id, stepId),
+        columns: { id: true, runId: true, type: true, status: true },
+      })
+      if (!existing || existing.runId !== runId) {
+        return null
+      }
+      if (existing.type !== 'manual') {
+        return 'TYPE_MISMATCH' as const
+      }
+      if (existing.status === 'completed') {
+        return 'STEP_COMPLETED' as const
+      }
+
+      const [row] = await tx
+        .update(runStep)
+        .set({ assigneeId })
+        .where(eq(runStep.id, stepId))
+        .returning()
+      return row
+    })
+
+    if (updated === 'TYPE_MISMATCH') {
+      return c.json({ code: 'TYPE_MISMATCH', message: 'Only manual steps can be reassigned.' }, 400)
+    }
+    if (updated === 'STEP_COMPLETED') {
+      return c.json({ code: 'STEP_COMPLETED', message: 'This step is already completed.' }, 400)
+    }
+    if (!updated) {
+      return c.json({ code: 'NOT_FOUND', message: 'Step not found.' }, 404)
+    }
+
+    return c.json({ id: updated.id, assigneeId: updated.assigneeId })
   },
 )

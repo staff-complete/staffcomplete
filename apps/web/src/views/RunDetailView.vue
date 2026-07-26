@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useQueryClient } from '@tanstack/vue-query'
 import { authClient } from '../lib/auth-client'
 import { useRunDetail } from '../composables/useRunDetail'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
@@ -14,6 +15,32 @@ const route = useRoute()
 const id = computed(() => route.params.id as string)
 
 const { data: run, isLoading } = useRunDetail(id.value)
+const queryClient = useQueryClient()
+const reassigningStepId = ref<string | null>(null)
+const reassignErrorStepId = ref<string | null>(null)
+const reassignError = ref('')
+
+async function reassignStep(stepId: string, assigneeId: string) {
+  reassignErrorStepId.value = null
+  reassignError.value = ''
+  reassigningStepId.value = stepId
+  try {
+    const res = await fetch(`/api/runs/${id.value}/steps/${stepId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assigneeId: assigneeId || null }),
+    })
+    if (res.ok) {
+      await queryClient.invalidateQueries({ queryKey: ['runs', id.value] })
+      return
+    }
+    const data = (await res.json()) as { message?: string }
+    reassignErrorStepId.value = stepId
+    reassignError.value = data.message ?? t('common.genericError')
+  } finally {
+    reassigningStepId.value = null
+  }
+}
 
 const completedCount = computed(
   () => run.value?.steps.filter((s) => s.status === 'completed').length ?? 0,
@@ -194,9 +221,22 @@ const typeLabel = computed(() =>
                 >
                   {{ step.title }}
                 </p>
-                <p class="mt-1 text-[13px] text-app-muted">
+                <p class="mt-1 flex items-center gap-1.5 text-[13px] text-app-muted">
                   <template v-if="step.type === 'manual'">
-                    {{ memberLabel(step.assigneeId) }}
+                    <select
+                      v-if="step.status !== 'completed'"
+                      :aria-label="t('runs.detail.reassignAriaLabel')"
+                      :value="step.assigneeId ?? ''"
+                      :disabled="reassigningStepId === step.id"
+                      class="rounded-md border border-app-border bg-white px-1.5 py-0.5 text-[13px] text-app-muted outline-none disabled:opacity-50"
+                      @change="reassignStep(step.id, ($event.target as HTMLSelectElement).value)"
+                    >
+                      <option value="">{{ t('common.unassigned') }}</option>
+                      <option v-for="member in members" :key="member.id" :value="member.id">
+                        {{ member.user.name }}
+                      </option>
+                    </select>
+                    <template v-else>{{ memberLabel(step.assigneeId) }}</template>
                     <template v-if="step.dueDate">{{
                       t('runs.detail.dueLabel', { date: step.dueDate })
                     }}</template>
@@ -204,6 +244,12 @@ const typeLabel = computed(() =>
                   <template v-else-if="step.action">{{
                     automatedActionLabel(step.action)
                   }}</template>
+                </p>
+                <p
+                  v-if="reassignErrorStepId === step.id"
+                  class="mt-1 text-[12px] text-app-danger-text"
+                >
+                  {{ reassignError }}
                 </p>
               </div>
               <span

@@ -342,6 +342,7 @@ const en = {
       statusStepPending: 'Pending',
       phaseLocked: 'Locked',
       phaseLockedHint: 'Unlocks once the previous phase is complete',
+      reassignAriaLabel: 'Reassign responsible person',
       notFound: 'Run not found.',
     },
   },

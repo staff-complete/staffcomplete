@@ -13,14 +13,14 @@ import {
   updateWorkflowTemplateSchema,
   wouldCreateCycle,
 } from '@staffcomplete/shared'
-import { db, withTenant } from '../db/index.js'
+import { withTenant } from '../db/index.js'
 import {
-  member,
   workflowTemplate,
   workflowTemplatePhase,
   workflowTemplatePhaseDependency,
   workflowTemplateStep,
 } from '../db/schema.js'
+import { assertValidAssignee } from '../lib/assignee.js'
 import { requireAdmin } from '../lib/session.js'
 import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
 
@@ -45,14 +45,6 @@ function serializeStep(step: typeof workflowTemplateStep.$inferSelect) {
     config: step.config,
     position: step.position,
   }
-}
-
-async function assertValidAssignee(assigneeId: string, organizationId: string): Promise<boolean> {
-  const assignee = await db.query.member.findFirst({
-    where: eq(member.id, assigneeId),
-    columns: { id: true, organizationId: true },
-  })
-  return !!assignee && assignee.organizationId === organizationId
 }
 
 workflowsRouter.get('/', async (c) => {

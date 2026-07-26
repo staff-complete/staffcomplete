@@ -13,10 +13,15 @@ const mocks = vi.hoisted(() => ({
   runPhaseFindManyMock: vi.fn(),
   runDependencyFindManyMock: vi.fn(),
   runStepFindManyMock: vi.fn(),
+  runStepFindFirstMock: vi.fn(),
   subscriptionFindFirstMock: vi.fn(),
   insertMock: vi.fn(),
   insertValuesMock: vi.fn(),
   insertReturningMock: vi.fn(),
+  updateMock: vi.fn(),
+  updateSetMock: vi.fn(),
+  updateWhereMock: vi.fn(),
+  updateReturningMock: vi.fn(),
   dispatchAutomatedStepsMock: vi.fn(),
 }))
 
@@ -30,10 +35,11 @@ function tx() {
       run: { findMany: mocks.runFindManyMock, findFirst: mocks.runFindFirstMock },
       runPhase: { findMany: mocks.runPhaseFindManyMock },
       runPhaseDependency: { findMany: mocks.runDependencyFindManyMock },
-      runStep: { findMany: mocks.runStepFindManyMock },
+      runStep: { findMany: mocks.runStepFindManyMock, findFirst: mocks.runStepFindFirstMock },
       subscription: { findFirst: mocks.subscriptionFindFirstMock },
     },
     insert: mocks.insertMock,
+    update: mocks.updateMock,
   }
 }
 
@@ -77,6 +83,14 @@ function postJson(path: string, body: unknown) {
   })
 }
 
+function patchJson(path: string, body: unknown) {
+  return req(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
 const VALID_RUN_INPUT = {
   workflowTemplateId: 't1',
   employeeName: 'Jane Doe',
@@ -97,6 +111,7 @@ beforeEach(() => {
   mocks.runPhaseFindManyMock.mockReset().mockResolvedValue([])
   mocks.runDependencyFindManyMock.mockReset().mockResolvedValue([])
   mocks.runStepFindManyMock.mockReset()
+  mocks.runStepFindFirstMock.mockReset()
   mocks.subscriptionFindFirstMock.mockReset().mockResolvedValue({
     status: 'trialing',
     trialEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -104,6 +119,10 @@ beforeEach(() => {
   mocks.insertMock.mockReset().mockReturnValue({ values: mocks.insertValuesMock })
   mocks.insertValuesMock.mockReset().mockReturnValue({ returning: mocks.insertReturningMock })
   mocks.insertReturningMock.mockReset()
+  mocks.updateMock.mockReset().mockReturnValue({ set: mocks.updateSetMock })
+  mocks.updateSetMock.mockReset().mockReturnValue({ where: mocks.updateWhereMock })
+  mocks.updateWhereMock.mockReset().mockReturnValue({ returning: mocks.updateReturningMock })
+  mocks.updateReturningMock.mockReset()
   mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
 })
 
@@ -610,5 +629,97 @@ describe('POST /api/runs', () => {
     expect(json.steps).toEqual([])
     expect(mocks.insertMock).toHaveBeenCalledTimes(1)
     expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledWith(ADMIN_ORG_ID, [])
+  })
+})
+
+describe('PATCH /api/runs/:id/steps/:stepId', () => {
+  it('returns 404 when the step does not belong to the run', async () => {
+    adminSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      runId: 'other-run',
+      type: 'manual',
+      status: 'pending',
+    })
+
+    const res = await patchJson('/r1/steps/s1', { assigneeId: 'm1' })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('rejects an assignee outside the tenant', async () => {
+    adminSession()
+    mocks.memberFindFirstMock.mockResolvedValueOnce({ role: 'admin', organizationId: ADMIN_ORG_ID })
+    mocks.memberFindFirstMock.mockResolvedValueOnce(null)
+
+    const res = await patchJson('/r1/steps/s1', { assigneeId: 'm1' })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('INVALID_ASSIGNEE')
+  })
+
+  it('rejects reassigning an automated step', async () => {
+    adminSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      runId: 'r1',
+      type: 'automated',
+      status: 'pending',
+    })
+
+    const res = await patchJson('/r1/steps/s1', { assigneeId: null })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('TYPE_MISMATCH')
+  })
+
+  it('rejects reassigning a completed step', async () => {
+    adminSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      runId: 'r1',
+      type: 'manual',
+      status: 'completed',
+    })
+
+    const res = await patchJson('/r1/steps/s1', { assigneeId: null })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('STEP_COMPLETED')
+  })
+
+  it('reassigns a pending manual step to a valid teammate', async () => {
+    adminSession()
+    mocks.memberFindFirstMock.mockResolvedValueOnce({ role: 'admin', organizationId: ADMIN_ORG_ID })
+    mocks.memberFindFirstMock.mockResolvedValueOnce({ id: 'm2', organizationId: ADMIN_ORG_ID })
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      runId: 'r1',
+      type: 'manual',
+      status: 'pending',
+    })
+    mocks.updateReturningMock.mockResolvedValue([{ id: 's1', assigneeId: 'm2' }])
+
+    const res = await patchJson('/r1/steps/s1', { assigneeId: 'm2' })
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ id: 's1', assigneeId: 'm2' })
+    expect(mocks.updateSetMock).toHaveBeenCalledWith({ assigneeId: 'm2' })
+  })
+
+  it('clears the assignee back to unassigned', async () => {
+    adminSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      runId: 'r1',
+      type: 'manual',
+      status: 'pending',
+    })
+    mocks.updateReturningMock.mockResolvedValue([{ id: 's1', assigneeId: null }])
+
+    const res = await patchJson('/r1/steps/s1', { assigneeId: null })
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ id: 's1', assigneeId: null })
   })
 })
