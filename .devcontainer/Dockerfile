@@ -20,8 +20,6 @@ RUN apt-get update \
     && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends \
        nodejs=24.16.0-1nodesource1 gh ruby-full build-essential ruby-dev \
-    && npm install -g pnpm @anthropic-ai/claude-code turbo \
-    && turbo telemetry disable \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -31,6 +29,14 @@ WORKDIR /home/dev
 
 ENV GEM_HOME="/home/dev/.gems"
 ENV PATH="${GEM_HOME}/bin:${PATH}"
+
+# User-owned npm global prefix so pnpm/claude-code/turbo (and Claude Code's
+# self-update, which does `npm install -g` at runtime) can write without root.
+ENV NPM_CONFIG_PREFIX="/home/dev/.npm-global"
+ENV PATH="${NPM_CONFIG_PREFIX}/bin:${PATH}"
+
+RUN npm install -g pnpm @anthropic-ai/claude-code turbo \
+    && turbo telemetry disable
 
 # Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
