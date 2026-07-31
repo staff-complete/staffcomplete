@@ -213,7 +213,12 @@ async function reorderPhase(phaseId: string, direction: 'up' | 'down') {
 // which only ran from inside an event handler after the template was
 // already up).
 const stepForms = reactive<Record<string, StepFormState>>({})
-const stepErrors = reactive<Record<string, string>>({})
+// A Map rather than an object: `stepErrors[phaseId]` with a runtime-string
+// key is the shape static analysis flags as a generic object-injection sink,
+// which ADR-0018 hit twice and resolved the same way. The key is a phase id
+// read back from our own API, so there's no real injection risk here —
+// Codacy just can't see that guarantee.
+const stepErrors = reactive(new Map<string, string>())
 const addingStepPhaseId = ref<string | null>(null)
 
 watch(
@@ -251,14 +256,14 @@ function onActionSelected(phaseId: string) {
 async function addStep(phaseId: string) {
   if (isReadOnly.value) return
   const form = stepFormFor(phaseId)
-  stepErrors[phaseId] = ''
+  stepErrors.set(phaseId, '')
 
   if (form.title.trim().length < 2) {
-    stepErrors[phaseId] = t('workflows.editor.validationTitle')
+    stepErrors.set(phaseId, t('workflows.editor.validationTitle'))
     return
   }
   if (form.type === 'automated' && form.action === '') {
-    stepErrors[phaseId] = t('workflows.editor.validationAction')
+    stepErrors.set(phaseId, t('workflows.editor.validationAction'))
     return
   }
   if (
@@ -266,7 +271,7 @@ async function addStep(phaseId: string) {
     form.action === 'email.send' &&
     (form.emailTo.trim() === '' || form.emailSubject.trim() === '' || form.emailBody.trim() === '')
   ) {
-    stepErrors[phaseId] = t('workflows.editor.validationEmailConfig')
+    stepErrors.set(phaseId, t('workflows.editor.validationEmailConfig'))
     return
   }
 
@@ -297,7 +302,7 @@ async function addStep(phaseId: string) {
     stepForms[phaseId] = emptyStepForm()
     await invalidate()
   } catch (err) {
-    stepErrors[phaseId] = err instanceof ApiError ? err.message : t('common.networkError')
+    stepErrors.set(phaseId, err instanceof ApiError ? err.message : t('common.networkError'))
   } finally {
     addingStepPhaseId.value = null
   }
@@ -537,7 +542,7 @@ async function reorderStep(
         :is-read-only="isReadOnly"
         :members="members"
         v-model:step-form="stepForms[phase.id]"
-        :step-error="stepErrors[phase.id] ?? ''"
+        :step-error="stepErrors.get(phase.id) ?? ''"
         :submitting="addingStepPhaseId === phase.id"
         :editing-step-id="editingStepId"
         v-model:edit-step-form="editStepForm"

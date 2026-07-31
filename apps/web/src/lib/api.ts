@@ -44,7 +44,14 @@ async function readErrorBody(res: Response): Promise<{ code: string; message: st
  * the right localized message for each.
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init)
+  // Taking `path` as a parameter trips Codacy's node-ssrf rule, which looks
+  // for a URL reaching an HTTP client without passing an allowlist. SSRF is
+  // a server-side attack — tricking a server into reaching internal
+  // infrastructure the caller can't get to. This runs in the user's own
+  // browser against their own origin, so there is no privilege to escalate:
+  // anything reachable here they can already request directly. Every call
+  // site passes an `/api/…` literal; none builds a path from user input.
+  const res = await fetch(path, init) // nosemgrep
 
   if (!res.ok) {
     const { code, message } = await readErrorBody(res)
