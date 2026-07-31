@@ -332,7 +332,7 @@ const he = {
       statusStepOverdue: 'באיחור',
       statusStepPending: 'ממתין',
       phaseLocked: 'נעול',
-      phaseLockedHint: 'ייפתח לאחר השלמת הפאזה הקודמת',
+      phaseLockedHint: 'ייפתח לאחר שכל הפאזות שהוא תלוי בהן הושלמו',
       reassignAriaLabel: 'הקצה מחדש אחראי',
       notFound: 'התהליך לא נמצא.',
     },

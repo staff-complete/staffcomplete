@@ -341,7 +341,7 @@ const ru = {
       statusStepOverdue: 'Просрочено',
       statusStepPending: 'Ожидает',
       phaseLocked: 'Заблокировано',
-      phaseLockedHint: 'Разблокируется после завершения предыдущего этапа',
+      phaseLockedHint: 'Разблокируется, когда завершены все этапы, от которых он зависит',
       reassignAriaLabel: 'Переназначить ответственного',
       notFound: 'Процесс не найден.',
     },

@@ -341,7 +341,7 @@ const en = {
       statusStepOverdue: 'Overdue',
       statusStepPending: 'Pending',
       phaseLocked: 'Locked',
-      phaseLockedHint: 'Unlocks once the previous phase is complete',
+      phaseLockedHint: 'Unlocks once every phase it depends on is complete',
       reassignAriaLabel: 'Reassign responsible person',
       notFound: 'Run not found.',
     },
