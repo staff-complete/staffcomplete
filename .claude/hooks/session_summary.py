@@ -22,6 +22,7 @@ import json
 import os
 import subprocess  # nosec B404 - fixed argv below, never shell=True
 import sys
+import time
 from datetime import datetime, timezone
 
 PROJECT_DIR = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
@@ -40,13 +41,21 @@ CHILD_ENV_FLAG = "CLAUDE_SESSION_SUMMARY_CHILD"
 MIN_TRANSCRIPT_BYTES = 20_000
 MIN_TRANSCRIPT_LINES = 40
 
+# The marker is written *before* the spawn, so it records "attempted", not
+# "summarized" — a child that dies early (usage limit, crash, container
+# teardown) would otherwise suppress this session forever. So a marker only
+# blocks unconditionally while a child could still plausibly be running;
+# after that it blocks only if the child actually logged its RESULT line.
+MARKER_STALE_SECONDS = 15 * 60
+
 PERMISSION_SETTINGS = {
     "permissions": {
         "allow": [
             "Read",
             "Grep",
             "Glob",
-            "Write(.claude/session-notes/**)",
+            # Edit(path) is the only form file permissions match on — it covers
+            # Write too. A Write(path) rule here is ignored and logs a warning.
             "Edit(.claude/session-notes/**)",
         ],
         "deny": ["Bash"],
@@ -136,6 +145,37 @@ def transcript_clears_bar(path: str) -> bool:
         return False
 
 
+def attempt_finished(session_id: str) -> bool:
+    """True if some earlier attempt for this session logged its RESULT line.
+
+    Each spawn writes a `=== <iso> session=<id> ===` header, then the child's
+    own stdout. A RESULT line inside this session's block means the child ran
+    to completion — whether it wrote a note or decided nothing cleared the bar.
+    """
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
+            in_block = False
+            for line in f:
+                if line.startswith("==="):
+                    in_block = f"session={session_id} " in line
+                elif in_block and line.lstrip().startswith("RESULT:"):
+                    return True
+    except OSError:
+        return False
+    return False
+
+
+def marker_blocks_retry(marker: str, session_id: str) -> bool:
+    """Whether an existing marker should suppress another spawn."""
+    try:
+        age = time.time() - os.path.getmtime(marker)
+    except OSError:
+        return False  # vanished between the exists() check and here
+    if age < MARKER_STALE_SECONDS:
+        return True  # a child spawned recently may still be working
+    return attempt_finished(session_id)
+
+
 def main() -> int:
     # Spawned by an outer run of this same hook — stop here (see CHILD_ENV_FLAG).
     if os.environ.get(CHILD_ENV_FLAG):
@@ -154,12 +194,13 @@ def main() -> int:
 
     os.makedirs(LOG_DIR, exist_ok=True)
     marker = os.path.join(LOG_DIR, f".summarized-{session_id}")
-    if os.path.exists(marker):
+    if os.path.exists(marker) and marker_blocks_retry(marker, session_id):
         return 0
 
     if not transcript_clears_bar(transcript_path):
         return 0
 
+    # Re-touched on a retry, so the new attempt gets its own grace period.
     open(marker, "w", encoding="utf-8").close()
     os.makedirs(NOTES_DIR, exist_ok=True)
 
