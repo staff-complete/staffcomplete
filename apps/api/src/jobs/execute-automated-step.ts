@@ -9,6 +9,9 @@ import { escapeHtml, sendAuthEmail } from '../auth.js'
 import { withTenant } from '../db/index.js'
 import { run, runStep } from '../db/schema.js'
 import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'
+import { componentLogger } from '../lib/logger.js'
+
+const log = componentLogger('execute-automated-step')
 
 export interface ExecuteAutomatedStepPayload {
   runStepId: string
@@ -28,7 +31,7 @@ export async function executeAutomatedStep(payload: ExecuteAutomatedStepPayload)
   const prepared = await withTenant(organizationId, async (tx) => {
     const step = await tx.query.runStep.findFirst({ where: eq(runStep.id, runStepId) })
     if (!step) {
-      console.error(`executeAutomatedStep: run step ${runStepId} not found`)
+      log.error({ runStepId }, 'run step not found')
       return null
     }
     // Idempotency: dispatchAutomatedSteps' singletonKey already stops most
@@ -41,24 +44,22 @@ export async function executeAutomatedStep(payload: ExecuteAutomatedStepPayload)
       // A step's action is validated against the registry at create/update
       // time, so this means the row and the registry have drifted apart —
       // a data-integrity bug, not a transient failure. Log, don't retry.
-      console.error(
-        `executeAutomatedStep: run step ${runStepId} has no valid automated action (${step.action})`,
-      )
+      log.error({ runStepId, action: step.action }, 'run step has no valid automated action')
       return null
     }
 
     const configResult = parseAutomatedActionConfig(step.action, step.config)
     if (!configResult.success) {
-      console.error(
-        `executeAutomatedStep: run step ${runStepId} has invalid config for ${step.action}`,
-        configResult.error,
+      log.error(
+        { runStepId, action: step.action, err: configResult.error },
+        'run step has invalid action config',
       )
       return null
     }
 
     const foundRun = await tx.query.run.findFirst({ where: eq(run.id, step.runId) })
     if (!foundRun) {
-      console.error(`executeAutomatedStep: run ${step.runId} not found for step ${runStepId}`)
+      log.error({ runStepId, runId: step.runId }, 'run not found for step')
       return null
     }
 

@@ -1,4 +1,7 @@
 import postgres from 'postgres'
+import { componentLogger } from '../lib/logger.js'
+
+const log = componentLogger('setup-tenant-role')
 
 // Idempotent: safe to run on every deploy. Grants and ALTER ROLE ... PASSWORD
 // both overwrite rather than error on re-run.
@@ -64,6 +67,6 @@ await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_phase" TO "staffcomplete_
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_phase_dependency" TO "staffcomplete_tenant"`
 await sql`GRANT SELECT, INSERT, UPDATE, DELETE ON "run_step" TO "staffcomplete_tenant"`
 
-console.log('staffcomplete_tenant role configured.')
+log.info('staffcomplete_tenant role configured')
 
 await sql.end()

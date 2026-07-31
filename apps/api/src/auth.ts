@@ -7,6 +7,9 @@ import { DEFAULT_LOCALE } from '@staffcomplete/shared'
 import { startTrialIfNeeded } from './billing/start-trial.js'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
+import { componentLogger } from './lib/logger.js'
+
+const log = componentLogger('auth')
 
 // No fallback, for the same reason TENANT_DATABASE_URL has none (db/index.ts):
 // a silently-substituted default doesn't degrade gracefully, it masks a
@@ -71,7 +74,7 @@ export async function handleSessionCreate(session: { userId: string }) {
     await startTrialIfNeeded(membership.organizationId)
   } catch (err) {
     // Never let a trial-start hiccup block someone from signing in.
-    console.error('startTrialIfNeeded failed', err)
+    log.error({ err, organizationId: membership.organizationId }, 'startTrialIfNeeded failed')
   }
   return { data: { activeOrganizationId: membership.organizationId } }
 }

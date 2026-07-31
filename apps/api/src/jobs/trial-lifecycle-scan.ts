@@ -3,6 +3,9 @@ import { computeTrialState } from '@staffcomplete/shared'
 import { escapeHtml, sendAuthEmail } from '../auth.js'
 import { db } from '../db/index.js'
 import { member, organization, subscription, user } from '../db/schema.js'
+import { componentLogger } from '../lib/logger.js'
+
+const log = componentLogger('trial-lifecycle-scan')
 
 const REMINDER_WINDOW_DAYS = 3
 
@@ -19,7 +22,7 @@ export async function runTrialLifecycleScan(): Promise<void> {
       where: eq(subscription.status, 'trialing'),
     })
   } catch (err) {
-    console.error('trial-lifecycle-scan failed to fetch trialing organizations', err)
+    log.error({ err }, 'failed to fetch trialing organizations')
     return
   }
 
@@ -29,7 +32,7 @@ export async function runTrialLifecycleScan(): Promise<void> {
     } catch (err) {
       // One org's failure (DB hiccup, email provider outage) must not stop
       // the rest of the scan from running.
-      console.error(`trial-lifecycle-scan failed for org ${sub.organizationId}`, err)
+      log.error({ err, organizationId: sub.organizationId }, 'org trial processing failed')
     }
   }
 }

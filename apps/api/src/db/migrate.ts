@@ -1,6 +1,9 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
+import { componentLogger } from '../lib/logger.js'
+
+const log = componentLogger('migrate')
 
 // drizzle-kit's `migrate` CLI command has no verbose/debug flag, and its
 // progress spinner silently drops the real error on failure instead of
@@ -22,7 +25,7 @@ const db = drizzle(sql)
 try {
   await migrate(db, { migrationsFolder: './src/db/migrations' })
 } catch (error) {
-  console.error(error)
+  log.error({ err: error }, 'migration failed')
   process.exitCode = 1
 } finally {
   await sql.end()

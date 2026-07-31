@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  logErrorMock: vi.fn(),
   runStepFindFirstMock: vi.fn(),
   runFindFirstMock: vi.fn(),
   sendAuthEmailMock: vi.fn(),
@@ -19,6 +20,12 @@ function tx() {
 
 vi.mock('../db/index.js', () => ({
   withTenant: async (_organizationId: string, fn: (t: unknown) => unknown) => fn(tx()),
+}))
+
+// Structured logging goes through pino now (ADR-0022), so these assertions
+// watch the component logger rather than console.error.
+vi.mock('../lib/logger.js', () => ({
+  componentLogger: () => ({ error: mocks.logErrorMock, warn: vi.fn(), info: vi.fn() }),
 }))
 
 // Not a passthrough: real escaping (not auth.ts's own module, which would
@@ -75,19 +82,13 @@ const EMAIL_STEP = {
 
 const PAYLOAD = { runStepId: 's1', organizationId: 'org-1' }
 
-let consoleErrorSpy: ReturnType<typeof vi.spyOn>
-
 beforeEach(() => {
+  mocks.logErrorMock.mockReset()
   mocks.runStepFindFirstMock.mockReset()
   mocks.runFindFirstMock.mockReset().mockResolvedValue(RUN)
   mocks.sendAuthEmailMock.mockReset().mockResolvedValue({ data: { id: 'email-1' }, error: null })
   mocks.completeRunStepMock.mockReset().mockResolvedValue({ stepsToDispatch: [] })
   mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
-  consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-})
-
-afterEach(() => {
-  consoleErrorSpy.mockRestore()
 })
 
 describe('executeAutomatedStep', () => {
@@ -173,7 +174,7 @@ describe('executeAutomatedStep', () => {
     await executeAutomatedStep(PAYLOAD)
 
     expect(mocks.sendAuthEmailMock).not.toHaveBeenCalled()
-    expect(consoleErrorSpy).toHaveBeenCalled()
+    expect(mocks.logErrorMock).toHaveBeenCalled()
   })
 
   it('logs and does not retry when config fails validation for its action', async () => {
@@ -182,7 +183,7 @@ describe('executeAutomatedStep', () => {
     await executeAutomatedStep(PAYLOAD)
 
     expect(mocks.sendAuthEmailMock).not.toHaveBeenCalled()
-    expect(consoleErrorSpy).toHaveBeenCalled()
+    expect(mocks.logErrorMock).toHaveBeenCalled()
   })
 
   it('is a no-op when the parent run no longer exists', async () => {
