@@ -6,8 +6,7 @@ import { APIError } from 'better-auth/api'
 import { auth } from '../auth.js'
 import { db, withTenant } from '../db/index.js'
 import { invitation, member, organization, user } from '../db/schema.js'
-import { requireAdmin } from '../lib/session.js'
-import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
+import { orgAuth } from '../middleware/org-auth.js'
 
 const inviteSchema = z.object({
   email: z.string().email('Valid email required'),
@@ -26,17 +25,14 @@ const acceptInviteSchema = z.object({
 
 export const invitesRouter = new Hono()
 
-invitesRouter.get('/', async (c) => {
-  const session = await requireAdmin(c)
-  if (!session) {
-    return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
-  }
+invitesRouter.get('/', orgAuth({ admin: true }), async (c) => {
+  const { organizationId } = c.get('orgAuth')
 
   // No explicit organizationId filter: the invitation_tenant_isolation RLS
   // policy (ADR-0012, re-keyed by ADR-0014) already scopes every row to
-  // session.organizationId via withTenant's set_config — adding one here
+  // organizationId via withTenant's set_config — adding one here
   // would just mask a broken policy instead of letting it fail loudly.
-  const invites = await withTenant(session.organizationId, (tx) =>
+  const invites = await withTenant(organizationId, (tx) =>
     tx.query.invitation.findMany({
       where: eq(invitation.status, 'pending'),
       columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
@@ -46,61 +42,50 @@ invitesRouter.get('/', async (c) => {
   return c.json({ invites })
 })
 
-invitesRouter.post(
-  '/',
-  zValidator('json', inviteSchema),
-  blockMutationsWhenExpired(),
-  async (c) => {
-    const session = await requireAdmin(c)
-    if (!session) {
-      return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
-    }
+invitesRouter.post('/', zValidator('json', inviteSchema), orgAuth({ admin: true }), async (c) => {
+  const { organizationId } = c.get('orgAuth')
 
-    const { email, role } = c.req.valid('json')
+  const { email, role } = c.req.valid('json')
 
-    try {
-      // The plugin's own invite flow (ADR-0014) already handles same-org
-      // duplicate-member and pending-invite de-duplication, and — the entire
-      // point of this ADR — raises no error at all when the email belongs to
-      // an account in a *different* organization, since that's now a normal,
-      // fully-supported invite instead of an enumeration risk to route around.
-      await auth.api.createInvitation({
-        headers: c.req.raw.headers,
-        body: { email, role, organizationId: session.organizationId },
-      })
-    } catch (err) {
-      const code =
-        err instanceof APIError ? (err.body as { code?: string } | undefined)?.code : undefined
-      if (code === 'USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION') {
-        return c.json(
-          { code: 'ALREADY_MEMBER', message: 'This person is already a member of your team.' },
-          409,
-        )
-      }
-      if (code === 'USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION') {
-        return c.json(
-          { code: 'INVITE_PENDING', message: 'An invite is already pending for this email.' },
-          409,
-        )
-      }
+  try {
+    // The plugin's own invite flow (ADR-0014) already handles same-org
+    // duplicate-member and pending-invite de-duplication, and — the entire
+    // point of this ADR — raises no error at all when the email belongs to
+    // an account in a *different* organization, since that's now a normal,
+    // fully-supported invite instead of an enumeration risk to route around.
+    await auth.api.createInvitation({
+      headers: c.req.raw.headers,
+      body: { email, role, organizationId },
+    })
+  } catch (err) {
+    const code =
+      err instanceof APIError ? (err.body as { code?: string } | undefined)?.code : undefined
+    if (code === 'USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION') {
       return c.json(
-        { code: 'INVITE_FAILED', message: 'Could not send the invite. Please try again.' },
-        500,
+        { code: 'ALREADY_MEMBER', message: 'This person is already a member of your team.' },
+        409,
       )
     }
-
-    return c.json({ status: 'invited' }, 201)
-  },
-)
-
-invitesRouter.delete('/:id', blockMutationsWhenExpired(), async (c) => {
-  const session = await requireAdmin(c)
-  if (!session) {
-    return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
+    if (code === 'USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION') {
+      return c.json(
+        { code: 'INVITE_PENDING', message: 'An invite is already pending for this email.' },
+        409,
+      )
+    }
+    return c.json(
+      { code: 'INVITE_FAILED', message: 'Could not send the invite. Please try again.' },
+      500,
+    )
   }
 
+  return c.json({ status: 'invited' }, 201)
+})
+
+invitesRouter.delete('/:id', orgAuth({ admin: true }), async (c) => {
+  const { organizationId } = c.get('orgAuth')
+
   const id = c.req.param('id')
-  const pending = await withTenant(session.organizationId, (tx) =>
+  const pending = await withTenant(organizationId, (tx) =>
     tx.query.invitation.findFirst({
       where: and(eq(invitation.id, id), eq(invitation.status, 'pending')),
       columns: { id: true },

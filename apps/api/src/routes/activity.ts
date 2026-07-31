@@ -1,21 +1,20 @@
 import { Hono } from 'hono'
 import { withTenant } from '../db/index.js'
-import { requireAdmin } from '../lib/session.js'
+import { orgAuth } from '../middleware/org-auth.js'
 
 const RECENT_EVENT_LIMIT = 20
 
 export const activityRouter = new Hono()
 
+activityRouter.use('*', orgAuth({ admin: true }))
+
 activityRouter.get('/', async (c) => {
-  const session = await requireAdmin(c)
-  if (!session) {
-    return c.json({ code: 'FORBIDDEN', message: 'Admin access required.' }, 403)
-  }
+  const { organizationId } = c.get('orgAuth')
 
   // No explicit organizationId filter: RLS (run_tenant_isolation /
   // run_step_tenant_isolation) already scopes both queries to
-  // session.organizationId via withTenant's set_config.
-  const { runs, steps } = await withTenant(session.organizationId, async (tx) => ({
+  // organizationId via withTenant's set_config.
+  const { runs, steps } = await withTenant(organizationId, async (tx) => ({
     runs: await tx.query.run.findMany(),
     steps: await tx.query.runStep.findMany({
       columns: { runId: true, title: true, status: true, completedAt: true },

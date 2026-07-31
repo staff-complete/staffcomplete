@@ -6,23 +6,15 @@ import {
   isStepLocked,
   isTaskOverdue,
 } from '@staffcomplete/shared'
-import { db, withTenant } from '../db/index.js'
-import { member, run, runPhase, runPhaseDependency, runStep } from '../db/schema.js'
+import { withTenant } from '../db/index.js'
+import { run, runPhase, runPhaseDependency, runStep } from '../db/schema.js'
 import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'
-import { resolveOrgSession } from '../lib/session.js'
-import { blockMutationsWhenExpired } from '../middleware/trial-lock.js'
+import { orgAuth } from '../middleware/org-auth.js'
 
 export const tasksRouter = new Hono()
 
-// runStep.assigneeId stores member.id, not user.id — same lookup requireAdmin
-// does internally, but without the role check (issue #26 tasks aren't admin-only).
-async function resolveMemberId(userId: string, organizationId: string): Promise<string | null> {
-  const membership = await db.query.member.findFirst({
-    where: and(eq(member.userId, userId), eq(member.organizationId, organizationId)),
-    columns: { id: true },
-  })
-  return membership?.id ?? null
-}
+// Not admin-only (issue #26) — any signed-in member sees their own tasks.
+tasksRouter.use('*', orgAuth())
 
 function serializeTask(
   step: typeof runStep.$inferSelect,
@@ -47,17 +39,15 @@ function serializeTask(
 }
 
 tasksRouter.get('/mine', async (c) => {
-  const session = await resolveOrgSession(c)
-  if (!session) {
-    return c.json({ code: 'FORBIDDEN', message: 'Sign-in required.' }, 403)
-  }
-
-  const memberId = await resolveMemberId(session.userId, session.organizationId)
-  if (!memberId) {
+  const { organizationId, membership } = c.get('orgAuth')
+  // A session whose active org has no member row for this user has no tasks
+  // assigned to it — an empty list, not an error.
+  if (!membership) {
     return c.json({ tasks: [] })
   }
+  const memberId = membership.id
 
-  const tasks = await withTenant(session.organizationId, async (tx) => {
+  const tasks = await withTenant(organizationId, async (tx) => {
     const steps = await tx.query.runStep.findMany({
       where: and(eq(runStep.assigneeId, memberId), eq(runStep.type, 'manual')),
     })
@@ -120,20 +110,16 @@ tasksRouter.get('/mine', async (c) => {
   return c.json({ tasks })
 })
 
-tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
-  const session = await resolveOrgSession(c)
-  if (!session) {
-    return c.json({ code: 'FORBIDDEN', message: 'Sign-in required.' }, 403)
-  }
-
-  const memberId = await resolveMemberId(session.userId, session.organizationId)
-  if (!memberId) {
+tasksRouter.post('/:id/complete', async (c) => {
+  const { organizationId, membership } = c.get('orgAuth')
+  if (!membership) {
     return c.json({ code: 'FORBIDDEN', message: 'Not a member of this organization.' }, 403)
   }
+  const memberId = membership.id
 
   const stepId = c.req.param('id')
 
-  const result = await withTenant(session.organizationId, async (tx) => {
+  const result = await withTenant(organizationId, async (tx) => {
     const step = await tx.query.runStep.findFirst({ where: eq(runStep.id, stepId) })
     if (!step) {
       return 'NOT_FOUND' as const
@@ -189,7 +175,7 @@ tasksRouter.post('/:id/complete', blockMutationsWhenExpired(), async (c) => {
 
   // Dispatched after the transaction above has committed, not from inside
   // it — see lib/run-steps.ts.
-  await dispatchAutomatedSteps(session.organizationId, result.stepsToDispatch)
+  await dispatchAutomatedSteps(organizationId, result.stepsToDispatch)
 
   return c.json(serializeTask(result.updatedStep, result.updatedRun, false))
 })
