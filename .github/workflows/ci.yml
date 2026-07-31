@@ -21,7 +21,7 @@ jobs:
       - run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
   checks:
-    name: Spell, lint, format, typecheck, test
+    name: Spell, lint, format, typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -35,9 +35,11 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
-      - run: pnpm test
 
-  coverage:
-    name: Coverage
+  # Runs the test suite. `pnpm test:coverage` is `pnpm test` plus --coverage,
+  # so running both here would execute every test twice per PR, in two jobs
+  # each paying its own checkout, install, and build.
+  tests:
+    name: Tests and coverage
     uses: ./.github/workflows/coverage.yml
     secrets: inherit
