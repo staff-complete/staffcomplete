@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import {
   boolean,
   date,
@@ -16,6 +17,41 @@ import {
 // PASSWORD aren't managed here — apps/api/src/db/setup-tenant-role.ts handles
 // those from an env var so credentials never land in version-controlled SQL.
 export const tenantRole = pgRole('staffcomplete_tenant', { inherit: true })
+
+/**
+ * The tenant-isolation RLS policy every tenant-scoped table gets: a row is
+ * readable and writable only when its `organizationId` matches the
+ * transaction's `app.organization_id` (ADR-0012, re-keyed onto
+ * `organization.id` by ADR-0014). `withTenant()` in db/index.ts is what sets
+ * that variable.
+ *
+ * Fails closed: `current_setting(..., true)` returns NULL when unset, so a
+ * query reaching a tenant-scoped table outside `withTenant()` sees zero rows
+ * rather than erroring or leaking another organization's data.
+ *
+ * Written once here rather than repeated per table. The block was previously
+ * copy-pasted ten times verbatim, which is ten chances to typo a policy name
+ * or drop `withCheck` — and a missing `withCheck` fails *open* on writes
+ * (reads stay isolated, inserts stop being checked), which is exactly the
+ * kind of mistake that doesn't announce itself.
+ *
+ * Note this is only half of what a new tenant-scoped table needs: it also
+ * requires an explicit GRANT in setup-tenant-role.ts. See ADR-0017's
+ * consequences — that omission has bitten this project twice.
+ */
+function tenantIsolationPolicy(tableName: string, organizationId: AnyPgColumn) {
+  // Built twice rather than shared, so `using` and `withCheck` never hold a
+  // reference to the same SQL chunk list.
+  const belongsToSessionOrg = () =>
+    sql`${organizationId} = current_setting('app.organization_id', true)`
+
+  return pgPolicy(`${tableName}_tenant_isolation`, {
+    for: 'all',
+    to: tenantRole,
+    using: belongsToSessionOrg(),
+    withCheck: belongsToSessionOrg(),
+  })
+}
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -115,14 +151,7 @@ export const subscription = pgTable(
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),
   },
-  (table) => [
-    pgPolicy('subscription_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('subscription', table.organizationId)],
 ).enableRLS()
 
 export const invitation = pgTable(
@@ -141,17 +170,7 @@ export const invitation = pgTable(
     expiresAt: timestamp('expiresAt').notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
-  (table) => [
-    // Fails closed: current_setting(..., true) returns NULL when unset, so a
-    // query that reaches this table outside withTenant() sees zero rows
-    // instead of erroring or leaking other organizations' invitations.
-    pgPolicy('invitation_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('invitation', table.organizationId)],
 ).enableRLS()
 
 // A reusable checklist definition an org builds up-front (issue #22) — the
@@ -170,14 +189,7 @@ export const workflowTemplate = pgTable(
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),
   },
-  (table) => [
-    pgPolicy('workflow_template_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('workflow_template', table.organizationId)],
 ).enableRLS()
 
 // Phases within a template. Steps inside a phase can run in parallel; which
@@ -201,14 +213,7 @@ export const workflowTemplatePhase = pgTable(
     position: integer('position').notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
-  (table) => [
-    pgPolicy('workflow_template_phase_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('workflow_template_phase', table.organizationId)],
 ).enableRLS()
 
 // Explicit phase→phase dependency edges (ADR-0019, extending ADR-0017's
@@ -234,12 +239,7 @@ export const workflowTemplatePhaseDependency = pgTable(
   },
   (table) => [
     unique().on(table.phaseId, table.dependsOnPhaseId),
-    pgPolicy('workflow_template_phase_dependency_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
+    tenantIsolationPolicy('workflow_template_phase_dependency', table.organizationId),
   ],
 ).enableRLS()
 
@@ -272,14 +272,7 @@ export const workflowTemplateStep = pgTable(
     position: integer('position').notNull(), // order within the phase
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
-  (table) => [
-    pgPolicy('workflow_template_step_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('workflow_template_step', table.organizationId)],
 ).enableRLS()
 
 // A workflow template instantiated for a specific employee (issue #25).
@@ -306,14 +299,7 @@ export const run = pgTable(
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),
   },
-  (table) => [
-    pgPolicy('run_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('run', table.organizationId)],
 ).enableRLS()
 
 // Ordered phases within a run, copied from workflowTemplatePhase at run
@@ -335,14 +321,7 @@ export const runPhase = pgTable(
     position: integer('position').notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
-  (table) => [
-    pgPolicy('run_phase_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('run_phase', table.organizationId)],
 ).enableRLS()
 
 // Run-side mirror of workflowTemplatePhaseDependency (ADR-0019), copied from
@@ -368,12 +347,7 @@ export const runPhaseDependency = pgTable(
   },
   (table) => [
     unique().on(table.phaseId, table.dependsOnPhaseId),
-    pgPolicy('run_phase_dependency_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
+    tenantIsolationPolicy('run_phase_dependency', table.organizationId),
   ],
 ).enableRLS()
 
@@ -407,12 +381,5 @@ export const runStep = pgTable(
     // not when the step finished).
     completedAt: timestamp('completedAt'),
   },
-  (table) => [
-    pgPolicy('run_step_tenant_isolation', {
-      for: 'all',
-      to: tenantRole,
-      using: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-      withCheck: sql`${table.organizationId} = current_setting('app.organization_id', true)`,
-    }),
-  ],
+  (table) => [tenantIsolationPolicy('run_step', table.organizationId)],
 ).enableRLS()
