@@ -188,7 +188,12 @@ def main() -> int:
             f"\n=== {datetime.now(timezone.utc).isoformat()} session={session_id} ===\n"
         )
         log_fh.flush()
-        subprocess.Popen(  # nosec B603 - fixed argv, no shell; prompt is a fixed template with path/id substitution, not attacker-controlled
+        # `cmd` is a fixed argv list built above — never a shell string, and
+        # the only interpolated values are a transcript path and session id
+        # handed to us by Claude Code itself, not anything user-supplied.
+        # nosec B603 (bandit) / nosemgrep (dangerous-subprocess-use-audit):
+        # both flag Popen on a non-literal argv regardless of shell=False.
+        subprocess.Popen(  # nosec B603  # nosemgrep
             cmd,
             cwd=PROJECT_DIR,
             env=child_env,
