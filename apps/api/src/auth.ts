@@ -8,6 +8,17 @@ import { startTrialIfNeeded } from './billing/start-trial.js'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
+// No fallback, for the same reason TENANT_DATABASE_URL has none (db/index.ts):
+// a silently-substituted default doesn't degrade gracefully, it masks a
+// missing config value that security depends on. A known default signing key
+// means anyone can mint a valid session cookie, so booting with one is worse
+// than not booting at all. Already a required Kamal secret in production
+// (config/deploy.yml) and documented in .env.example.
+const authSecret = process.env.AUTH_SECRET
+if (!authSecret) {
+  throw new Error('AUTH_SECRET environment variable is required')
+}
+
 const SEVENTY_TWO_HOURS_IN_SECONDS = 72 * 60 * 60
 
 const AUTH_EMAIL_FROM = 'noreply@staffcomplete.io'
@@ -67,7 +78,7 @@ export async function handleSessionCreate(session: { userId: string }) {
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
-  secret: process.env.AUTH_SECRET ?? 'dev-secret-change-in-production',
+  secret: authSecret,
   trustedOrigins: [process.env.APP_URL ?? 'http://localhost:5173'],
   advanced: {
     // Without this, request-password-reset awaits the Resend API call before
