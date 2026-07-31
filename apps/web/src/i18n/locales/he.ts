@@ -189,7 +189,7 @@ const he = {
     ago: 'לפני {time}',
   },
 
-  workflows: {
+  checklists: {
     list: {
       title: 'תבניות רשימות משימות',
       newTemplateHeading: 'תבנית חדשה',

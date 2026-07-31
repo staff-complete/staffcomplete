@@ -38,7 +38,7 @@ describe('apiFetch', () => {
   it("throws ApiError carrying the server's code, message, and status", async () => {
     respond(402, { code: 'TRIAL_EXPIRED', message: 'Your trial has ended. Subscribe to continue.' })
 
-    const err = await apiFetch('/api/workflows', { method: 'POST' }).catch((e: unknown) => e)
+    const err = await apiFetch('/api/checklists', { method: 'POST' }).catch((e: unknown) => e)
 
     expect(err).toBeInstanceOf(ApiError)
     expect(err).toMatchObject({

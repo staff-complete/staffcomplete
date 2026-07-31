@@ -17,7 +17,7 @@ const steps: Array<{
   },
   {
     number: '02',
-    title: 'Define your workflows',
+    title: 'Define your checklists',
     description:
       'Pick a pre-built template for new hires or leavers, or build your own checklist in minutes. No engineer involved.',
     icon: 'configure',

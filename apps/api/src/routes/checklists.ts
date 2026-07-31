@@ -4,37 +4,37 @@ import { zValidator } from '@hono/zod-validator'
 import {
   createPhaseSchema,
   createStepSchema,
-  createWorkflowTemplateSchema,
+  createChecklistTemplateSchema,
   reorderPhasesSchema,
   reorderStepsSchema,
   setPhaseDependenciesSchema,
   updatePhaseSchema,
   updateStepSchema,
-  updateWorkflowTemplateSchema,
+  updateChecklistTemplateSchema,
   wouldCreateCycle,
 } from '@staffcomplete/shared'
 import { withTenant } from '../db/index.js'
 import {
-  workflowTemplate,
-  workflowTemplatePhase,
-  workflowTemplatePhaseDependency,
-  workflowTemplateStep,
+  checklistTemplate,
+  checklistTemplatePhase,
+  checklistTemplatePhaseDependency,
+  checklistTemplateStep,
 } from '../db/schema.js'
 import { assertValidAssignee } from '../lib/assignee.js'
 import { orgAuth } from '../middleware/org-auth.js'
 
-export const workflowsRouter = new Hono()
+export const checklistsRouter = new Hono()
 
-workflowsRouter.use('*', orgAuth({ admin: true }))
+checklistsRouter.use('*', orgAuth({ admin: true }))
 
 function serializePhase(
-  phase: typeof workflowTemplatePhase.$inferSelect,
+  phase: typeof checklistTemplatePhase.$inferSelect,
   dependsOnPhaseIds: string[],
 ) {
   return { id: phase.id, name: phase.name, position: phase.position, dependsOnPhaseIds }
 }
 
-function serializeStep(step: typeof workflowTemplateStep.$inferSelect) {
+function serializeStep(step: typeof checklistTemplateStep.$inferSelect) {
   return {
     id: step.id,
     phaseId: step.phaseId,
@@ -48,36 +48,39 @@ function serializeStep(step: typeof workflowTemplateStep.$inferSelect) {
   }
 }
 
-workflowsRouter.get('/', async (c) => {
+checklistsRouter.get('/', async (c) => {
   const { organizationId } = c.get('orgAuth')
 
   // No explicit organizationId filter on either query below: RLS
   // (workflow_template_tenant_isolation / workflow_template_step_tenant_isolation)
   // already scopes both to organizationId via withTenant's set_config.
   const { templates, phases, steps } = await withTenant(organizationId, async (tx) => ({
-    templates: await tx.query.workflowTemplate.findMany({
+    templates: await tx.query.checklistTemplate.findMany({
       orderBy: (t, { desc }) => [desc(t.createdAt)],
     }),
-    phases: await tx.query.workflowTemplatePhase.findMany({
-      columns: { workflowTemplateId: true },
+    phases: await tx.query.checklistTemplatePhase.findMany({
+      columns: { checklistTemplateId: true },
     }),
-    steps: await tx.query.workflowTemplateStep.findMany({
-      columns: { workflowTemplateId: true },
+    steps: await tx.query.checklistTemplateStep.findMany({
+      columns: { checklistTemplateId: true },
     }),
   }))
 
   const phaseCounts = new Map<string, number>()
   for (const phase of phases) {
-    phaseCounts.set(phase.workflowTemplateId, (phaseCounts.get(phase.workflowTemplateId) ?? 0) + 1)
+    phaseCounts.set(
+      phase.checklistTemplateId,
+      (phaseCounts.get(phase.checklistTemplateId) ?? 0) + 1,
+    )
   }
 
   const stepCounts = new Map<string, number>()
   for (const step of steps) {
-    stepCounts.set(step.workflowTemplateId, (stepCounts.get(step.workflowTemplateId) ?? 0) + 1)
+    stepCounts.set(step.checklistTemplateId, (stepCounts.get(step.checklistTemplateId) ?? 0) + 1)
   }
 
   return c.json({
-    workflows: templates.map((t) => ({
+    checklists: templates.map((t) => ({
       id: t.id,
       name: t.name,
       type: t.type,
@@ -89,14 +92,14 @@ workflowsRouter.get('/', async (c) => {
   })
 })
 
-workflowsRouter.post('/', zValidator('json', createWorkflowTemplateSchema), async (c) => {
+checklistsRouter.post('/', zValidator('json', createChecklistTemplateSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
   const { name, type } = c.req.valid('json')
 
   const [created] = await withTenant(organizationId, (tx) =>
     tx
-      .insert(workflowTemplate)
+      .insert(checklistTemplate)
       .values({ id: crypto.randomUUID(), organizationId, name, type })
       .returning(),
   )
@@ -113,39 +116,39 @@ workflowsRouter.post('/', zValidator('json', createWorkflowTemplateSchema), asyn
   )
 })
 
-workflowsRouter.get('/:id', async (c) => {
+checklistsRouter.get('/:id', async (c) => {
   const { organizationId } = c.get('orgAuth')
 
   const id = c.req.param('id')
 
   const result = await withTenant(organizationId, async (tx) => {
-    const template = await tx.query.workflowTemplate.findFirst({
-      where: eq(workflowTemplate.id, id),
+    const template = await tx.query.checklistTemplate.findFirst({
+      where: eq(checklistTemplate.id, id),
     })
     if (!template) {
       return null
     }
-    const phases = await tx.query.workflowTemplatePhase.findMany({
-      where: eq(workflowTemplatePhase.workflowTemplateId, id),
-      orderBy: [asc(workflowTemplatePhase.position)],
+    const phases = await tx.query.checklistTemplatePhase.findMany({
+      where: eq(checklistTemplatePhase.checklistTemplateId, id),
+      orderBy: [asc(checklistTemplatePhase.position)],
     })
     const dependencies = phases.length
-      ? await tx.query.workflowTemplatePhaseDependency.findMany({
+      ? await tx.query.checklistTemplatePhaseDependency.findMany({
           where: inArray(
-            workflowTemplatePhaseDependency.phaseId,
+            checklistTemplatePhaseDependency.phaseId,
             phases.map((p) => p.id),
           ),
         })
       : []
-    const steps = await tx.query.workflowTemplateStep.findMany({
-      where: eq(workflowTemplateStep.workflowTemplateId, id),
-      orderBy: [asc(workflowTemplateStep.position)],
+    const steps = await tx.query.checklistTemplateStep.findMany({
+      where: eq(checklistTemplateStep.checklistTemplateId, id),
+      orderBy: [asc(checklistTemplateStep.position)],
     })
     return { template, phases, dependencies, steps }
   })
 
   if (!result) {
-    return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
+    return c.json({ code: 'NOT_FOUND', message: 'Checklist template not found.' }, 404)
   }
 
   const stepsByPhase = new Map<string, (typeof result.steps)[number][]>()
@@ -184,30 +187,30 @@ workflowsRouter.get('/:id', async (c) => {
   })
 })
 
-workflowsRouter.patch('/:id', zValidator('json', updateWorkflowTemplateSchema), async (c) => {
+checklistsRouter.patch('/:id', zValidator('json', updateChecklistTemplateSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
   const id = c.req.param('id')
   const updates = c.req.valid('json')
 
   const updated = await withTenant(organizationId, async (tx) => {
-    const existing = await tx.query.workflowTemplate.findFirst({
-      where: eq(workflowTemplate.id, id),
+    const existing = await tx.query.checklistTemplate.findFirst({
+      where: eq(checklistTemplate.id, id),
       columns: { id: true },
     })
     if (!existing) {
       return null
     }
     const [row] = await tx
-      .update(workflowTemplate)
+      .update(checklistTemplate)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(workflowTemplate.id, id))
+      .where(eq(checklistTemplate.id, id))
       .returning()
     return row
   })
 
   if (!updated) {
-    return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
+    return c.json({ code: 'NOT_FOUND', message: 'Checklist template not found.' }, 404)
   }
 
   return c.json({
@@ -219,57 +222,57 @@ workflowsRouter.patch('/:id', zValidator('json', updateWorkflowTemplateSchema), 
   })
 })
 
-workflowsRouter.delete('/:id', async (c) => {
+checklistsRouter.delete('/:id', async (c) => {
   const { organizationId } = c.get('orgAuth')
 
   const id = c.req.param('id')
 
   const deleted = await withTenant(organizationId, async (tx) => {
-    const existing = await tx.query.workflowTemplate.findFirst({
-      where: eq(workflowTemplate.id, id),
+    const existing = await tx.query.checklistTemplate.findFirst({
+      where: eq(checklistTemplate.id, id),
       columns: { id: true },
     })
     if (!existing) {
       return false
     }
     // Steps cascade via the workflow_template_step FK's ON DELETE CASCADE.
-    await tx.delete(workflowTemplate).where(eq(workflowTemplate.id, id))
+    await tx.delete(checklistTemplate).where(eq(checklistTemplate.id, id))
     return true
   })
 
   if (!deleted) {
-    return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
+    return c.json({ code: 'NOT_FOUND', message: 'Checklist template not found.' }, 404)
   }
 
   return c.json({ status: 'deleted' })
 })
 
-workflowsRouter.post('/:id/phases', zValidator('json', createPhaseSchema), async (c) => {
+checklistsRouter.post('/:id/phases', zValidator('json', createPhaseSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const workflowTemplateId = c.req.param('id')
+  const checklistTemplateId = c.req.param('id')
   const { name } = c.req.valid('json')
 
   const created = await withTenant(organizationId, async (tx) => {
-    const template = await tx.query.workflowTemplate.findFirst({
-      where: eq(workflowTemplate.id, workflowTemplateId),
+    const template = await tx.query.checklistTemplate.findFirst({
+      where: eq(checklistTemplate.id, checklistTemplateId),
       columns: { id: true },
     })
     if (!template) {
       return null
     }
 
-    const existingPhases = await tx.query.workflowTemplatePhase.findMany({
-      where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
+    const existingPhases = await tx.query.checklistTemplatePhase.findMany({
+      where: eq(checklistTemplatePhase.checklistTemplateId, checklistTemplateId),
       columns: { position: true },
     })
     const nextPosition = existingPhases.reduce((max, p) => Math.max(max, p.position), -1) + 1
 
     const [row] = await tx
-      .insert(workflowTemplatePhase)
+      .insert(checklistTemplatePhase)
       .values({
         id: crypto.randomUUID(),
-        workflowTemplateId,
+        checklistTemplateId,
         organizationId,
         name,
         position: nextPosition,
@@ -279,7 +282,7 @@ workflowsRouter.post('/:id/phases', zValidator('json', createPhaseSchema), async
   })
 
   if (!created) {
-    return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
+    return c.json({ code: 'NOT_FOUND', message: 'Checklist template not found.' }, 404)
   }
 
   // A newly created phase is a root — no dependencies yet (ADR-0019). The
@@ -287,28 +290,28 @@ workflowsRouter.post('/:id/phases', zValidator('json', createPhaseSchema), async
   return c.json(serializePhase(created, []), 201)
 })
 
-workflowsRouter.patch('/:id/phases/:phaseId', zValidator('json', updatePhaseSchema), async (c) => {
+checklistsRouter.patch('/:id/phases/:phaseId', zValidator('json', updatePhaseSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const workflowTemplateId = c.req.param('id')
+  const checklistTemplateId = c.req.param('id')
   const phaseId = c.req.param('phaseId')
   const updates = c.req.valid('json')
 
   const updated = await withTenant(organizationId, async (tx) => {
-    const existing = await tx.query.workflowTemplatePhase.findFirst({
-      where: eq(workflowTemplatePhase.id, phaseId),
-      columns: { id: true, workflowTemplateId: true },
+    const existing = await tx.query.checklistTemplatePhase.findFirst({
+      where: eq(checklistTemplatePhase.id, phaseId),
+      columns: { id: true, checklistTemplateId: true },
     })
-    if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
+    if (!existing || existing.checklistTemplateId !== checklistTemplateId) {
       return null
     }
     const [row] = await tx
-      .update(workflowTemplatePhase)
+      .update(checklistTemplatePhase)
       .set(updates)
-      .where(eq(workflowTemplatePhase.id, phaseId))
+      .where(eq(checklistTemplatePhase.id, phaseId))
       .returning()
-    const dependencies = await tx.query.workflowTemplatePhaseDependency.findMany({
-      where: eq(workflowTemplatePhaseDependency.phaseId, phaseId),
+    const dependencies = await tx.query.checklistTemplatePhaseDependency.findMany({
+      where: eq(checklistTemplatePhaseDependency.phaseId, phaseId),
       columns: { dependsOnPhaseId: true },
     })
     return { row, dependsOnPhaseIds: dependencies.map((d) => d.dependsOnPhaseId) }
@@ -328,27 +331,27 @@ workflowsRouter.patch('/:id/phases/:phaseId', zValidator('json', updatePhaseSche
 // collision documented on /phase-order (a literal segment and a :param at
 // the same depth breaks Hono's RegExpRouter) — this one doesn't collide,
 // but keeping the flat naming avoids reintroducing that risk later.
-workflowsRouter.put(
+checklistsRouter.put(
   '/:id/phases/:phaseId/dependencies',
   zValidator('json', setPhaseDependenciesSchema),
   async (c) => {
     const { organizationId } = c.get('orgAuth')
 
-    const workflowTemplateId = c.req.param('id')
+    const checklistTemplateId = c.req.param('id')
     const phaseId = c.req.param('phaseId')
     const { dependsOnPhaseIds } = c.req.valid('json')
     const uniqueDependsOnPhaseIds = [...new Set(dependsOnPhaseIds)]
 
     const result = await withTenant(organizationId, async (tx) => {
-      const phase = await tx.query.workflowTemplatePhase.findFirst({
-        where: eq(workflowTemplatePhase.id, phaseId),
+      const phase = await tx.query.checklistTemplatePhase.findFirst({
+        where: eq(checklistTemplatePhase.id, phaseId),
       })
-      if (!phase || phase.workflowTemplateId !== workflowTemplateId) {
+      if (!phase || phase.checklistTemplateId !== checklistTemplateId) {
         return 'NOT_FOUND' as const
       }
 
-      const templatePhases = await tx.query.workflowTemplatePhase.findMany({
-        where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
+      const templatePhases = await tx.query.checklistTemplatePhase.findMany({
+        where: eq(checklistTemplatePhase.checklistTemplateId, checklistTemplateId),
         columns: { id: true },
       })
       const templatePhaseIds = new Set(templatePhases.map((p) => p.id))
@@ -360,8 +363,8 @@ workflowsRouter.put(
       // current outgoing edges (which this call is about to replace), plus
       // whichever of the new edges have already been accepted earlier in
       // this same loop.
-      const existingEdges = await tx.query.workflowTemplatePhaseDependency.findMany({
-        where: inArray(workflowTemplatePhaseDependency.phaseId, [...templatePhaseIds]),
+      const existingEdges = await tx.query.checklistTemplatePhaseDependency.findMany({
+        where: inArray(checklistTemplatePhaseDependency.phaseId, [...templatePhaseIds]),
         columns: { phaseId: true, dependsOnPhaseId: true },
       })
       const baselineEdges = existingEdges.filter((edge) => edge.phaseId !== phaseId)
@@ -374,10 +377,10 @@ workflowsRouter.put(
       }
 
       await tx
-        .delete(workflowTemplatePhaseDependency)
-        .where(eq(workflowTemplatePhaseDependency.phaseId, phaseId))
+        .delete(checklistTemplatePhaseDependency)
+        .where(eq(checklistTemplatePhaseDependency.phaseId, phaseId))
       if (uniqueDependsOnPhaseIds.length) {
-        await tx.insert(workflowTemplatePhaseDependency).values(
+        await tx.insert(checklistTemplatePhaseDependency).values(
           uniqueDependsOnPhaseIds.map((dependsOnPhaseId) => ({
             id: crypto.randomUUID(),
             phaseId,
@@ -394,7 +397,10 @@ workflowsRouter.put(
     }
     if (result === 'INVALID_PHASE') {
       return c.json(
-        { code: 'INVALID_PHASE', message: 'A dependency must be a phase in this workflow.' },
+        {
+          code: 'INVALID_PHASE',
+          message: 'A dependency must be a phase in this checklist template.',
+        },
         400,
       )
     }
@@ -409,22 +415,22 @@ workflowsRouter.put(
   },
 )
 
-workflowsRouter.delete('/:id/phases/:phaseId', async (c) => {
+checklistsRouter.delete('/:id/phases/:phaseId', async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const workflowTemplateId = c.req.param('id')
+  const checklistTemplateId = c.req.param('id')
   const phaseId = c.req.param('phaseId')
 
   const deleted = await withTenant(organizationId, async (tx) => {
-    const existing = await tx.query.workflowTemplatePhase.findFirst({
-      where: eq(workflowTemplatePhase.id, phaseId),
-      columns: { id: true, workflowTemplateId: true },
+    const existing = await tx.query.checklistTemplatePhase.findFirst({
+      where: eq(checklistTemplatePhase.id, phaseId),
+      columns: { id: true, checklistTemplateId: true },
     })
-    if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
+    if (!existing || existing.checklistTemplateId !== checklistTemplateId) {
       return false
     }
     // Steps cascade via the workflow_template_step FK's ON DELETE CASCADE.
-    await tx.delete(workflowTemplatePhase).where(eq(workflowTemplatePhase.id, phaseId))
+    await tx.delete(checklistTemplatePhase).where(eq(checklistTemplatePhase.id, phaseId))
     return true
   })
 
@@ -442,15 +448,15 @@ workflowsRouter.delete('/:id/phases/:phaseId', async (c) => {
 // UnsupportedPathError building the matcher, which makes SmartRouter fall
 // back to TrieRouter for the whole app, and TrieRouter doesn't resolve the
 // /api/auth/** wildcard mount the same way (broke sign-in/sign-up entirely).
-workflowsRouter.put('/:id/phase-order', zValidator('json', reorderPhasesSchema), async (c) => {
+checklistsRouter.put('/:id/phase-order', zValidator('json', reorderPhasesSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const workflowTemplateId = c.req.param('id')
+  const checklistTemplateId = c.req.param('id')
   const { phaseIds } = c.req.valid('json')
 
   const result = await withTenant(organizationId, async (tx) => {
-    const existingPhases = await tx.query.workflowTemplatePhase.findMany({
-      where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
+    const existingPhases = await tx.query.checklistTemplatePhase.findMany({
+      where: eq(checklistTemplatePhase.checklistTemplateId, checklistTemplateId),
       columns: { id: true },
     })
     const existingIds = new Set(existingPhases.map((p) => p.id))
@@ -463,9 +469,9 @@ workflowsRouter.put('/:id/phase-order', zValidator('json', reorderPhasesSchema),
 
     for (const [index, phaseId] of phaseIds.entries()) {
       await tx
-        .update(workflowTemplatePhase)
+        .update(checklistTemplatePhase)
         .set({ position: index })
-        .where(eq(workflowTemplatePhase.id, phaseId))
+        .where(eq(checklistTemplatePhase.id, phaseId))
     }
     return 'OK' as const
   })
@@ -474,7 +480,7 @@ workflowsRouter.put('/:id/phase-order', zValidator('json', reorderPhasesSchema),
     return c.json(
       {
         code: 'VALIDATION_ERROR',
-        message: "phaseIds must match the workflow's existing phases.",
+        message: "phaseIds must match the checklist template's existing phases.",
       },
       400,
     )
@@ -483,10 +489,10 @@ workflowsRouter.put('/:id/phase-order', zValidator('json', reorderPhasesSchema),
   return c.json({ status: 'reordered' })
 })
 
-workflowsRouter.post('/:id/steps', zValidator('json', createStepSchema), async (c) => {
+checklistsRouter.post('/:id/steps', zValidator('json', createStepSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const workflowTemplateId = c.req.param('id')
+  const checklistTemplateId = c.req.param('id')
   const body = c.req.valid('json')
   const { phaseId } = body
 
@@ -499,24 +505,24 @@ workflowsRouter.post('/:id/steps', zValidator('json', createStepSchema), async (
   }
 
   const created = await withTenant(organizationId, async (tx) => {
-    const template = await tx.query.workflowTemplate.findFirst({
-      where: eq(workflowTemplate.id, workflowTemplateId),
+    const template = await tx.query.checklistTemplate.findFirst({
+      where: eq(checklistTemplate.id, checklistTemplateId),
       columns: { id: true },
     })
     if (!template) {
       return null
     }
 
-    const phase = await tx.query.workflowTemplatePhase.findFirst({
-      where: eq(workflowTemplatePhase.id, phaseId),
-      columns: { id: true, workflowTemplateId: true },
+    const phase = await tx.query.checklistTemplatePhase.findFirst({
+      where: eq(checklistTemplatePhase.id, phaseId),
+      columns: { id: true, checklistTemplateId: true },
     })
-    if (!phase || phase.workflowTemplateId !== workflowTemplateId) {
+    if (!phase || phase.checklistTemplateId !== checklistTemplateId) {
       return 'INVALID_PHASE' as const
     }
 
-    const existingSteps = await tx.query.workflowTemplateStep.findMany({
-      where: eq(workflowTemplateStep.phaseId, phaseId),
+    const existingSteps = await tx.query.checklistTemplateStep.findMany({
+      where: eq(checklistTemplateStep.phaseId, phaseId),
       columns: { position: true },
     })
     const nextPosition = existingSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
@@ -544,10 +550,10 @@ workflowsRouter.post('/:id/steps', zValidator('json', createStepSchema), async (
           }
 
     const [row] = await tx
-      .insert(workflowTemplateStep)
+      .insert(checklistTemplateStep)
       .values({
         id: crypto.randomUUID(),
-        workflowTemplateId,
+        checklistTemplateId,
         phaseId,
         organizationId,
         type: body.type,
@@ -561,21 +567,21 @@ workflowsRouter.post('/:id/steps', zValidator('json', createStepSchema), async (
 
   if (created === 'INVALID_PHASE') {
     return c.json(
-      { code: 'INVALID_PHASE', message: 'Phase does not belong to this workflow.' },
+      { code: 'INVALID_PHASE', message: 'Phase does not belong to this checklist template.' },
       400,
     )
   }
   if (!created) {
-    return c.json({ code: 'NOT_FOUND', message: 'Workflow not found.' }, 404)
+    return c.json({ code: 'NOT_FOUND', message: 'Checklist template not found.' }, 404)
   }
 
   return c.json(serializeStep(created), 201)
 })
 
-workflowsRouter.patch('/:id/steps/:stepId', zValidator('json', updateStepSchema), async (c) => {
+checklistsRouter.patch('/:id/steps/:stepId', zValidator('json', updateStepSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const workflowTemplateId = c.req.param('id')
+  const checklistTemplateId = c.req.param('id')
   const stepId = c.req.param('stepId')
   const updates = c.req.valid('json')
 
@@ -584,11 +590,11 @@ workflowsRouter.patch('/:id/steps/:stepId', zValidator('json', updateStepSchema)
   }
 
   const updated = await withTenant(organizationId, async (tx) => {
-    const existing = await tx.query.workflowTemplateStep.findFirst({
-      where: eq(workflowTemplateStep.id, stepId),
-      columns: { id: true, workflowTemplateId: true, phaseId: true, type: true },
+    const existing = await tx.query.checklistTemplateStep.findFirst({
+      where: eq(checklistTemplateStep.id, stepId),
+      columns: { id: true, checklistTemplateId: true, phaseId: true, type: true },
     })
-    if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
+    if (!existing || existing.checklistTemplateId !== checklistTemplateId) {
       return null
     }
 
@@ -605,29 +611,29 @@ workflowsRouter.patch('/:id/steps/:stepId', zValidator('json', updateStepSchema)
       return 'TYPE_MISMATCH' as const
     }
 
-    // Moving to a different phase: validate it belongs to this workflow
+    // Moving to a different phase: validate it belongs to this template
     // and drop the step at the end of the destination phase, same as a
     // freshly created step — position is meaningless across phases.
     let position: number | undefined
     if (updates.phaseId && updates.phaseId !== existing.phaseId) {
-      const phase = await tx.query.workflowTemplatePhase.findFirst({
-        where: eq(workflowTemplatePhase.id, updates.phaseId),
-        columns: { id: true, workflowTemplateId: true },
+      const phase = await tx.query.checklistTemplatePhase.findFirst({
+        where: eq(checklistTemplatePhase.id, updates.phaseId),
+        columns: { id: true, checklistTemplateId: true },
       })
-      if (!phase || phase.workflowTemplateId !== workflowTemplateId) {
+      if (!phase || phase.checklistTemplateId !== checklistTemplateId) {
         return 'INVALID_PHASE' as const
       }
-      const destinationSteps = await tx.query.workflowTemplateStep.findMany({
-        where: eq(workflowTemplateStep.phaseId, updates.phaseId),
+      const destinationSteps = await tx.query.checklistTemplateStep.findMany({
+        where: eq(checklistTemplateStep.phaseId, updates.phaseId),
         columns: { position: true },
       })
       position = destinationSteps.reduce((max, s) => Math.max(max, s.position), -1) + 1
     }
 
     const [row] = await tx
-      .update(workflowTemplateStep)
+      .update(checklistTemplateStep)
       .set(position === undefined ? updates : { ...updates, position })
-      .where(eq(workflowTemplateStep.id, stepId))
+      .where(eq(checklistTemplateStep.id, stepId))
       .returning()
     return row
   })
@@ -643,7 +649,7 @@ workflowsRouter.patch('/:id/steps/:stepId', zValidator('json', updateStepSchema)
   }
   if (updated === 'INVALID_PHASE') {
     return c.json(
-      { code: 'INVALID_PHASE', message: 'Phase does not belong to this workflow.' },
+      { code: 'INVALID_PHASE', message: 'Phase does not belong to this checklist template.' },
       400,
     )
   }
@@ -654,21 +660,21 @@ workflowsRouter.patch('/:id/steps/:stepId', zValidator('json', updateStepSchema)
   return c.json(serializeStep(updated))
 })
 
-workflowsRouter.delete('/:id/steps/:stepId', async (c) => {
+checklistsRouter.delete('/:id/steps/:stepId', async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const workflowTemplateId = c.req.param('id')
+  const checklistTemplateId = c.req.param('id')
   const stepId = c.req.param('stepId')
 
   const deleted = await withTenant(organizationId, async (tx) => {
-    const existing = await tx.query.workflowTemplateStep.findFirst({
-      where: eq(workflowTemplateStep.id, stepId),
-      columns: { id: true, workflowTemplateId: true },
+    const existing = await tx.query.checklistTemplateStep.findFirst({
+      where: eq(checklistTemplateStep.id, stepId),
+      columns: { id: true, checklistTemplateId: true },
     })
-    if (!existing || existing.workflowTemplateId !== workflowTemplateId) {
+    if (!existing || existing.checklistTemplateId !== checklistTemplateId) {
       return false
     }
-    await tx.delete(workflowTemplateStep).where(eq(workflowTemplateStep.id, stepId))
+    await tx.delete(checklistTemplateStep).where(eq(checklistTemplateStep.id, stepId))
     return true
   })
 
@@ -679,21 +685,21 @@ workflowsRouter.delete('/:id/steps/:stepId', async (c) => {
   return c.json({ status: 'deleted' })
 })
 
-workflowsRouter.put(
+checklistsRouter.put(
   '/:id/phases/:phaseId/steps/order',
   zValidator('json', reorderStepsSchema),
   async (c) => {
     const { organizationId } = c.get('orgAuth')
 
-    const workflowTemplateId = c.req.param('id')
+    const checklistTemplateId = c.req.param('id')
     const phaseId = c.req.param('phaseId')
     const { stepIds } = c.req.valid('json')
 
     const result = await withTenant(organizationId, async (tx) => {
-      const existingSteps = await tx.query.workflowTemplateStep.findMany({
+      const existingSteps = await tx.query.checklistTemplateStep.findMany({
         where: and(
-          eq(workflowTemplateStep.workflowTemplateId, workflowTemplateId),
-          eq(workflowTemplateStep.phaseId, phaseId),
+          eq(checklistTemplateStep.checklistTemplateId, checklistTemplateId),
+          eq(checklistTemplateStep.phaseId, phaseId),
         ),
         columns: { id: true },
       })
@@ -708,16 +714,19 @@ workflowsRouter.put(
 
       for (const [index, stepId] of stepIds.entries()) {
         await tx
-          .update(workflowTemplateStep)
+          .update(checklistTemplateStep)
           .set({ position: index })
-          .where(eq(workflowTemplateStep.id, stepId))
+          .where(eq(checklistTemplateStep.id, stepId))
       }
       return 'OK' as const
     })
 
     if (result === 'MISMATCH') {
       return c.json(
-        { code: 'VALIDATION_ERROR', message: "stepIds must match the workflow's existing steps." },
+        {
+          code: 'VALIDATION_ERROR',
+          message: "stepIds must match the checklist template's existing steps.",
+        },
         400,
       )
     }

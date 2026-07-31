@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createStepSchema, updateStepSchema } from './workflow.js'
+import { createStepSchema, updateStepSchema } from './checklist.js'
 
 const VALID_EMAIL_CONFIG = {
   to: '[employeeEmail]',

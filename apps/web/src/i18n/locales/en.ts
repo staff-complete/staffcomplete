@@ -190,7 +190,7 @@ const en = {
     ago: '{time} ago',
   },
 
-  workflows: {
+  checklists: {
     list: {
       title: 'Checklist templates',
       newTemplateHeading: 'New template',
@@ -281,7 +281,7 @@ const en = {
     // they're translated like any other UI vocabulary. Keyed to match
     // packages/shared/src/automation.ts's AutomatedActionKey values exactly
     // (e.g. 'email.send' resolves through the nested email/send path below)
-    // — see WorkflowEditorView.vue's use of this.
+    // — see ChecklistEditorView.vue's use of this.
     automatedActions: {
       email: {
         send: 'Send email',

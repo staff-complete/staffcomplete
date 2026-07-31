@@ -30,29 +30,29 @@ export {
   createManualStepSchema,
   createPhaseSchema,
   createStepSchema,
-  createWorkflowTemplateSchema,
+  createChecklistTemplateSchema,
   reorderPhasesSchema,
   reorderStepsSchema,
   setPhaseDependenciesSchema,
   stepTypeSchema,
   updatePhaseSchema,
   updateStepSchema,
-  updateWorkflowTemplateSchema,
-  workflowTypeSchema,
-} from './workflow.js'
+  updateChecklistTemplateSchema,
+  checklistTypeSchema,
+} from './checklist.js'
 export type {
   CreateAutomatedStepInput,
   CreateManualStepInput,
   CreatePhaseInput,
   CreateStepInput,
-  CreateWorkflowTemplateInput,
+  CreateChecklistTemplateInput,
   ReorderPhasesInput,
   ReorderStepsInput,
   SetPhaseDependenciesInput,
   UpdatePhaseInput,
   UpdateStepInput,
-  UpdateWorkflowTemplateInput,
-} from './workflow.js'
+  UpdateChecklistTemplateInput,
+} from './checklist.js'
 
 export const signUpSchema = z.object({
   name: z.string().min(2, 'Full name must be at least 2 characters'),

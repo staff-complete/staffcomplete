@@ -2,20 +2,20 @@ import { useQuery } from '@tanstack/vue-query'
 import { apiFetch, apiFetchOrNull } from '../lib/api'
 import type { AutomatedActionKey } from '@staffcomplete/shared'
 
-export type WorkflowType = 'onboarding' | 'offboarding'
+export type ChecklistType = 'onboarding' | 'offboarding'
 export type StepType = 'automated' | 'manual'
 
-export interface WorkflowTemplateSummary {
+export interface ChecklistTemplateSummary {
   id: string
   name: string
-  type: WorkflowType
+  type: ChecklistType
   phaseCount: number
   stepCount: number
   createdAt: string
   updatedAt: string
 }
 
-export interface WorkflowTemplateStep {
+export interface ChecklistTemplateStep {
   id: string
   phaseId: string
   title: string
@@ -34,42 +34,44 @@ export interface WorkflowTemplateStep {
 // `position` is display order only — it no longer implies a dependency.
 // An empty dependsOnPhaseIds means this phase is a root, unlocked
 // immediately (see packages/shared/src/phase.ts).
-export interface WorkflowTemplatePhase {
+export interface ChecklistTemplatePhase {
   id: string
   name: string
   position: number
   dependsOnPhaseIds: string[]
-  steps: WorkflowTemplateStep[]
+  steps: ChecklistTemplateStep[]
 }
 
-export interface WorkflowTemplateDetail {
+export interface ChecklistTemplateDetail {
   id: string
   name: string
-  type: WorkflowType
+  type: ChecklistType
   createdAt: string
   updatedAt: string
-  phases: WorkflowTemplatePhase[]
+  phases: ChecklistTemplatePhase[]
 }
 
-export async function fetchWorkflowTemplates(): Promise<WorkflowTemplateSummary[]> {
-  const { workflows } = await apiFetch<{ workflows: WorkflowTemplateSummary[] }>('/api/workflows')
-  return workflows
+export async function fetchChecklistTemplates(): Promise<ChecklistTemplateSummary[]> {
+  const { checklists } = await apiFetch<{ checklists: ChecklistTemplateSummary[] }>(
+    '/api/checklists',
+  )
+  return checklists
 }
 
-export function useWorkflowTemplates() {
+export function useChecklistTemplates() {
   return useQuery({
-    queryKey: ['workflow-templates'],
-    queryFn: fetchWorkflowTemplates,
+    queryKey: ['checklist-templates'],
+    queryFn: fetchChecklistTemplates,
   })
 }
 
-export async function fetchWorkflowTemplate(id: string): Promise<WorkflowTemplateDetail | null> {
-  return apiFetchOrNull<WorkflowTemplateDetail>(`/api/workflows/${id}`)
+export async function fetchChecklistTemplate(id: string): Promise<ChecklistTemplateDetail | null> {
+  return apiFetchOrNull<ChecklistTemplateDetail>(`/api/checklists/${id}`)
 }
 
-export function useWorkflowTemplate(id: string) {
+export function useChecklistTemplate(id: string) {
   return useQuery({
-    queryKey: ['workflow-template', id],
-    queryFn: () => fetchWorkflowTemplate(id),
+    queryKey: ['checklist-template', id],
+    queryFn: () => fetchChecklistTemplate(id),
   })
 }

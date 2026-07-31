@@ -18,16 +18,16 @@ export const actionConfigFields: Record<AutomatedActionKey, ActionConfigField[]>
   'email.send': [
     {
       key: 'emailTo',
-      labelKey: 'workflows.editor.emailToLabel',
-      placeholderKey: 'workflows.editor.emailToPlaceholder',
+      labelKey: 'checklists.editor.emailToLabel',
+      placeholderKey: 'checklists.editor.emailToPlaceholder',
       type: 'text',
     },
-    { key: 'emailSubject', labelKey: 'workflows.editor.emailSubjectLabel', type: 'text' },
+    { key: 'emailSubject', labelKey: 'checklists.editor.emailSubjectLabel', type: 'text' },
     {
       key: 'emailBody',
-      labelKey: 'workflows.editor.emailBodyLabel',
-      placeholderKey: 'workflows.editor.emailBodyPlaceholder',
-      hintKey: 'workflows.editor.emailBodyHint',
+      labelKey: 'checklists.editor.emailBodyLabel',
+      placeholderKey: 'checklists.editor.emailBodyPlaceholder',
+      hintKey: 'checklists.editor.emailBodyHint',
       type: 'textarea',
     },
   ],

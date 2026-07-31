@@ -193,7 +193,7 @@ const ru = {
     ago: '{time} назад',
   },
 
-  workflows: {
+  checklists: {
     list: {
       title: 'Шаблоны чек-листов',
       newTemplateHeading: 'Новый шаблон',

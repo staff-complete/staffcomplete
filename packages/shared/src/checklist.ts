@@ -1,17 +1,17 @@
 import { z } from 'zod'
 import { automatedActionKeySchema, parseAutomatedActionConfig } from './automation.js'
 
-export const workflowTypeSchema = z.enum(['onboarding', 'offboarding'])
+export const checklistTypeSchema = z.enum(['onboarding', 'offboarding'])
 export const stepTypeSchema = z.enum(['automated', 'manual'])
 
-export const createWorkflowTemplateSchema = z.object({
+export const createChecklistTemplateSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  type: workflowTypeSchema,
+  type: checklistTypeSchema,
 })
-export type CreateWorkflowTemplateInput = z.infer<typeof createWorkflowTemplateSchema>
+export type CreateChecklistTemplateInput = z.infer<typeof createChecklistTemplateSchema>
 
-export const updateWorkflowTemplateSchema = createWorkflowTemplateSchema.partial()
-export type UpdateWorkflowTemplateInput = z.infer<typeof updateWorkflowTemplateSchema>
+export const updateChecklistTemplateSchema = createChecklistTemplateSchema.partial()
+export type UpdateChecklistTemplateInput = z.infer<typeof updateChecklistTemplateSchema>
 
 export const createPhaseSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -93,7 +93,7 @@ export type CreateStepInput = z.infer<typeof createStepSchema>
 // step's fields into an automated step's makes no sense mid-edit), so an
 // update never needs to discriminate on it. phaseId here also moves the
 // step to a different phase (it lands at the end of that phase — see
-// workflows.ts). Only cross-validates config against action when action is
+// checklists.ts). Only cross-validates config against action when action is
 // actually part of the update, since a bare config-only update can't know
 // which action's schema to check against without it.
 export const updateStepSchema = z

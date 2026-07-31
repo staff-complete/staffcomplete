@@ -8,7 +8,7 @@ describe('api', () => {
   // Regression guard: Hono's RegExpRouter throws UnsupportedPathError on
   // certain route shapes (e.g. a literal segment and a :param sitting at the
   // same depth under the same HTTP method — see the comment on
-  // workflowsRouter's phase-order route). When that happens, SmartRouter
+  // checklistsRouter's phase-order route). When that happens, SmartRouter
   // silently falls back to TrieRouter for the *entire* app, which resolves
   // the /api/auth/** wildcard mount differently and broke sign-in/sign-up
   // outright — with no error anywhere, only a 404 on every auth route. This

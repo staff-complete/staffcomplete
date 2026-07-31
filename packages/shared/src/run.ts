@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const createRunSchema = z.object({
-  workflowTemplateId: z.string().min(1, 'A checklist template is required'),
+  checklistTemplateId: z.string().min(1, 'A checklist template is required'),
   employeeName: z.string().min(2, 'Name must be at least 2 characters'),
   employeeEmail: z.string().email('A valid email is required'),
   employeeRole: z.string().min(1, 'Role is required'),

@@ -81,15 +81,15 @@ const router = createRouter({
           meta: { requiresAdmin: true },
         },
         {
-          path: 'workflows',
-          name: 'workflows',
-          component: () => import('../views/WorkflowsView.vue'),
+          path: 'checklists',
+          name: 'checklists',
+          component: () => import('../views/ChecklistsView.vue'),
           meta: { requiresAdmin: true },
         },
         {
-          path: 'workflows/:id',
-          name: 'workflow-editor',
-          component: () => import('../views/WorkflowEditorView.vue'),
+          path: 'checklists/:id',
+          name: 'checklist-editor',
+          component: () => import('../views/ChecklistEditorView.vue'),
           meta: { requiresAdmin: true },
         },
         {

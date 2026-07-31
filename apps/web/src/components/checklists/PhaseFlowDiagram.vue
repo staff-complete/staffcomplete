@@ -3,10 +3,10 @@ import { ref, watch } from 'vue'
 import mermaid from 'mermaid'
 import { useI18n } from 'vue-i18n'
 import { buildPhaseFlowDiagram } from '../../lib/phaseFlowDiagram'
-import type { WorkflowTemplatePhase } from '../../composables/useWorkflowTemplates'
+import type { ChecklistTemplatePhase } from '../../composables/useChecklistTemplates'
 
 const props = defineProps<{
-  phases: WorkflowTemplatePhase[]
+  phases: ChecklistTemplatePhase[]
 }>()
 
 const { t } = useI18n()
@@ -76,10 +76,10 @@ watch(() => props.phases, renderDiagram, { immediate: true, deep: true })
 <template>
   <div v-if="phases.length > 0" class="mb-4.5 rounded-[20px] bg-white p-5.5">
     <h2 class="mb-3.5 text-[15px] font-extrabold">
-      {{ t('workflows.editor.dependencyGraphHeading') }}
+      {{ t('checklists.editor.dependencyGraphHeading') }}
     </h2>
     <p v-if="renderFailed" class="text-[13px] text-app-danger">
-      {{ t('workflows.editor.dependencyGraphError') }}
+      {{ t('checklists.editor.dependencyGraphError') }}
     </p>
     <!-- svgMarkup is mermaid's own sanitized SVG output (securityLevel: 'strict'), not raw
          admin input — this rule targets raw, un-sanitized HTML reflected into the DOM, which

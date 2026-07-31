@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { member } from '../db/schema.js'
 
-// Shared between workflows.ts (template-step assignee) and runs.ts (run-step
+// Shared between checklists.ts (template-step assignee) and runs.ts (run-step
 // reassignment) — an assignee must be a member of the same tenant as the
 // step being assigned.
 export async function assertValidAssignee(

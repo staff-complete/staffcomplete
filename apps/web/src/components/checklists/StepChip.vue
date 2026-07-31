@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { WorkflowTemplateStep } from '../../composables/useWorkflowTemplates'
+import type { ChecklistTemplateStep } from '../../composables/useChecklistTemplates'
 
 const props = defineProps<{
-  step: WorkflowTemplateStep
+  step: ChecklistTemplateStep
   meta: string
   isFirst: boolean
   isLast: boolean
@@ -73,7 +73,7 @@ const isAutomated = () => props.step.type === 'automated'
         type="button"
         :disabled="isReadOnly || isFirst"
         class="flex h-6 w-6 items-center justify-center rounded-md text-app-slate disabled:opacity-30"
-        :aria-label="t('workflows.editor.moveUp')"
+        :aria-label="t('checklists.editor.moveUp')"
         @click="emit('moveUp')"
       >
         <svg
@@ -92,7 +92,7 @@ const isAutomated = () => props.step.type === 'automated'
         type="button"
         :disabled="isReadOnly || isLast"
         class="flex h-6 w-6 items-center justify-center rounded-md text-app-slate disabled:opacity-30"
-        :aria-label="t('workflows.editor.moveDown')"
+        :aria-label="t('checklists.editor.moveDown')"
         @click="emit('moveDown')"
       >
         <svg
@@ -111,8 +111,8 @@ const isAutomated = () => props.step.type === 'automated'
         type="button"
         :disabled="isReadOnly"
         class="flex h-6 w-6 items-center justify-center rounded-md text-app-slate disabled:opacity-30"
-        :aria-label="t('workflows.editor.editStep')"
-        :title="t('workflows.editor.editStep')"
+        :aria-label="t('checklists.editor.editStep')"
+        :title="t('checklists.editor.editStep')"
         @click="emit('edit')"
       >
         <svg
@@ -132,8 +132,8 @@ const isAutomated = () => props.step.type === 'automated'
         type="button"
         :disabled="isReadOnly"
         class="flex h-6 w-6 items-center justify-center rounded-md disabled:opacity-30"
-        :aria-label="t('workflows.editor.delete')"
-        :title="t('workflows.editor.delete')"
+        :aria-label="t('checklists.editor.delete')"
+        :title="t('checklists.editor.delete')"
         @click="emit('delete')"
       >
         <svg

@@ -7,17 +7,17 @@ import type { AutomatedActionKey } from '@staffcomplete/shared'
 import { ApiError, apiFetch } from '../lib/api'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
-import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
+import { useChecklistTemplate } from '../composables/useChecklistTemplates'
 import type {
-  WorkflowTemplatePhase,
-  WorkflowTemplateStep,
-} from '../composables/useWorkflowTemplates'
+  ChecklistTemplatePhase,
+  ChecklistTemplateStep,
+} from '../composables/useChecklistTemplates'
 import { moveStep } from '../lib/reorderSteps'
 import { emptyStepForm } from '../lib/stepForm'
 import type { Member, StepFormState } from '../lib/stepForm'
-import PhaseCard from '../components/workflows/PhaseCard.vue'
-import PhaseFlowDiagram from '../components/workflows/PhaseFlowDiagram.vue'
-import ConfirmDialog from '../components/workflows/ConfirmDialog.vue'
+import PhaseCard from '../components/checklists/PhaseCard.vue'
+import PhaseFlowDiagram from '../components/checklists/PhaseFlowDiagram.vue'
+import ConfirmDialog from '../components/checklists/ConfirmDialog.vue'
 
 const { t } = useI18n()
 
@@ -27,7 +27,7 @@ const { t } = useI18n()
 // registry (see packages/shared/src/automation.ts). Action keys use dots
 // (e.g. 'email.send'), which map directly onto a nested i18n path.
 function automatedActionLabel(key: AutomatedActionKey) {
-  return t(`workflows.automatedActions.${key}`)
+  return t(`checklists.automatedActions.${key}`)
 }
 
 const route = useRoute()
@@ -37,10 +37,10 @@ const { data: trialStatus } = useTrialStatus()
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const queryClient = useQueryClient()
-const { data: template, isLoading } = useWorkflowTemplate(id.value)
+const { data: template, isLoading } = useChecklistTemplate(id.value)
 
 function invalidate() {
-  return queryClient.invalidateQueries({ queryKey: ['workflow-template', id.value] })
+  return queryClient.invalidateQueries({ queryKey: ['checklist-template', id.value] })
 }
 
 // Shared error slot for the editor's inline actions — rename/delete a phase,
@@ -76,17 +76,17 @@ function memberLabel(memberId: string | null) {
   return member ? member.user.name : t('common.unassigned')
 }
 
-function stepMeta(step: WorkflowTemplateStep): string {
+function stepMeta(step: ChecklistTemplateStep): string {
   if (step.type === 'manual') {
-    let meta = `${t('workflows.editor.typeManual')} · ${memberLabel(step.assigneeId)}`
+    let meta = `${t('checklists.editor.typeManual')} · ${memberLabel(step.assigneeId)}`
     if (step.dueDateOffsetDays !== null) {
-      meta += ` ${t('workflows.editor.dueAfterStart', { days: step.dueDateOffsetDays })}`
+      meta += ` ${t('checklists.editor.dueAfterStart', { days: step.dueDateOffsetDays })}`
     }
     return meta
   }
   return step.action
-    ? `${t('workflows.editor.typeAutomated')} · ${automatedActionLabel(step.action)}`
-    : t('workflows.editor.typeAutomated')
+    ? `${t('checklists.editor.typeAutomated')} · ${automatedActionLabel(step.action)}`
+    : t('checklists.editor.typeAutomated')
 }
 
 const nameForm = ref({ name: '', type: 'onboarding' as 'onboarding' | 'offboarding' })
@@ -107,12 +107,12 @@ async function saveName() {
   if (isReadOnly.value || !template.value) return
   nameError.value = ''
   if (nameForm.value.name.trim().length < 2) {
-    nameError.value = t('workflows.editor.validationName')
+    nameError.value = t('checklists.editor.validationName')
     return
   }
   savingName.value = true
   try {
-    await apiFetch(`/api/workflows/${id.value}`, {
+    await apiFetch(`/api/checklists/${id.value}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(nameForm.value),
@@ -134,12 +134,12 @@ async function addPhase() {
   if (isReadOnly.value) return
   phaseError.value = ''
   if (newPhaseName.value.trim().length < 2) {
-    phaseError.value = t('workflows.editor.validationName')
+    phaseError.value = t('checklists.editor.validationName')
     return
   }
   addingPhase.value = true
   try {
-    await apiFetch(`/api/workflows/${id.value}/phases`, {
+    await apiFetch(`/api/checklists/${id.value}/phases`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newPhaseName.value }),
@@ -156,7 +156,7 @@ async function addPhase() {
 async function renamePhase(phaseId: string, newName: string) {
   if (isReadOnly.value) return
   await runAction(() =>
-    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}`, {
+    apiFetch(`/api/checklists/${id.value}/phases/${phaseId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newName }),
@@ -167,7 +167,7 @@ async function renamePhase(phaseId: string, newName: string) {
 async function deletePhase(phaseId: string) {
   if (isReadOnly.value) return
   await runAction(() =>
-    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}`, { method: 'DELETE' }),
+    apiFetch(`/api/checklists/${id.value}/phases/${phaseId}`, { method: 'DELETE' }),
   )
 }
 
@@ -177,7 +177,7 @@ async function deletePhase(phaseId: string) {
 async function setPhaseDependencies(phaseId: string, dependsOnPhaseIds: string[]) {
   if (isReadOnly.value) return
   await runAction(() =>
-    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}/dependencies`, {
+    apiFetch(`/api/checklists/${id.value}/phases/${phaseId}/dependencies`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dependsOnPhaseIds }),
@@ -185,7 +185,7 @@ async function setPhaseDependencies(phaseId: string, dependsOnPhaseIds: string[]
   )
 }
 
-const deletePhaseTarget = ref<WorkflowTemplatePhase | null>(null)
+const deletePhaseTarget = ref<ChecklistTemplatePhase | null>(null)
 async function confirmDeletePhase() {
   if (!deletePhaseTarget.value) return
   await deletePhase(deletePhaseTarget.value.id)
@@ -199,7 +199,7 @@ async function reorderPhase(phaseId: string, direction: 'up' | 'down') {
   if (nextIds === currentIds) return
 
   await runAction(() =>
-    apiFetch(`/api/workflows/${id.value}/phase-order`, {
+    apiFetch(`/api/checklists/${id.value}/phase-order`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phaseIds: nextIds }),
@@ -259,11 +259,11 @@ async function addStep(phaseId: string) {
   stepErrors.set(phaseId, '')
 
   if (form.title.trim().length < 2) {
-    stepErrors.set(phaseId, t('workflows.editor.validationTitle'))
+    stepErrors.set(phaseId, t('checklists.editor.validationTitle'))
     return
   }
   if (form.type === 'automated' && form.action === '') {
-    stepErrors.set(phaseId, t('workflows.editor.validationAction'))
+    stepErrors.set(phaseId, t('checklists.editor.validationAction'))
     return
   }
   if (
@@ -271,7 +271,7 @@ async function addStep(phaseId: string) {
     form.action === 'email.send' &&
     (form.emailTo.trim() === '' || form.emailSubject.trim() === '' || form.emailBody.trim() === '')
   ) {
-    stepErrors.set(phaseId, t('workflows.editor.validationEmailConfig'))
+    stepErrors.set(phaseId, t('checklists.editor.validationEmailConfig'))
     return
   }
 
@@ -294,7 +294,7 @@ async function addStep(phaseId: string) {
 
   addingStepPhaseId.value = phaseId
   try {
-    await apiFetch(`/api/workflows/${id.value}/steps`, {
+    await apiFetch(`/api/checklists/${id.value}/steps`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -311,7 +311,7 @@ async function addStep(phaseId: string) {
 async function deleteStep(stepId: string) {
   if (isReadOnly.value) return
   await runAction(() =>
-    apiFetch(`/api/workflows/${id.value}/steps/${stepId}`, { method: 'DELETE' }),
+    apiFetch(`/api/checklists/${id.value}/steps/${stepId}`, { method: 'DELETE' }),
   )
 }
 
@@ -328,7 +328,7 @@ const editStepForm = ref<StepFormState>(emptyStepForm())
 const editStepError = ref('')
 const editSubmitting = ref(false)
 
-function startEditStep(step: WorkflowTemplateStep) {
+function startEditStep(step: ChecklistTemplateStep) {
   if (isReadOnly.value) return
   editingStepId.value = step.id
   editStepError.value = ''
@@ -361,11 +361,11 @@ async function submitEditStep() {
   editStepError.value = ''
 
   if (form.title.trim().length < 2) {
-    editStepError.value = t('workflows.editor.validationTitle')
+    editStepError.value = t('checklists.editor.validationTitle')
     return
   }
   if (form.type === 'automated' && form.action === '') {
-    editStepError.value = t('workflows.editor.validationAction')
+    editStepError.value = t('checklists.editor.validationAction')
     return
   }
   if (
@@ -373,7 +373,7 @@ async function submitEditStep() {
     form.action === 'email.send' &&
     (form.emailTo.trim() === '' || form.emailSubject.trim() === '' || form.emailBody.trim() === '')
   ) {
-    editStepError.value = t('workflows.editor.validationEmailConfig')
+    editStepError.value = t('checklists.editor.validationEmailConfig')
     return
   }
 
@@ -392,7 +392,7 @@ async function submitEditStep() {
 
   editSubmitting.value = true
   try {
-    await apiFetch(`/api/workflows/${id.value}/steps/${editingStepId.value}`, {
+    await apiFetch(`/api/checklists/${id.value}/steps/${editingStepId.value}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -417,7 +417,7 @@ async function reorderStep(
   if (nextIds === stepIds) return
 
   await runAction(() =>
-    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}/steps/order`, {
+    apiFetch(`/api/checklists/${id.value}/phases/${phaseId}/steps/order`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stepIds: nextIds }),
@@ -429,7 +429,7 @@ async function reorderStep(
 <template>
   <div>
     <RouterLink
-      to="/workflows"
+      to="/checklists"
       class="mb-5 flex w-fit items-center gap-1.5 text-[14.5px] font-bold text-app-ink"
     >
       <svg
@@ -444,14 +444,14 @@ async function reorderStep(
       >
         <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
-      {{ t('workflows.editor.backToTemplates') }}
+      {{ t('checklists.editor.backToTemplates') }}
     </RouterLink>
 
     <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
 
     <template v-else-if="template">
       <h1 class="mb-5 text-2xl font-extrabold tracking-tight">
-        {{ template.name || t('workflows.editor.fallbackTitle') }}
+        {{ template.name || t('checklists.editor.fallbackTitle') }}
       </h1>
 
       <div
@@ -471,17 +471,17 @@ async function reorderStep(
             d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.14A1 1 0 0 0 3 19.5h18a1 1 0 0 0 .89-1.5L13.71 3.86a1 1 0 0 0-1.72 0z"
           />
         </svg>
-        {{ t('workflows.editor.trialExpired') }}
+        {{ t('checklists.editor.trialExpired') }}
       </div>
 
       <div class="mb-4.5 rounded-[20px] bg-white p-5.5">
         <h2 class="mb-3.5 text-[15px] font-extrabold">
-          {{ t('workflows.editor.detailsHeading') }}
+          {{ t('checklists.editor.detailsHeading') }}
         </h2>
         <form class="flex flex-wrap items-end gap-3" @submit.prevent="saveName">
           <div class="min-w-[200px] flex-1">
             <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="template-name">{{
-              t('workflows.editor.nameLabel')
+              t('checklists.editor.nameLabel')
             }}</label>
             <input
               id="template-name"
@@ -493,7 +493,7 @@ async function reorderStep(
           </div>
           <div>
             <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="template-type">{{
-              t('workflows.editor.typeLabel')
+              t('checklists.editor.typeLabel')
             }}</label>
             <select
               id="template-type"
@@ -510,19 +510,19 @@ async function reorderStep(
             :disabled="savingName || isReadOnly"
             class="whitespace-nowrap rounded-lg bg-app-accent px-5.5 py-3 text-sm font-bold text-white disabled:opacity-60"
           >
-            {{ savingName ? t('workflows.editor.saving') : t('workflows.editor.save') }}
+            {{ savingName ? t('checklists.editor.saving') : t('checklists.editor.save') }}
           </button>
         </form>
         <p v-if="nameError" class="mt-2 text-xs text-app-danger">{{ nameError }}</p>
       </div>
 
       <div class="mb-1.5">
-        <h2 class="mb-1 text-[15px] font-extrabold">{{ t('workflows.editor.phasesHeading') }}</h2>
-        <p class="mb-4 text-[13px] text-app-muted">{{ t('workflows.editor.parallelHint') }}</p>
+        <h2 class="mb-1 text-[15px] font-extrabold">{{ t('checklists.editor.phasesHeading') }}</h2>
+        <p class="mb-4 text-[13px] text-app-muted">{{ t('checklists.editor.parallelHint') }}</p>
       </div>
 
       <p v-if="template.phases.length === 0" class="mb-4 text-sm text-app-muted">
-        {{ t('workflows.editor.noPhases') }}
+        {{ t('checklists.editor.noPhases') }}
       </p>
 
       <p v-if="actionError" role="alert" class="mb-4 text-[13px] text-app-danger">
@@ -577,14 +577,14 @@ async function reorderStep(
         <form class="flex flex-wrap items-end gap-3" @submit.prevent="addPhase">
           <div class="min-w-[200px] flex-1">
             <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="new-phase-name">{{
-              t('workflows.editor.phaseNameLabel')
+              t('checklists.editor.phaseNameLabel')
             }}</label>
             <input
               id="new-phase-name"
               v-model="newPhaseName"
               type="text"
               :disabled="isReadOnly"
-              :placeholder="t('workflows.editor.phaseNamePlaceholder')"
+              :placeholder="t('checklists.editor.phaseNamePlaceholder')"
               class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
             />
           </div>
@@ -595,8 +595,8 @@ async function reorderStep(
           >
             {{
               addingPhase
-                ? t('workflows.editor.addPhaseSubmitting')
-                : t('workflows.editor.addPhaseSubmit')
+                ? t('checklists.editor.addPhaseSubmitting')
+                : t('checklists.editor.addPhaseSubmit')
             }}
           </button>
         </form>
@@ -606,19 +606,19 @@ async function reorderStep(
       <ConfirmDialog
         :open="deletePhaseTarget !== null"
         :title="
-          t('workflows.editor.deletePhaseConfirmTitle', { name: deletePhaseTarget?.name ?? '' })
+          t('checklists.editor.deletePhaseConfirmTitle', { name: deletePhaseTarget?.name ?? '' })
         "
         :body="
-          t('workflows.editor.deletePhaseConfirmBody', {
+          t('checklists.editor.deletePhaseConfirmBody', {
             steps: t('common.steps', deletePhaseTarget?.steps.length ?? 0),
           })
         "
-        :confirm-label="t('workflows.editor.deletePhaseConfirmSubmit')"
+        :confirm-label="t('checklists.editor.deletePhaseConfirmSubmit')"
         @cancel="deletePhaseTarget = null"
         @confirm="confirmDeletePhase"
       />
     </template>
 
-    <p v-else class="text-sm text-app-muted">{{ t('workflows.editor.notFound') }}</p>
+    <p v-else class="text-sm text-app-muted">{{ t('checklists.editor.notFound') }}</p>
   </div>
 </template>

@@ -4,10 +4,10 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { ApiError, apiFetch } from '../lib/api'
 import { useTrialStatus } from '../composables/useTrialStatus'
-import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
-import type { WorkflowTemplateSummary } from '../composables/useWorkflowTemplates'
+import { useChecklistTemplates } from '../composables/useChecklistTemplates'
+import type { ChecklistTemplateSummary } from '../composables/useChecklistTemplates'
 import LoadError from '../components/LoadError.vue'
-import ConfirmDialog from '../components/workflows/ConfirmDialog.vue'
+import ConfirmDialog from '../components/checklists/ConfirmDialog.vue'
 
 const { t } = useI18n()
 
@@ -15,21 +15,21 @@ const { data: trialStatus } = useTrialStatus()
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const queryClient = useQueryClient()
-const { data: templates, isLoading, isError, error, refetch, isFetching } = useWorkflowTemplates()
+const { data: templates, isLoading, isError, error, refetch, isFetching } = useChecklistTemplates()
 
 const form = ref({ name: '', type: 'onboarding' as 'onboarding' | 'offboarding' })
 const errors = ref<Record<string, string>>({})
 const serverError = ref('')
 const creating = ref(false)
 const showForm = ref(false)
-const deleteTarget = ref<WorkflowTemplateSummary | null>(null)
+const deleteTarget = ref<ChecklistTemplateSummary | null>(null)
 
 function typeLabel(type: 'onboarding' | 'offboarding') {
   return type === 'offboarding' ? t('common.offboarding') : t('common.onboarding')
 }
 
 function invalidate() {
-  return queryClient.invalidateQueries({ queryKey: ['workflow-templates'] })
+  return queryClient.invalidateQueries({ queryKey: ['checklist-templates'] })
 }
 
 async function createTemplate() {
@@ -39,13 +39,13 @@ async function createTemplate() {
   serverError.value = ''
 
   if (form.value.name.trim().length < 2) {
-    errors.value.name = t('workflows.list.validationName')
+    errors.value.name = t('checklists.list.validationName')
     return
   }
 
   creating.value = true
   try {
-    await apiFetch('/api/workflows', {
+    await apiFetch('/api/checklists', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value),
@@ -66,7 +66,7 @@ async function confirmDelete() {
   // and reloaded the list, so the template silently reappeared with no explanation.
   serverError.value = ''
   try {
-    await apiFetch(`/api/workflows/${deleteTarget.value.id}`, { method: 'DELETE' })
+    await apiFetch(`/api/checklists/${deleteTarget.value.id}`, { method: 'DELETE' })
   } catch (err) {
     serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
   }
@@ -80,7 +80,7 @@ async function confirmDelete() {
     <div class="mb-5.5 flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="mb-1.5 text-2xl font-extrabold tracking-tight">
-          {{ t('workflows.list.title') }}
+          {{ t('checklists.list.title') }}
         </h1>
         <p class="text-[15px] text-app-slate">{{ t('nav.templates') }}</p>
       </div>
@@ -101,7 +101,7 @@ async function confirmDelete() {
         >
           <path d="M12 5v14M5 12h14" />
         </svg>
-        {{ t('workflows.list.newTemplateHeading') }}
+        {{ t('checklists.list.newTemplateHeading') }}
       </button>
     </div>
 
@@ -122,24 +122,24 @@ async function confirmDelete() {
           d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.14A1 1 0 0 0 3 19.5h18a1 1 0 0 0 .89-1.5L13.71 3.86a1 1 0 0 0-1.72 0z"
         />
       </svg>
-      {{ t('workflows.list.trialExpired') }}
+      {{ t('checklists.list.trialExpired') }}
     </div>
 
     <div v-if="showForm" class="mb-5.5 rounded-3xl bg-white p-7">
       <div class="mb-4 text-[15px] font-extrabold">
-        {{ t('workflows.list.newTemplateHeading') }}
+        {{ t('checklists.list.newTemplateHeading') }}
       </div>
 
       <form class="flex flex-wrap items-end gap-3" @submit.prevent="createTemplate">
         <div class="min-w-[200px] flex-1">
           <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="name">{{
-            t('workflows.list.nameLabel')
+            t('checklists.list.nameLabel')
           }}</label>
           <input
             id="name"
             v-model="form.name"
             type="text"
-            :placeholder="t('workflows.list.namePlaceholder')"
+            :placeholder="t('checklists.list.namePlaceholder')"
             class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
           />
           <p v-if="errors.name" class="mt-1 text-xs text-app-danger">{{ errors.name }}</p>
@@ -147,7 +147,7 @@ async function confirmDelete() {
 
         <div>
           <label class="mb-1.5 block text-[13px] font-bold text-app-slate" for="type">{{
-            t('workflows.list.typeLabel')
+            t('checklists.list.typeLabel')
           }}</label>
           <select
             id="type"
@@ -164,7 +164,7 @@ async function confirmDelete() {
           :disabled="creating || isReadOnly"
           class="whitespace-nowrap rounded-lg bg-app-accent px-5.5 py-3 text-sm font-bold text-white disabled:opacity-60"
         >
-          {{ creating ? t('workflows.list.submitting') : t('workflows.list.submit') }}
+          {{ creating ? t('checklists.list.submitting') : t('checklists.list.submit') }}
         </button>
       </form>
       <p
@@ -178,7 +178,7 @@ async function confirmDelete() {
     <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
     <LoadError v-else-if="isError" :error="error" :retrying="isFetching" @retry="refetch()" />
     <p v-else-if="!templates || templates.length === 0" class="text-sm text-app-muted">
-      {{ t('workflows.list.empty') }}
+      {{ t('checklists.list.empty') }}
     </p>
     <div v-else class="grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-3">
       <div
@@ -201,8 +201,8 @@ async function confirmDelete() {
             type="button"
             :disabled="isReadOnly"
             class="flex h-7.5 w-7.5 items-center justify-center rounded-lg disabled:opacity-50"
-            :aria-label="t('workflows.list.delete')"
-            :title="t('workflows.list.delete')"
+            :aria-label="t('checklists.list.delete')"
+            :title="t('checklists.list.delete')"
             @click.stop.prevent="deleteTarget = template"
           >
             <svg
@@ -219,7 +219,7 @@ async function confirmDelete() {
             </svg>
           </button>
         </div>
-        <RouterLink :to="`/workflows/${template.id}`">
+        <RouterLink :to="`/checklists/${template.id}`">
           <h3 class="mb-2 truncate text-[16.5px] font-extrabold tracking-tight">
             {{ template.name }}
           </h3>
@@ -234,14 +234,14 @@ async function confirmDelete() {
 
     <ConfirmDialog
       :open="deleteTarget !== null"
-      :title="t('workflows.list.deleteConfirmTitle', { name: deleteTarget?.name ?? '' })"
+      :title="t('checklists.list.deleteConfirmTitle', { name: deleteTarget?.name ?? '' })"
       :body="
-        t('workflows.list.deleteConfirmBody', {
+        t('checklists.list.deleteConfirmBody', {
           phases: t('common.phases', deleteTarget?.phaseCount ?? 0),
           steps: t('common.steps', deleteTarget?.stepCount ?? 0),
         })
       "
-      :confirm-label="t('workflows.list.deleteConfirmSubmit')"
+      :confirm-label="t('checklists.list.deleteConfirmSubmit')"
       @cancel="deleteTarget = null"
       @confirm="confirmDelete"
     />

@@ -5,9 +5,9 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
 import { ApiError, apiFetch } from '../lib/api'
-import type { WorkflowTemplateSummary } from '../composables/useWorkflowTemplates'
+import type { ChecklistTemplateSummary } from '../composables/useChecklistTemplates'
 
-const props = defineProps<{ templates: WorkflowTemplateSummary[] }>()
+const props = defineProps<{ templates: ChecklistTemplateSummary[] }>()
 const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
@@ -15,7 +15,7 @@ const router = useRouter()
 const queryClient = useQueryClient()
 
 const form = ref({
-  workflowTemplateId: props.templates[0]?.id ?? '',
+  checklistTemplateId: props.templates[0]?.id ?? '',
   employeeName: '',
   employeeEmail: '',
   employeeRole: '',
@@ -27,7 +27,7 @@ const submitting = ref(false)
 
 const schema = computed(() =>
   z.object({
-    workflowTemplateId: z.string().min(1, t('runs.startModal.validationTemplate')),
+    checklistTemplateId: z.string().min(1, t('runs.startModal.validationTemplate')),
     employeeName: z.string().min(2, t('runs.startModal.validationName')),
     employeeEmail: z.string().email(t('runs.startModal.validationEmail')),
     employeeRole: z.string().min(1, t('runs.startModal.validationRole')),
@@ -85,7 +85,7 @@ async function submit() {
           }}</label>
           <select
             id="template"
-            v-model="form.workflowTemplateId"
+            v-model="form.checklistTemplateId"
             class="w-full rounded-xl border border-app-border px-4 py-3 text-[14.5px] outline-none"
           >
             <option value="" disabled>{{ t('runs.startModal.selectTemplate') }}</option>
@@ -95,8 +95,8 @@ async function submit() {
               }})
             </option>
           </select>
-          <p v-if="errors.workflowTemplateId" class="mt-1 text-xs text-app-danger">
-            {{ errors.workflowTemplateId }}
+          <p v-if="errors.checklistTemplateId" class="mt-1 text-xs text-app-danger">
+            {{ errors.checklistTemplateId }}
           </p>
         </div>
 

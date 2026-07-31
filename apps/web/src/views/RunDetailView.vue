@@ -83,7 +83,7 @@ function memberLabel(memberId: string | null) {
 // action, distinguished by title), so it's shown as-is, same as a manual
 // step's title.
 function automatedActionLabel(action: string) {
-  return t(`workflows.automatedActions.${action}`)
+  return t(`checklists.automatedActions.${action}`)
 }
 
 function stepStatusLabel(step: { status: string; isOverdue: boolean }) {

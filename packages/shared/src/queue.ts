@@ -12,7 +12,7 @@ export interface JobHandler<T = unknown> {
 }
 
 // Options for one-off jobs that need retry-on-failure or dedup semantics
-// (e.g. executing an automated workflow step) — plain fields rather than a
+// (e.g. executing an automated checklist step) — plain fields rather than a
 // generic pass-through bag, so callers stay decoupled from pg-boss's own
 // option shape per ADR-0006.
 export interface EnqueueOptions {

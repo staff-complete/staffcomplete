@@ -26,18 +26,18 @@ const mocks = vi.hoisted(() => ({
 function tx() {
   return {
     query: {
-      workflowTemplate: {
+      checklistTemplate: {
         findFirst: mocks.templateFindFirstMock,
         findMany: mocks.templateFindManyMock,
       },
-      workflowTemplatePhase: {
+      checklistTemplatePhase: {
         findFirst: mocks.phaseFindFirstMock,
         findMany: mocks.phaseFindManyMock,
       },
-      workflowTemplatePhaseDependency: {
+      checklistTemplatePhaseDependency: {
         findMany: mocks.dependencyFindManyMock,
       },
-      workflowTemplateStep: {
+      checklistTemplateStep: {
         findFirst: mocks.stepFindFirstMock,
         findMany: mocks.stepFindManyMock,
       },
@@ -58,9 +58,9 @@ vi.mock('../auth.js', () => ({
   auth: { api: { getSession: mocks.getSessionMock } },
 }))
 
-const { workflowsRouter } = await import('./workflows.js')
+const { checklistsRouter } = await import('./checklists.js')
 
-const app = new Hono().route('/api/workflows', workflowsRouter)
+const app = new Hono().route('/api/checklists', checklistsRouter)
 
 const ADMIN_ORG_ID = 'org-admin'
 const VALID_EMAIL_CONFIG = {
@@ -78,7 +78,7 @@ function adminSession(role: 'admin' | 'owner' = 'admin') {
 }
 
 function req(path: string, init?: RequestInit) {
-  return app.request(path === '/' ? '/api/workflows' : `/api/workflows${path}`, init)
+  return app.request(path === '/' ? '/api/checklists' : `/api/checklists${path}`, init)
 }
 
 function postJson(path: string, body: unknown) {
@@ -152,7 +152,7 @@ describe('admin gate', () => {
   })
 })
 
-describe('GET /api/workflows', () => {
+describe('GET /api/checklists', () => {
   it('lists templates with phase and step counts', async () => {
     adminSession()
     mocks.templateFindManyMock.mockResolvedValue([
@@ -172,28 +172,28 @@ describe('GET /api/workflows', () => {
       },
     ])
     mocks.phaseFindManyMock.mockResolvedValue([
-      { workflowTemplateId: 't1' },
-      { workflowTemplateId: 't1' },
-      { workflowTemplateId: 't1' },
+      { checklistTemplateId: 't1' },
+      { checklistTemplateId: 't1' },
+      { checklistTemplateId: 't1' },
     ])
     mocks.stepFindManyMock.mockResolvedValue([
-      { workflowTemplateId: 't1' },
-      { workflowTemplateId: 't1' },
+      { checklistTemplateId: 't1' },
+      { checklistTemplateId: 't1' },
     ])
 
     const res = await req('/')
     const json = await res.json()
 
     expect(res.status).toBe(200)
-    expect(json.workflows).toEqual([
+    expect(json.checklists).toEqual([
       expect.objectContaining({ id: 't1', phaseCount: 3, stepCount: 2 }),
       expect.objectContaining({ id: 't2', phaseCount: 0, stepCount: 0 }),
     ])
   })
 })
 
-describe('POST /api/workflows', () => {
-  it('creates a workflow template', async () => {
+describe('POST /api/checklists', () => {
+  it('creates a checklist template', async () => {
     adminSession()
     mocks.insertReturningMock.mockResolvedValue([
       {
@@ -239,7 +239,7 @@ describe('POST /api/workflows', () => {
   })
 })
 
-describe('GET /api/workflows/:id', () => {
+describe('GET /api/checklists/:id', () => {
   it('returns 404 for an unknown template', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue(null)
@@ -287,7 +287,7 @@ describe('GET /api/workflows/:id', () => {
   })
 })
 
-describe('PATCH /api/workflows/:id', () => {
+describe('PATCH /api/checklists/:id', () => {
   it('returns 404 when the template does not exist', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue(null)
@@ -317,7 +317,7 @@ describe('PATCH /api/workflows/:id', () => {
   })
 })
 
-describe('DELETE /api/workflows/:id', () => {
+describe('DELETE /api/checklists/:id', () => {
   it('returns 404 when the template does not exist', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue(null)
@@ -338,8 +338,8 @@ describe('DELETE /api/workflows/:id', () => {
   })
 })
 
-describe('POST /api/workflows/:id/phases', () => {
-  it('returns 404 when the workflow does not exist', async () => {
+describe('POST /api/checklists/:id/phases', () => {
+  it('returns 404 when the checklist template does not exist', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue(null)
 
@@ -361,10 +361,10 @@ describe('POST /api/workflows/:id/phases', () => {
   })
 })
 
-describe('PATCH /api/workflows/:id/phases/:phaseId', () => {
-  it('returns 404 when the phase does not belong to the workflow', async () => {
+describe('PATCH /api/checklists/:id/phases/:phaseId', () => {
+  it('returns 404 when the phase does not belong to the checklist template', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 'other-template' })
 
     const res = await patchJson('/t1/phases/p1', { name: 'Renamed' })
 
@@ -373,7 +373,7 @@ describe('PATCH /api/workflows/:id/phases/:phaseId', () => {
 
   it('renames the phase', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 't1' })
     mocks.updateReturningMock.mockResolvedValue([{ id: 'p1', name: 'Renamed', position: 0 }])
 
     const res = await patchJson('/t1/phases/p1', { name: 'Renamed' })
@@ -383,10 +383,10 @@ describe('PATCH /api/workflows/:id/phases/:phaseId', () => {
   })
 })
 
-describe('DELETE /api/workflows/:id/phases/:phaseId', () => {
-  it('returns 404 when the phase does not belong to the workflow', async () => {
+describe('DELETE /api/checklists/:id/phases/:phaseId', () => {
+  it('returns 404 when the phase does not belong to the checklist template', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 'other-template' })
 
     const res = await req('/t1/phases/p1', { method: 'DELETE' })
 
@@ -395,7 +395,7 @@ describe('DELETE /api/workflows/:id/phases/:phaseId', () => {
 
   it('deletes the phase', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 't1' })
 
     const res = await req('/t1/phases/p1', { method: 'DELETE' })
 
@@ -404,7 +404,7 @@ describe('DELETE /api/workflows/:id/phases/:phaseId', () => {
   })
 })
 
-describe('PUT /api/workflows/:id/phase-order', () => {
+describe('PUT /api/checklists/:id/phase-order', () => {
   it('rejects a phaseIds set that does not match the existing phases', async () => {
     adminSession()
     mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
@@ -427,19 +427,19 @@ describe('PUT /api/workflows/:id/phase-order', () => {
   })
 })
 
-describe('PUT /api/workflows/:id/phases/:phaseId/dependencies', () => {
-  it('returns 404 when the phase does not belong to the workflow', async () => {
+describe('PUT /api/checklists/:id/phases/:phaseId/dependencies', () => {
+  it('returns 404 when the phase does not belong to the checklist template', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 'other-template' })
 
     const res = await putJson('/t1/phases/p1/dependencies', { dependsOnPhaseIds: [] })
 
     expect(res.status).toBe(404)
   })
 
-  it('rejects a dependsOnPhaseId that is not a phase in this workflow', async () => {
+  it('rejects a dependsOnPhaseId that is not a phase in this checklist template', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', checklistTemplateId: 't1' })
     mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
 
     const res = await putJson('/t1/phases/p2/dependencies', {
@@ -453,7 +453,7 @@ describe('PUT /api/workflows/:id/phases/:phaseId/dependencies', () => {
   it('rejects an edge that would close a cycle', async () => {
     adminSession()
     // p2 already depends on p1 — making p1 depend on p2 would close a loop.
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 't1' })
     mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
     mocks.dependencyFindManyMock.mockResolvedValue([{ phaseId: 'p2', dependsOnPhaseId: 'p1' }])
 
@@ -467,7 +467,7 @@ describe('PUT /api/workflows/:id/phases/:phaseId/dependencies', () => {
     adminSession()
     mocks.phaseFindFirstMock.mockResolvedValue({
       id: 'p3',
-      workflowTemplateId: 't1',
+      checklistTemplateId: 't1',
       name: 'Payroll',
       position: 2,
     })
@@ -488,7 +488,7 @@ describe('PUT /api/workflows/:id/phases/:phaseId/dependencies', () => {
 
   it('clears dependencies for an empty set without inserting', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', checklistTemplateId: 't1' })
     mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
 
     const res = await putJson('/t1/phases/p2/dependencies', { dependsOnPhaseIds: [] })
@@ -502,7 +502,7 @@ describe('PUT /api/workflows/:id/phases/:phaseId/dependencies', () => {
 
   it('deduplicates repeated ids in the request', async () => {
     adminSession()
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', checklistTemplateId: 't1' })
     mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
 
     const res = await putJson('/t1/phases/p2/dependencies', {
@@ -518,8 +518,8 @@ describe('PUT /api/workflows/:id/phases/:phaseId/dependencies', () => {
   })
 })
 
-describe('POST /api/workflows/:id/steps', () => {
-  it('returns 404 when the workflow does not exist', async () => {
+describe('POST /api/checklists/:id/steps', () => {
+  it('returns 404 when the checklist template does not exist', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue(null)
 
@@ -528,10 +528,10 @@ describe('POST /api/workflows/:id/steps', () => {
     expect(res.status).toBe(404)
   })
 
-  it('rejects a phase that does not belong to the workflow', async () => {
+  it('rejects a phase that does not belong to the checklist template', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 'other-workflow' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 'other-template' })
 
     const res = await postJson('/t1/steps', { phaseId: 'p1', title: 'Step', type: 'manual' })
 
@@ -542,7 +542,7 @@ describe('POST /api/workflows/:id/steps', () => {
   it('appends the step at the next position within the phase', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 't1' })
     mocks.stepFindManyMock.mockResolvedValue([{ position: 0 }, { position: 1 }])
     mocks.insertReturningMock.mockResolvedValue([
       {
@@ -582,7 +582,7 @@ describe('POST /api/workflows/:id/steps', () => {
   it('creates an automated step with its own title (not derived from the action) and no assignee', async () => {
     adminSession()
     mocks.templateFindFirstMock.mockResolvedValue({ id: 't1' })
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', workflowTemplateId: 't1' })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p1', checklistTemplateId: 't1' })
     mocks.stepFindManyMock.mockResolvedValue([])
     mocks.insertReturningMock.mockResolvedValue([
       {
@@ -649,10 +649,10 @@ describe('POST /api/workflows/:id/steps', () => {
   })
 })
 
-describe('PATCH /api/workflows/:id/steps/:stepId', () => {
-  it('returns 404 when the step does not belong to the workflow', async () => {
+describe('PATCH /api/checklists/:id/steps/:stepId', () => {
+  it('returns 404 when the step does not belong to the checklist template', async () => {
     adminSession()
-    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 'other-workflow' })
+    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', checklistTemplateId: 'other-template' })
 
     const res = await patchJson('/t1/steps/s1', { title: 'Renamed' })
 
@@ -661,7 +661,11 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
 
   it('updates the step', async () => {
     adminSession()
-    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1', phaseId: 'p1' })
+    mocks.stepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      checklistTemplateId: 't1',
+      phaseId: 'p1',
+    })
     mocks.updateReturningMock.mockResolvedValue([
       {
         id: 's1',
@@ -680,10 +684,14 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
     expect((await res.json()).title).toBe('Renamed')
   })
 
-  it('rejects moving the step to a phase outside the workflow', async () => {
+  it('rejects moving the step to a phase outside the checklist template', async () => {
     adminSession()
-    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1', phaseId: 'p1' })
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 'other-workflow' })
+    mocks.stepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      checklistTemplateId: 't1',
+      phaseId: 'p1',
+    })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', checklistTemplateId: 'other-template' })
 
     const res = await patchJson('/t1/steps/s1', { phaseId: 'p2' })
 
@@ -693,8 +701,12 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
 
   it('moves the step to the end of the destination phase', async () => {
     adminSession()
-    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1', phaseId: 'p1' })
-    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', workflowTemplateId: 't1' })
+    mocks.stepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      checklistTemplateId: 't1',
+      phaseId: 'p1',
+    })
+    mocks.phaseFindFirstMock.mockResolvedValue({ id: 'p2', checklistTemplateId: 't1' })
     mocks.stepFindManyMock.mockResolvedValue([{ position: 0 }, { position: 1 }])
     mocks.updateReturningMock.mockResolvedValue([
       {
@@ -722,7 +734,7 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
     mocks.memberFindFirstMock.mockResolvedValueOnce({ id: 'm1', organizationId: ADMIN_ORG_ID })
     mocks.stepFindFirstMock.mockResolvedValue({
       id: 's1',
-      workflowTemplateId: 't1',
+      checklistTemplateId: 't1',
       phaseId: 'p1',
       type: 'automated',
     })
@@ -737,7 +749,7 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
     adminSession()
     mocks.stepFindFirstMock.mockResolvedValue({
       id: 's1',
-      workflowTemplateId: 't1',
+      checklistTemplateId: 't1',
       phaseId: 'p1',
       type: 'manual',
     })
@@ -755,7 +767,7 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
     adminSession()
     mocks.stepFindFirstMock.mockResolvedValue({
       id: 's1',
-      workflowTemplateId: 't1',
+      checklistTemplateId: 't1',
       phaseId: 'p1',
       type: 'automated',
     })
@@ -792,7 +804,7 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
     adminSession()
     mocks.stepFindFirstMock.mockResolvedValue({
       id: 's1',
-      workflowTemplateId: 't1',
+      checklistTemplateId: 't1',
       phaseId: 'p1',
       type: 'automated',
     })
@@ -818,10 +830,10 @@ describe('PATCH /api/workflows/:id/steps/:stepId', () => {
   })
 })
 
-describe('DELETE /api/workflows/:id/steps/:stepId', () => {
-  it('returns 404 when the step does not belong to the workflow', async () => {
+describe('DELETE /api/checklists/:id/steps/:stepId', () => {
+  it('returns 404 when the step does not belong to the checklist template', async () => {
     adminSession()
-    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 'other-workflow' })
+    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', checklistTemplateId: 'other-template' })
 
     const res = await req('/t1/steps/s1', { method: 'DELETE' })
 
@@ -830,7 +842,7 @@ describe('DELETE /api/workflows/:id/steps/:stepId', () => {
 
   it('deletes the step', async () => {
     adminSession()
-    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', workflowTemplateId: 't1' })
+    mocks.stepFindFirstMock.mockResolvedValue({ id: 's1', checklistTemplateId: 't1' })
 
     const res = await req('/t1/steps/s1', { method: 'DELETE' })
 
@@ -838,7 +850,7 @@ describe('DELETE /api/workflows/:id/steps/:stepId', () => {
   })
 })
 
-describe('PUT /api/workflows/:id/phases/:phaseId/steps/order', () => {
+describe('PUT /api/checklists/:id/phases/:phaseId/steps/order', () => {
   it('rejects a stepIds set that does not match the existing steps in the phase', async () => {
     adminSession()
     mocks.stepFindManyMock.mockResolvedValue([{ id: 's1' }, { id: 's2' }])

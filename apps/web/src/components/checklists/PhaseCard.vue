@@ -4,16 +4,16 @@ import { useI18n } from 'vue-i18n'
 import type { AutomatedActionKey, PhaseDependencyEdge } from '@staffcomplete/shared'
 import { wouldCreateCycle } from '@staffcomplete/shared'
 import type {
-  WorkflowTemplatePhase,
-  WorkflowTemplateStep,
-} from '../../composables/useWorkflowTemplates'
+  ChecklistTemplatePhase,
+  ChecklistTemplateStep,
+} from '../../composables/useChecklistTemplates'
 import type { Member, StepFormState } from '../../lib/stepForm'
 import StepChip from './StepChip.vue'
 import AddStepPanel from './AddStepPanel.vue'
 
 const props = defineProps<{
-  phase: WorkflowTemplatePhase
-  allPhases: WorkflowTemplatePhase[]
+  phase: ChecklistTemplatePhase
+  allPhases: ChecklistTemplatePhase[]
   index: number
   isFirst: boolean
   isLast: boolean
@@ -24,7 +24,7 @@ const props = defineProps<{
   editingStepId: string | null
   editStepError: string
   editSubmitting: boolean
-  stepMeta: (step: WorkflowTemplateStep) => string
+  stepMeta: (step: ChecklistTemplateStep) => string
   automatedActionLabel: (key: AutomatedActionKey) => string
 }>()
 const emit = defineEmits<{
@@ -34,7 +34,7 @@ const emit = defineEmits<{
   deletePhase: []
   setDependencies: [dependsOnPhaseIds: string[]]
   reorderStep: [stepId: string, direction: 'up' | 'down']
-  editStep: [step: WorkflowTemplateStep]
+  editStep: [step: ChecklistTemplateStep]
   updateStep: []
   cancelEditStep: []
   deleteStep: [stepId: string]
@@ -142,7 +142,7 @@ function saveEdit(currentName: string) {
           <button
             type="button"
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-app-surface"
-            :aria-label="t('workflows.editor.savePhaseName')"
+            :aria-label="t('checklists.editor.savePhaseName')"
             @click="saveEdit(phase.name)"
           >
             <svg
@@ -162,7 +162,7 @@ function saveEdit(currentName: string) {
           <button
             type="button"
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            :aria-label="t('workflows.editor.cancelEditPhaseName')"
+            :aria-label="t('checklists.editor.cancelEditPhaseName')"
             @click="cancelEdit"
           >
             <svg
@@ -184,7 +184,7 @@ function saveEdit(currentName: string) {
           class="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5"
           role="button"
           tabindex="0"
-          :aria-label="t('workflows.editor.editPhaseName')"
+          :aria-label="t('checklists.editor.editPhaseName')"
           @click="startEdit(phase.name)"
           @keyup.enter="startEdit(phase.name)"
         >
@@ -205,7 +205,7 @@ function saveEdit(currentName: string) {
         </div>
 
         <span v-if="justSaved" class="shrink-0 text-[12px] font-bold text-app-accent">{{
-          t('workflows.editor.savedBadge')
+          t('checklists.editor.savedBadge')
         }}</span>
 
         <div class="flex-1"></div>
@@ -214,7 +214,7 @@ function saveEdit(currentName: string) {
           type="button"
           :disabled="isReadOnly || isFirst"
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-app-slate disabled:opacity-30"
-          :aria-label="t('workflows.editor.movePhaseUp')"
+          :aria-label="t('checklists.editor.movePhaseUp')"
           @click="emit('moveUp')"
         >
           <svg
@@ -233,7 +233,7 @@ function saveEdit(currentName: string) {
           type="button"
           :disabled="isReadOnly || isLast"
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-app-slate disabled:opacity-30"
-          :aria-label="t('workflows.editor.movePhaseDown')"
+          :aria-label="t('checklists.editor.movePhaseDown')"
           @click="emit('moveDown')"
         >
           <svg
@@ -252,7 +252,7 @@ function saveEdit(currentName: string) {
           type="button"
           :disabled="isReadOnly"
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg disabled:opacity-30"
-          :aria-label="t('workflows.editor.deletePhase')"
+          :aria-label="t('checklists.editor.deletePhase')"
           @click="emit('deletePhase')"
         >
           <svg
@@ -272,10 +272,10 @@ function saveEdit(currentName: string) {
 
       <div class="mb-4.5">
         <p class="mb-2 text-[12px] font-bold tracking-wide text-app-muted uppercase">
-          {{ t('workflows.editor.dependsOnLabel') }}
+          {{ t('checklists.editor.dependsOnLabel') }}
         </p>
         <p v-if="otherPhases.length === 0" class="text-[13px] text-app-muted">
-          {{ t('workflows.editor.dependsOnNoOtherPhases') }}
+          {{ t('checklists.editor.dependsOnNoOtherPhases') }}
         </p>
         <template v-else>
           <div class="flex flex-wrap gap-2">
@@ -293,7 +293,7 @@ function saveEdit(currentName: string) {
               ]"
               :title="
                 isDependencyDisabled(candidate.id)
-                  ? t('workflows.editor.dependsOnCycleDisabledHint')
+                  ? t('checklists.editor.dependsOnCycleDisabledHint')
                   : undefined
               "
             >
@@ -307,7 +307,7 @@ function saveEdit(currentName: string) {
             </label>
           </div>
           <p v-if="phase.dependsOnPhaseIds.length === 0" class="mt-1.5 text-[12px] text-app-muted">
-            {{ t('workflows.editor.dependsOnRootHint') }}
+            {{ t('checklists.editor.dependsOnRootHint') }}
           </p>
         </template>
       </div>
@@ -327,7 +327,7 @@ function saveEdit(currentName: string) {
             <path d="M8 6v12M16 6v12" />
           </svg>
           <span class="text-[12px] font-bold tracking-wide text-app-muted uppercase">{{
-            t('workflows.editor.runsInParallelLabel')
+            t('checklists.editor.runsInParallelLabel')
           }}</span>
         </div>
         <div
@@ -367,7 +367,7 @@ function saveEdit(currentName: string) {
           </template>
         </div>
       </template>
-      <p v-else class="mb-4 text-[13.5px] text-app-muted">{{ t('workflows.editor.noSteps') }}</p>
+      <p v-else class="mb-4 text-[13.5px] text-app-muted">{{ t('checklists.editor.noSteps') }}</p>
 
       <AddStepPanel
         v-model="stepForm"

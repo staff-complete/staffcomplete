@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTrialStatus } from '../composables/useTrialStatus'
-import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
+import { useChecklistTemplates } from '../composables/useChecklistTemplates'
 import { useRuns, type RunSummary } from '../composables/useRuns'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
 import { runHealth } from '../lib/runHealth'
@@ -18,7 +18,7 @@ const route = useRoute()
 const { data: trialStatus } = useTrialStatus()
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
-const { data: templates } = useWorkflowTemplates()
+const { data: templates } = useChecklistTemplates()
 const { data: runs, isLoading, isError, error, refetch, isFetching } = useRuns()
 
 const initialFilter = route.query.filter

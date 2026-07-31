@@ -174,10 +174,13 @@ export const invitation = pgTable(
 ).enableRLS()
 
 // A reusable checklist definition an org builds up-front (issue #22) — the
-// template a future run (#23) instantiates for a specific employee. Named
-// `workflowTemplate` rather than `workflow` to avoid colliding with the
-// separate runtime workflow-engine concept (apps/api/src/workflows/<name>/).
-export const workflowTemplate = pgTable(
+// template a future run (#23) instantiates for a specific employee. The SQL
+// names below still say `workflow_template`: "workflow" was retired as a
+// domain term (see CONTEXT.md) after the code had shipped, and renaming the
+// tables would be a breaking migration for no user-visible gain. Drizzle maps
+// the old SQL name onto the current one — everything above the schema says
+// checklist template.
+export const checklistTemplate = pgTable(
   'workflow_template',
   {
     id: text('id').primaryKey(),
@@ -194,18 +197,18 @@ export const workflowTemplate = pgTable(
 
 // Phases within a template. Steps inside a phase can run in parallel; which
 // phases are unlocked is driven by the explicit dependency edges in
-// workflowTemplatePhaseDependency below (ADR-0019), not by `position` —
+// checklistTemplatePhaseDependency below (ADR-0019), not by `position` —
 // ADR-0017's original "unlocks once the previous phase by position is
 // complete" rule no longer applies. `position` is display order only.
-export const workflowTemplatePhase = pgTable(
+export const checklistTemplatePhase = pgTable(
   'workflow_template_phase',
   {
     id: text('id').primaryKey(),
-    workflowTemplateId: text('workflowTemplateId')
+    checklistTemplateId: text('workflowTemplateId')
       .notNull()
-      .references(() => workflowTemplate.id, { onDelete: 'cascade' }),
+      .references(() => checklistTemplate.id, { onDelete: 'cascade' }),
     // Denormalized per ADR-0005 ("every tenant-scoped table must have a
-    // tenant_id column") — RLS policies can't join through workflowTemplateId.
+    // tenant_id column") — RLS policies can't join through checklistTemplateId.
     organizationId: text('organizationId')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
@@ -220,16 +223,16 @@ export const workflowTemplatePhase = pgTable(
 // position-based sequential locking). A phase with no outgoing edges here is
 // a root — unlocked as soon as the template/run starts. `position` above is
 // kept for display order only; it no longer drives locking.
-export const workflowTemplatePhaseDependency = pgTable(
+export const checklistTemplatePhaseDependency = pgTable(
   'workflow_template_phase_dependency',
   {
     id: text('id').primaryKey(),
     phaseId: text('phaseId')
       .notNull()
-      .references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
+      .references(() => checklistTemplatePhase.id, { onDelete: 'cascade' }),
     dependsOnPhaseId: text('dependsOnPhaseId')
       .notNull()
-      .references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
+      .references(() => checklistTemplatePhase.id, { onDelete: 'cascade' }),
     // Denormalized per ADR-0005 ("every tenant-scoped table must have a
     // tenant_id column") — RLS policies can't join through phaseId.
     organizationId: text('organizationId')
@@ -243,18 +246,18 @@ export const workflowTemplatePhaseDependency = pgTable(
   ],
 ).enableRLS()
 
-export const workflowTemplateStep = pgTable(
+export const checklistTemplateStep = pgTable(
   'workflow_template_step',
   {
     id: text('id').primaryKey(),
-    workflowTemplateId: text('workflowTemplateId')
+    checklistTemplateId: text('workflowTemplateId')
       .notNull()
-      .references(() => workflowTemplate.id, { onDelete: 'cascade' }),
+      .references(() => checklistTemplate.id, { onDelete: 'cascade' }),
     phaseId: text('phaseId')
       .notNull()
-      .references(() => workflowTemplatePhase.id, { onDelete: 'cascade' }),
+      .references(() => checklistTemplatePhase.id, { onDelete: 'cascade' }),
     // Denormalized per ADR-0005 ("every tenant-scoped table must have a
-    // tenant_id column") — RLS policies can't join through workflowTemplateId.
+    // tenant_id column") — RLS policies can't join through checklistTemplateId.
     organizationId: text('organizationId')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
@@ -265,7 +268,7 @@ export const workflowTemplateStep = pgTable(
     // automated steps only — a key into packages/shared/src/automation.ts's
     // action registry, plus that action's own parameters. There's no FK to
     // enforce `action` is a real registry key since the registry lives in
-    // application code, not the database — packages/shared/src/workflow.ts's
+    // application code, not the database — packages/shared/src/checklist.ts's
     // createStepSchema is what enforces it at write time.
     action: text('action'),
     config: jsonb('config'),
@@ -275,8 +278,8 @@ export const workflowTemplateStep = pgTable(
   (table) => [tenantIsolationPolicy('workflow_template_step', table.organizationId)],
 ).enableRLS()
 
-// A workflow template instantiated for a specific employee (issue #25).
-// workflowTemplateId is nullable/set-null on delete because employeeName,
+// A checklist template instantiated for a specific employee (issue #25).
+// checklistTemplateId is nullable/set-null on delete because employeeName,
 // employeeRole, eventDate and `type` are captured here at creation time and
 // the steps are copied onto runStep — a run must keep its own history even
 // if the template it started from is edited or deleted later.
@@ -287,7 +290,7 @@ export const run = pgTable(
     organizationId: text('organizationId')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
-    workflowTemplateId: text('workflowTemplateId').references(() => workflowTemplate.id, {
+    checklistTemplateId: text('workflowTemplateId').references(() => checklistTemplate.id, {
       onDelete: 'set null',
     }),
     type: text('type').notNull(), // onboarding | offboarding
@@ -302,8 +305,8 @@ export const run = pgTable(
   (table) => [tenantIsolationPolicy('run', table.organizationId)],
 ).enableRLS()
 
-// Ordered phases within a run, copied from workflowTemplatePhase at run
-// creation time (same reasoning as why runStep copies workflowTemplateStep —
+// Ordered phases within a run, copied from checklistTemplatePhase at run
+// creation time (same reasoning as why runStep copies checklistTemplateStep —
 // a run must keep its own history even if the template changes later).
 export const runPhase = pgTable(
   'run_phase',
@@ -324,9 +327,9 @@ export const runPhase = pgTable(
   (table) => [tenantIsolationPolicy('run_phase', table.organizationId)],
 ).enableRLS()
 
-// Run-side mirror of workflowTemplatePhaseDependency (ADR-0019), copied from
+// Run-side mirror of checklistTemplatePhaseDependency (ADR-0019), copied from
 // it at run creation time — same reasoning as runPhase vs.
-// workflowTemplatePhase: a run keeps its own history even if the template's
+// checklistTemplatePhase: a run keeps its own history even if the template's
 // dependencies are edited or deleted later.
 export const runPhaseDependency = pgTable(
   'run_phase_dependency',
@@ -370,7 +373,7 @@ export const runStep = pgTable(
     type: text('type').notNull(), // automated | manual
     assigneeId: text('assigneeId').references(() => member.id, { onDelete: 'set null' }), // manual steps only
     dueDateOffsetDays: integer('dueDateOffsetDays'), // manual steps only
-    // automated steps only — see the matching comment on workflowTemplateStep.
+    // automated steps only — see the matching comment on checklistTemplateStep.
     action: text('action'),
     config: jsonb('config'),
     status: text('status').notNull().default('pending'), // pending | completed

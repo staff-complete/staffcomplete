@@ -25,7 +25,7 @@ const tiers: PricingTier[] = [
     ctaStyle: 'outline',
     features: [
       'Google Workspace + Slack integrations',
-      'Onboarding & offboarding workflows',
+      'Onboarding & offboarding checklists',
       'Manual task fallback with due dates',
       'Unlimited admin seats',
       'Audit log (90 days)',
@@ -45,7 +45,7 @@ const tiers: PricingTier[] = [
       'Everything in Starter',
       'All integrations (GitHub, Jira, Notion and more)',
       'HRIS sync (BambooHR, HiBob and more)',
-      'Role & team change workflows',
+      'Role & team change checklists',
       'Full audit log + CSV export',
       'Unlimited admin seats',
       'Priority support',

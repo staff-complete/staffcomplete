@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // What an automated step actually does, and what parameters it needs — see
-// the discussion on workflow.ts's createStepSchema. Each entry's configSchema
+// the discussion on checklist.ts's createStepSchema. Each entry's configSchema
 // is deliberately per-action rather than one shared shape, since different
 // actions need different parameters (or none at all).
 //
@@ -27,7 +27,7 @@ export type AutomatedActionKey = 'email.send'
 interface AutomatedActionDefinition {
   // English fallback for contexts that can't reach vue-i18n (server-side
   // step title default, activity feed, non-UI logging) — the UI itself
-  // should prefer t(`workflows.automatedActions.${key}`) instead of this,
+  // should prefer t(`checklists.automatedActions.${key}`) instead of this,
   // same as any other UI vocabulary (see apps/web's locale files). Unlike a
   // manual step's title, this label isn't user-authored content, so it gets
   // translated like other chrome rather than stored as free text.

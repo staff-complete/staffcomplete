@@ -68,7 +68,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
       >
         <path d="M12 5v14M5 12h14" />
       </svg>
-      {{ t('workflows.editor.submit') }}
+      {{ t('checklists.editor.submit') }}
     </button>
   </div>
 
@@ -80,7 +80,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
   >
     <div class="flex items-center justify-between">
       <span class="text-[13.5px] font-extrabold">{{
-        mode === 'edit' ? t('workflows.editor.editStep') : t('workflows.editor.addStepHeading')
+        mode === 'edit' ? t('checklists.editor.editStep') : t('checklists.editor.addStepHeading')
       }}</span>
       <button
         type="button"
@@ -121,7 +121,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
           <circle cx="12" cy="8" r="3.2" />
           <path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" />
         </svg>
-        <span class="text-[13px] font-bold">{{ t('workflows.editor.typeManual') }}</span>
+        <span class="text-[13px] font-bold">{{ t('checklists.editor.typeManual') }}</span>
       </div>
       <div
         class="flex flex-1 cursor-pointer items-center gap-2 rounded-[10px] border-1.5 p-2.5"
@@ -145,26 +145,26 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
         >
           <path d="M13 2 3 14h7l-1 8 11-14h-7z" />
         </svg>
-        <span class="text-[13px] font-bold">{{ t('workflows.editor.typeAutomated') }}</span>
+        <span class="text-[13px] font-bold">{{ t('checklists.editor.typeAutomated') }}</span>
       </div>
     </div>
     <div v-else class="text-[12px] font-bold text-app-muted">
       {{
         form.type === 'manual'
-          ? t('workflows.editor.typeManual')
-          : t('workflows.editor.typeAutomated')
+          ? t('checklists.editor.typeManual')
+          : t('checklists.editor.typeAutomated')
       }}
     </div>
 
     <div>
       <label class="mb-1.5 block text-[12px] font-bold text-app-slate" for="step-title">{{
-        t('workflows.editor.titleLabel')
+        t('checklists.editor.titleLabel')
       }}</label>
       <input
         id="step-title"
         v-model="form.title"
         type="text"
-        :placeholder="t('workflows.editor.titlePlaceholder')"
+        :placeholder="t('checklists.editor.titlePlaceholder')"
         class="w-full rounded-[9px] border border-app-border bg-white px-3.5 py-2.5 text-[13.5px] outline-none"
       />
     </div>
@@ -173,7 +173,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
       <div class="flex flex-wrap gap-2.5">
         <div class="min-w-[160px] flex-1">
           <label class="mb-1.5 block text-[12px] font-bold text-app-slate" for="step-assignee">{{
-            t('workflows.editor.assigneeLabel')
+            t('checklists.editor.assigneeLabel')
           }}</label>
           <select
             id="step-assignee"
@@ -188,7 +188,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
         </div>
         <div>
           <label class="mb-1.5 block text-[12px] font-bold text-app-slate" for="step-due">{{
-            t('workflows.editor.dueDaysLabel')
+            t('checklists.editor.dueDaysLabel')
           }}</label>
           <input
             id="step-due"
@@ -205,7 +205,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
     <template v-else>
       <div>
         <label class="mb-1.5 block text-[12px] font-bold text-app-slate" for="step-action">{{
-          t('workflows.editor.actionLabel')
+          t('checklists.editor.actionLabel')
         }}</label>
         <select
           id="step-action"
@@ -213,7 +213,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
           class="w-full rounded-[9px] border border-app-border bg-white px-3.5 py-2.5 text-[13.5px] outline-none"
           @change="emit('actionSelected')"
         >
-          <option value="" disabled>{{ t('workflows.editor.actionPlaceholder') }}</option>
+          <option value="" disabled>{{ t('checklists.editor.actionPlaceholder') }}</option>
           <option v-for="key in automatedActionKeys" :key="key" :value="key">
             {{ automatedActionLabel(key) }}
           </option>
@@ -226,7 +226,7 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
         :class="mode === 'edit' ? 'bg-white' : 'bg-app-bg'"
       >
         <div class="text-[11px] font-bold tracking-wide text-app-muted uppercase">
-          {{ t('workflows.editor.actionConfigHeading') }}
+          {{ t('checklists.editor.actionConfigHeading') }}
         </div>
         <div v-for="field in actionConfigFields[form.action]" :key="field.key">
           <label
@@ -271,11 +271,11 @@ function fieldModel(key: 'emailTo' | 'emailSubject' | 'emailBody') {
         {{
           mode === 'edit'
             ? submitting
-              ? t('workflows.editor.saving')
-              : t('workflows.editor.save')
+              ? t('checklists.editor.saving')
+              : t('checklists.editor.save')
             : submitting
-              ? t('workflows.editor.submitting')
-              : t('workflows.editor.submit')
+              ? t('checklists.editor.submitting')
+              : t('checklists.editor.submit')
         }}
       </button>
       <button

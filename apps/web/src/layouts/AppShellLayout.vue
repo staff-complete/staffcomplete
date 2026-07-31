@@ -39,7 +39,7 @@ const navItems = computed<NavItem[]>(() => [
   { routeName: 'dashboard', to: '/dashboard', label: t('nav.home'), adminOnly: false },
   { routeName: 'tasks', to: '/tasks', label: t('nav.myTasks'), adminOnly: false },
   { routeName: 'runs', to: '/runs', label: t('nav.runs'), adminOnly: true },
-  { routeName: 'workflows', to: '/workflows', label: t('nav.templates'), adminOnly: true },
+  { routeName: 'checklists', to: '/checklists', label: t('nav.templates'), adminOnly: true },
   { routeName: 'team', to: '/team', label: t('team.title'), adminOnly: true },
   { routeName: 'settings', to: '/settings', label: t('nav.settings'), adminOnly: true },
   { routeName: 'billing', to: '/billing', label: t('billing.title'), adminOnly: true },
@@ -47,8 +47,8 @@ const navItems = computed<NavItem[]>(() => [
 
 function isActive(routeName: string) {
   if (routeName === 'runs') return route.name === 'runs' || route.name === 'run-detail'
-  if (routeName === 'workflows')
-    return route.name === 'workflows' || route.name === 'workflow-editor'
+  if (routeName === 'checklists')
+    return route.name === 'checklists' || route.name === 'checklist-editor'
   return route.name === routeName
 }
 

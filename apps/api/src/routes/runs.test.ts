@@ -28,10 +28,10 @@ const mocks = vi.hoisted(() => ({
 function tx() {
   return {
     query: {
-      workflowTemplate: { findFirst: mocks.templateFindFirstMock },
-      workflowTemplatePhase: { findMany: mocks.templatePhaseFindManyMock },
-      workflowTemplatePhaseDependency: { findMany: mocks.templateDependencyFindManyMock },
-      workflowTemplateStep: { findMany: mocks.templateStepFindManyMock },
+      checklistTemplate: { findFirst: mocks.templateFindFirstMock },
+      checklistTemplatePhase: { findMany: mocks.templatePhaseFindManyMock },
+      checklistTemplatePhaseDependency: { findMany: mocks.templateDependencyFindManyMock },
+      checklistTemplateStep: { findMany: mocks.templateStepFindManyMock },
       run: { findMany: mocks.runFindManyMock, findFirst: mocks.runFindFirstMock },
       runPhase: { findMany: mocks.runPhaseFindManyMock },
       runPhaseDependency: { findMany: mocks.runDependencyFindManyMock },
@@ -92,7 +92,7 @@ function patchJson(path: string, body: unknown) {
 }
 
 const VALID_RUN_INPUT = {
-  workflowTemplateId: 't1',
+  checklistTemplateId: 't1',
   employeeName: 'Jane Doe',
   employeeEmail: 'jane@example.com',
   employeeRole: 'Engineer',

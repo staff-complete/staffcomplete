@@ -15,10 +15,10 @@ import {
   runPhase,
   runPhaseDependency,
   runStep,
-  workflowTemplate,
-  workflowTemplatePhase,
-  workflowTemplatePhaseDependency,
-  workflowTemplateStep,
+  checklistTemplate,
+  checklistTemplatePhase,
+  checklistTemplatePhaseDependency,
+  checklistTemplateStep,
 } from '../db/schema.js'
 import { assertValidAssignee } from '../lib/assignee.js'
 import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'
@@ -163,32 +163,32 @@ runsRouter.get('/:id', async (c) => {
 runsRouter.post('/', zValidator('json', createRunSchema), async (c) => {
   const { organizationId } = c.get('orgAuth')
 
-  const { workflowTemplateId, employeeName, employeeEmail, employeeRole, eventDate } =
+  const { checklistTemplateId, employeeName, employeeEmail, employeeRole, eventDate } =
     c.req.valid('json')
 
   const result = await withTenant(organizationId, async (tx) => {
-    const template = await tx.query.workflowTemplate.findFirst({
-      where: eq(workflowTemplate.id, workflowTemplateId),
+    const template = await tx.query.checklistTemplate.findFirst({
+      where: eq(checklistTemplate.id, checklistTemplateId),
     })
     if (!template) {
       return null
     }
 
-    const templatePhases = await tx.query.workflowTemplatePhase.findMany({
-      where: eq(workflowTemplatePhase.workflowTemplateId, workflowTemplateId),
-      orderBy: [asc(workflowTemplatePhase.position)],
+    const templatePhases = await tx.query.checklistTemplatePhase.findMany({
+      where: eq(checklistTemplatePhase.checklistTemplateId, checklistTemplateId),
+      orderBy: [asc(checklistTemplatePhase.position)],
     })
     const templateDependencies = templatePhases.length
-      ? await tx.query.workflowTemplatePhaseDependency.findMany({
+      ? await tx.query.checklistTemplatePhaseDependency.findMany({
           where: inArray(
-            workflowTemplatePhaseDependency.phaseId,
+            checklistTemplatePhaseDependency.phaseId,
             templatePhases.map((p) => p.id),
           ),
         })
       : []
-    const templateSteps = await tx.query.workflowTemplateStep.findMany({
-      where: eq(workflowTemplateStep.workflowTemplateId, workflowTemplateId),
-      orderBy: [asc(workflowTemplateStep.position)],
+    const templateSteps = await tx.query.checklistTemplateStep.findMany({
+      where: eq(checklistTemplateStep.checklistTemplateId, checklistTemplateId),
+      orderBy: [asc(checklistTemplateStep.position)],
     })
 
     const [createdRun] = await tx
@@ -196,7 +196,7 @@ runsRouter.post('/', zValidator('json', createRunSchema), async (c) => {
       .values({
         id: crypto.randomUUID(),
         organizationId,
-        workflowTemplateId,
+        checklistTemplateId,
         type: template.type,
         employeeName,
         employeeEmail,
@@ -208,7 +208,7 @@ runsRouter.post('/', zValidator('json', createRunSchema), async (c) => {
     // Copy the template's phases first so runStep.phaseId can point at the
     // run's own copies — a run keeps its own history even if the template
     // is edited or deleted later, same reasoning as runStep vs.
-    // workflowTemplateStep (see the comment on `run` in schema.ts). Each
+    // checklistTemplateStep (see the comment on `run` in schema.ts). Each
     // copy's id is generated here, up front, so both the insert values and
     // the template->run phase-id map can read it directly without a
     // .returning() round trip or a re-lookup by array index/key.
@@ -236,14 +236,14 @@ runsRouter.post('/', zValidator('json', createRunSchema), async (c) => {
     // Copy the template's dependency edges onto the run's own phase
     // copies (ADR-0019), same "run keeps its own history" reasoning as
     // the phase/step copies above. Dangling-reference handling mirrors
-    // the runStep loop below — the FK on workflowTemplatePhaseDependency
+    // the runStep loop below — the FK on checklistTemplatePhaseDependency
     // should make an edge outside this template's phases impossible.
     const dependencyCopies = templateDependencies.map((edge) => {
       const runPhaseId = runPhaseIdByTemplatePhaseId.get(edge.phaseId)
       const dependsOnRunPhaseId = runPhaseIdByTemplatePhaseId.get(edge.dependsOnPhaseId)
       if (runPhaseId === undefined || dependsOnRunPhaseId === undefined) {
         throw new Error(
-          `workflowTemplatePhaseDependency ${edge.id} references a phase outside workflowTemplate ${workflowTemplateId}`,
+          `checklistTemplatePhaseDependency ${edge.id} references a phase outside checklistTemplate ${checklistTemplateId}`,
         )
       }
       return { phaseId: runPhaseId, dependsOnPhaseId: dependsOnRunPhaseId }
@@ -266,13 +266,13 @@ runsRouter.post('/', zValidator('json', createRunSchema), async (c) => {
             templateSteps.map((step) => {
               const stepRunPhaseId = runPhaseIdByTemplatePhaseId.get(step.phaseId)
               if (stepRunPhaseId === undefined) {
-                // Would mean workflowTemplateStep.phaseId's FK points at a
+                // Would mean checklistTemplateStep.phaseId's FK points at a
                 // phase outside phaseCopies, i.e. outside this same
                 // template — the FK constraint should make that
                 // impossible, so surface it loudly rather than writing a
                 // runStep with a dangling phase reference.
                 throw new Error(
-                  `workflowTemplateStep ${step.id} references phase ${step.phaseId}, which is not part of workflowTemplate ${workflowTemplateId}`,
+                  `checklistTemplateStep ${step.id} references phase ${step.phaseId}, which is not part of checklistTemplate ${checklistTemplateId}`,
                 )
               }
               return {
@@ -349,7 +349,7 @@ runsRouter.post('/', zValidator('json', createRunSchema), async (c) => {
 })
 
 // Reassigns who's responsible for a manual step on an already-started run.
-// Mirrors workflowsRouter's PATCH .../steps/:stepId (template-step editing)
+// Mirrors checklistsRouter's PATCH .../steps/:stepId (template-step editing)
 // but scoped to what a run actually needs: only assigneeId can change here —
 // a run's steps are a frozen copy of the template (see the `run` comment in
 // schema.ts), so title/phase/action/config are fixed once the run starts.

@@ -14,7 +14,7 @@ import { invitesRouter } from './routes/invites.js'
 import { onboardRouter } from './routes/onboard.js'
 import { runsRouter } from './routes/runs.js'
 import { tasksRouter } from './routes/tasks.js'
-import { workflowsRouter } from './routes/workflows.js'
+import { checklistsRouter } from './routes/checklists.js'
 
 // Daily scan handling both the 3-day trial-reminder email and flipping
 // expired trials to status: 'expired' — see apps/api/src/jobs/trial-lifecycle-scan.ts
@@ -31,7 +31,7 @@ app.on(['GET', 'POST'], '/api/auth/**', (c) => auth.handler(c.req.raw))
 app.route('/api/onboard', onboardRouter)
 app.route('/api/invites', invitesRouter)
 app.route('/api/billing', billingRouter)
-app.route('/api/workflows', workflowsRouter)
+app.route('/api/checklists', checklistsRouter)
 app.route('/api/runs', runsRouter)
 app.route('/api/tasks', tasksRouter)
 app.route('/api/activity', activityRouter)
