@@ -20,9 +20,13 @@ If a tool seems missing, that means you're not in the devcontainer — it is not
 
 ### Core Domain Model
 
-**Employee Lifecycle Events**: `onboarding` · `role_change` · `offboarding`
+**Employee Lifecycle Events**: `onboarding` · `offboarding` (`role_change` is named in the model but not yet built)
 
-**System Concepts**: Employee, Access Control, Integrations (external SaaS tools), Workflows, Event-driven automation
+**System Concepts**: Employee, Access Control, Integrations (external SaaS tools), Checklist Templates, Runs, Event-driven automation
+
+"Workflow" is retired as a domain term — only the `workflow_template*` SQL table names still carry it. See CONTEXT.md.
+
+Full vocabulary lives in [CONTEXT.md](CONTEXT.md) — the glossary of canonical domain terms and the synonyms to avoid. Read it before naming anything; use the `domain-modeling` skill to change it.
 
 ---
 
@@ -58,7 +62,7 @@ git push origin main
 [Conventional Commits](https://www.conventionalcommits.org/), **one type per commit** — never combine multiple `type: ...` concerns in one commit.
 
 Types: `feat` `fix` `refactor` `test` `docs` `chore` `ci` `perf` `style` `revert`
-Scopes: `onboarding` `offboarding` `role-change` `access` `integrations` `workflows` `auth` `api` `db` `config` (kebab-case in commits — the `role_change` lifecycle-event enum value itself is snake_case in code)
+Scopes: `onboarding` `offboarding` `role-change` `access` `integrations` `checklists` `auth` `api` `db` `config` (kebab-case in commits — the `role_change` lifecycle-event enum value itself is snake_case in code)
 
 - Subject ≤ 72 chars, lowercase, imperative mood, no trailing period
 - Breaking change: `!` after type/scope, plus a `BREAKING CHANGE:` footer
