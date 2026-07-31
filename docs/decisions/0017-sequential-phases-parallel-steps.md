@@ -1,6 +1,6 @@
 # ADR-0017: Sequential Phases with Parallel Steps
 
-- **Status:** accepted
+- **Status:** partially superseded by [ADR-0019](0019-phase-level-dependencies.md) (phase locking rule only)
 - **Date:** 2026-07-24
 
 ## Context

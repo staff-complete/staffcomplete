@@ -18,9 +18,10 @@ export interface RunStepDetail {
   position: number
 }
 
-// A phase unlocks once every step in every earlier phase (by position) is
-// completed — steps within a phase can be worked on in parallel, phases
-// themselves run in order (see packages/shared/src/phase.ts).
+// A phase unlocks once every phase it explicitly depends on is complete
+// (ADR-0019) — steps within a phase can be worked on in parallel, and
+// independent branches run at the same time. `position` is display order
+// only, not the locking rule (see packages/shared/src/phase.ts).
 export interface RunPhaseDetail {
   id: string
   name: string

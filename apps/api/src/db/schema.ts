@@ -180,9 +180,11 @@ export const workflowTemplate = pgTable(
   ],
 ).enableRLS()
 
-// Ordered phases within a template. Steps inside a phase can run in
-// parallel; phases themselves run sequentially by position — a phase only
-// unlocks once every step in the previous phase is completed.
+// Phases within a template. Steps inside a phase can run in parallel; which
+// phases are unlocked is driven by the explicit dependency edges in
+// workflowTemplatePhaseDependency below (ADR-0019), not by `position` —
+// ADR-0017's original "unlocks once the previous phase by position is
+// complete" rule no longer applies. `position` is display order only.
 export const workflowTemplatePhase = pgTable(
   'workflow_template_phase',
   {

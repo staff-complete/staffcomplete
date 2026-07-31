@@ -6,9 +6,10 @@ export interface MyTask {
   status: string
   dueDate: string | null
   isOverdue: boolean
-  // True while an earlier phase of this run still has incomplete steps —
-  // see packages/shared/src/phase.ts. The complete endpoint also enforces
-  // this server-side, so the UI only needs to reflect it, not gate on it.
+  // True while a phase this step's phase depends on still has incomplete
+  // steps (ADR-0019) — see packages/shared/src/phase.ts. The complete
+  // endpoint also enforces this server-side, so the UI only needs to
+  // reflect it, not gate on it.
   isLocked: boolean
   run: {
     id: string
