@@ -101,4 +101,4 @@ Pick up an issue with `gh issue develop <n> --checkout`, or the `start-issue` sk
 
 `.claude/skills/` covers most recurring workflows — prefer these over doing the equivalent steps by hand:
 
-`start-issue` · `new-feature` · `new-adr` · `new-integration` · `new-workflow` · `new-lifecycle-event` · `new-migration` · `ci-check` · `release-check` · `security-check`
+`start-issue` · `new-feature` · `new-adr` · `new-integration` · `new-automated-action` · `new-lifecycle-event` · `new-migration` · `domain-modeling` · `ci-check` · `release-check` · `security-check`

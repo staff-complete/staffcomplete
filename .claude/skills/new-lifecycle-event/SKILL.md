@@ -28,7 +28,7 @@ export const LifecycleEventType = z.enum([
 
 3. **Add the Zod schema** for the event payload to `packages/shared/src/schemas/events.ts`
 4. **Add the API route** in `apps/api/src/routes/events.ts` to accept and enqueue the event
-5. **Add the workflow stub** — run the `new-workflow` skill for the new event
+5. **Add the event to `checklistTypeSchema`** (`packages/shared/src/checklist.ts`) so templates and runs can be created for it — there is no separate workflow module. If the event needs new automation, use the `new-automated-action` skill
 6. **Add integration handler stubs** — update each existing integration in `apps/api/src/integrations/*/handlers.ts` to handle the new event (even if the handler is a no-op initially)
 7. **Update CLAUDE.md** — add the new event to the Core Domain Model section
 8. **Suggest an ADR** if this event type represents a significant domain expansion
