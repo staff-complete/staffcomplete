@@ -8,6 +8,7 @@ import { ApiError, apiFetch } from '../lib/api'
 import { useRunDetail } from '../composables/useRunDetail'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
 import { runHealth } from '../lib/runHealth'
+import LoadError from '../components/LoadError.vue'
 
 type Member = { id: string; user: { name: string; email: string } }
 
@@ -15,7 +16,7 @@ const { t } = useI18n()
 const route = useRoute()
 const id = computed(() => route.params.id as string)
 
-const { data: run, isLoading } = useRunDetail(id.value)
+const { data: run, isLoading, isError, error, refetch, isFetching } = useRunDetail(id.value)
 const queryClient = useQueryClient()
 const reassigningStepId = ref<string | null>(null)
 const reassignErrorStepId = ref<string | null>(null)
@@ -112,6 +113,8 @@ const typeLabel = computed(() =>
     </RouterLink>
 
     <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+
+    <LoadError v-else-if="isError" :error="error" :retrying="isFetching" @retry="refetch()" />
 
     <template v-else-if="run">
       <div class="mb-5 rounded-3xl bg-white p-7">

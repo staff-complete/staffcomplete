@@ -4,10 +4,11 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { completeTask, useMyTasks } from '../composables/useMyTasks'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
+import LoadError from '../components/LoadError.vue'
 
 const { t } = useI18n()
 const queryClient = useQueryClient()
-const { data: tasks, isLoading } = useMyTasks()
+const { data: tasks, isLoading, isError, error, refetch, isFetching } = useMyTasks()
 const openTasks = computed(() =>
   (tasks.value ?? [])
     .filter((task) => task.status === 'pending')
@@ -55,6 +56,7 @@ async function markComplete(id: string) {
       </p>
 
       <p v-if="isLoading" class="py-6 text-sm text-app-muted">{{ t('common.loading') }}</p>
+      <LoadError v-else-if="isError" :error="error" :retrying="isFetching" @retry="refetch()" />
       <p v-else-if="openTasks.length === 0" class="py-6 text-sm text-app-muted">
         {{ t('myTasks.empty') }}
       </p>

@@ -3,9 +3,10 @@ import { formatDistanceToNow } from 'date-fns'
 import { useI18n } from 'vue-i18n'
 import { useActivity } from '../composables/useActivity'
 import type { ActivityEvent } from '../composables/useActivity'
+import LoadError from './LoadError.vue'
 
 const { t } = useI18n()
-const { data: events, isLoading } = useActivity()
+const { data: events, isLoading, isError, error, refetch, isFetching } = useActivity()
 
 function describe(event: ActivityEvent): string {
   const type = event.runType === 'offboarding' ? t('common.offboarding') : t('common.onboarding')
@@ -29,6 +30,7 @@ function relativeTime(at: string): string {
     <h2 class="mb-4 text-base font-extrabold">{{ t('activityFeed.title') }}</h2>
 
     <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+    <LoadError v-else-if="isError" :error="error" :retrying="isFetching" @retry="refetch()" />
     <p v-else-if="!events || events.length === 0" class="text-sm text-app-muted">
       {{ t('activityFeed.empty') }}
     </p>

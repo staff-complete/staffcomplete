@@ -7,6 +7,7 @@ import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
 import { useRuns, type RunSummary } from '../composables/useRuns'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
 import { runHealth } from '../lib/runHealth'
+import LoadError from '../components/LoadError.vue'
 import StartRunModal from '../components/StartRunModal.vue'
 
 type FilterKey = 'all' | 'onboarding' | 'offboarding' | 'active' | 'completed' | 'overdue'
@@ -18,7 +19,7 @@ const { data: trialStatus } = useTrialStatus()
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const { data: templates } = useWorkflowTemplates()
-const { data: runs, isLoading } = useRuns()
+const { data: runs, isLoading, isError, error, refetch, isFetching } = useRuns()
 
 const initialFilter = route.query.filter
 const validFilters: FilterKey[] = [
@@ -118,6 +119,7 @@ const showModal = ref(false)
     </div>
 
     <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+    <LoadError v-else-if="isError" :error="error" :retrying="isFetching" @retry="refetch()" />
     <p v-else-if="decoratedRuns.length === 0" class="text-sm text-app-muted">
       {{ t('runs.list.empty') }}
     </p>

@@ -6,10 +6,11 @@ import { authClient } from '../lib/auth-client'
 import { useRuns } from '../composables/useRuns'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
 import { runHealth } from '../lib/runHealth'
+import LoadError from '../components/LoadError.vue'
 
 const { t } = useI18n()
 const session = authClient.useSession()
-const { data: runs, isLoading } = useRuns()
+const { data: runs, isLoading, isError, error, refetch, isFetching } = useRuns()
 
 const activeRuns = computed(() => runs.value?.filter((r) => r.status !== 'completed') ?? [])
 
@@ -155,6 +156,13 @@ const peopleInProgress = computed(() =>
       </div>
 
       <p v-if="isLoading" class="pb-4 text-sm text-app-muted">{{ t('common.loading') }}</p>
+      <LoadError
+        v-else-if="isError"
+        class="mb-4"
+        :error="error"
+        :retrying="isFetching"
+        @retry="refetch()"
+      />
       <p v-else-if="peopleInProgress.length === 0" class="pb-4 text-sm text-app-muted">
         {{ t('dashboard.empty') }}
       </p>

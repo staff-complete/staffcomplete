@@ -13,6 +13,8 @@ const en = {
     backToDashboard: '← Back to dashboard',
     networkError: 'Unable to connect. Please check your connection and try again.',
     genericError: 'Something went wrong. Please try again.',
+    loadFailed: "Couldn't load this.",
+    retry: 'Try again',
     steps: 'no steps | {n} step | {n} steps',
     phases: 'no phases | {n} phase | {n} phases',
     ofStepsComplete: '{completed} of {total} {steps} complete',

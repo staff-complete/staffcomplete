@@ -15,6 +15,8 @@ const he = {
     backToDashboard: '← חזרה ללוח הבקרה',
     networkError: 'לא ניתן להתחבר. בדקו את החיבור ונסו שוב.',
     genericError: 'משהו השתבש. נסו שוב.',
+    loadFailed: 'לא ניתן היה לטעון את הנתונים.',
+    retry: 'נסו שוב',
     steps: 'אין שלבים | שלב אחד | {n} שלבים',
     phases: 'אין פאזות | פאזה אחת | {n} פאזות',
     ofStepsComplete: 'הושלמו {completed} מתוך {total} ({steps})',

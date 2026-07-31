@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from '../lib/api'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
 import type { WorkflowTemplateSummary } from '../composables/useWorkflowTemplates'
+import LoadError from '../components/LoadError.vue'
 import ConfirmDialog from '../components/workflows/ConfirmDialog.vue'
 
 const { t } = useI18n()
@@ -14,7 +15,7 @@ const { data: trialStatus } = useTrialStatus()
 const isReadOnly = computed(() => trialStatus.value?.isReadOnly ?? false)
 
 const queryClient = useQueryClient()
-const { data: templates, isLoading } = useWorkflowTemplates()
+const { data: templates, isLoading, isError, error, refetch, isFetching } = useWorkflowTemplates()
 
 const form = ref({ name: '', type: 'onboarding' as 'onboarding' | 'offboarding' })
 const errors = ref<Record<string, string>>({})
@@ -175,6 +176,7 @@ async function confirmDelete() {
     </div>
 
     <p v-if="isLoading" class="text-sm text-app-muted">{{ t('common.loading') }}</p>
+    <LoadError v-else-if="isError" :error="error" :retrying="isFetching" @retry="refetch()" />
     <p v-else-if="!templates || templates.length === 0" class="text-sm text-app-muted">
       {{ t('workflows.list.empty') }}
     </p>
