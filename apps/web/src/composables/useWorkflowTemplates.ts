@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { apiFetch, apiFetchOrNull } from '../lib/api'
 import type { AutomatedActionKey } from '@staffcomplete/shared'
 
 export type WorkflowType = 'onboarding' | 'offboarding'
@@ -51,12 +52,8 @@ export interface WorkflowTemplateDetail {
 }
 
 export async function fetchWorkflowTemplates(): Promise<WorkflowTemplateSummary[]> {
-  const res = await fetch('/api/workflows')
-  if (!res.ok) {
-    throw new Error('Failed to load workflow templates')
-  }
-  const data = (await res.json()) as { workflows: WorkflowTemplateSummary[] }
-  return data.workflows
+  const { workflows } = await apiFetch<{ workflows: WorkflowTemplateSummary[] }>('/api/workflows')
+  return workflows
 }
 
 export function useWorkflowTemplates() {
@@ -67,14 +64,7 @@ export function useWorkflowTemplates() {
 }
 
 export async function fetchWorkflowTemplate(id: string): Promise<WorkflowTemplateDetail | null> {
-  const res = await fetch(`/api/workflows/${id}`)
-  if (res.status === 404) {
-    return null
-  }
-  if (!res.ok) {
-    throw new Error('Failed to load workflow template')
-  }
-  return (await res.json()) as WorkflowTemplateDetail
+  return apiFetchOrNull<WorkflowTemplateDetail>(`/api/workflows/${id}`)
 }
 
 export function useWorkflowTemplate(id: string) {

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../lib/api'
 import { fetchActivity } from './useActivity'
 
 describe('fetchActivity', () => {
@@ -28,9 +29,18 @@ describe('fetchActivity', () => {
     expect(result).toEqual(events)
   })
 
-  it('throws on an unexpected error response', async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 500 }))
+  it("throws an ApiError carrying the server's code on an error response", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ code: 'FORBIDDEN', message: 'Admin access required.' }), {
+        status: 403,
+      }),
+    )
 
-    await expect(fetchActivity()).rejects.toThrow('Failed to load activity')
+    const err = (await fetchActivity().catch((e: unknown) => e)) as ApiError
+
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.status).toBe(403)
+    expect(err.code).toBe('FORBIDDEN')
+    expect(err.message).toBe('Admin access required.')
   })
 })

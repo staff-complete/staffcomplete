@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { apiFetch } from '../lib/api'
 
 export interface ActivityEvent {
   type: 'run_started' | 'run_completed' | 'step_completed'
@@ -10,12 +11,8 @@ export interface ActivityEvent {
 }
 
 export async function fetchActivity(): Promise<ActivityEvent[]> {
-  const res = await fetch('/api/activity')
-  if (!res.ok) {
-    throw new Error('Failed to load activity')
-  }
-  const data = (await res.json()) as { events: ActivityEvent[] }
-  return data.events
+  const { events } = await apiFetch<{ events: ActivityEvent[] }>('/api/activity')
+  return events
 }
 
 export function useActivity() {

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { apiFetchOrNull } from '../lib/api'
 import type { AutomatedActionKey } from '@staffcomplete/shared'
 
 export interface RunStepDetail {
@@ -43,14 +44,7 @@ export interface RunDetail {
 }
 
 export async function fetchRunDetail(id: string): Promise<RunDetail | null> {
-  const res = await fetch(`/api/runs/${id}`)
-  if (res.status === 404) {
-    return null
-  }
-  if (!res.ok) {
-    throw new Error('Failed to load run')
-  }
-  return (await res.json()) as RunDetail
+  return apiFetchOrNull<RunDetail>(`/api/runs/${id}`)
 }
 
 export function useRunDetail(id: string) {

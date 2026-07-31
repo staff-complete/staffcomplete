@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
+import { ApiError, apiFetch } from '../lib/api'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplates } from '../composables/useWorkflowTemplates'
 import type { WorkflowTemplateSummary } from '../composables/useWorkflowTemplates'
@@ -43,23 +44,16 @@ async function createTemplate() {
 
   creating.value = true
   try {
-    const res = await fetch('/api/workflows', {
+    await apiFetch('/api/workflows', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value),
     })
-
-    if (res.ok) {
-      form.value = { name: '', type: 'onboarding' }
-      showForm.value = false
-      await invalidate()
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    serverError.value = data.message ?? t('common.genericError')
-  } catch {
-    serverError.value = t('common.networkError')
+    form.value = { name: '', type: 'onboarding' }
+    showForm.value = false
+    await invalidate()
+  } catch (err) {
+    serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     creating.value = false
   }
@@ -67,7 +61,14 @@ async function createTemplate() {
 
 async function confirmDelete() {
   if (isReadOnly.value || !deleteTarget.value) return
-  await fetch(`/api/workflows/${deleteTarget.value.id}`, { method: 'DELETE' })
+  // Previously fire-and-forget: a rejected delete still closed the dialog
+  // and reloaded the list, so the template silently reappeared with no explanation.
+  serverError.value = ''
+  try {
+    await apiFetch(`/api/workflows/${deleteTarget.value.id}`, { method: 'DELETE' })
+  } catch (err) {
+    serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
+  }
   deleteTarget.value = null
   await invalidate()
 }

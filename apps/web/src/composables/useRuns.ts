@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { apiFetch } from '../lib/api'
 
 export interface RunSummary {
   id: string
@@ -16,12 +17,8 @@ export interface RunSummary {
 }
 
 export async function fetchRuns(): Promise<RunSummary[]> {
-  const res = await fetch('/api/runs')
-  if (!res.ok) {
-    throw new Error('Failed to load runs')
-  }
-  const data = (await res.json()) as { runs: RunSummary[] }
-  return data.runs
+  const { runs } = await apiFetch<{ runs: RunSummary[] }>('/api/runs')
+  return runs
 }
 
 export function useRuns() {

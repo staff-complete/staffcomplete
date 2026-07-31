@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
+import { ApiError, apiFetch, apiFetchOrNull } from '../lib/api'
 import AppLogo from '../components/AppLogo.vue'
 
 const { t } = useI18n()
@@ -64,10 +65,11 @@ onMounted(async () => {
   }
 
   try {
-    const res = await fetch(`/api/invites/${token.value}`)
-    if (res.ok) {
-      invite.value = (await res.json()) as Invite
-    }
+    // A missing or expired invite is a 404 the template already renders as
+    // the "invalid invite" state, so it stays a null value, not an error.
+    invite.value = await apiFetchOrNull<Invite>(`/api/invites/${token.value}`)
+  } catch {
+    invite.value = null
   } finally {
     checkingInvite.value = false
   }
@@ -77,21 +79,14 @@ async function join() {
   serverError.value = ''
   joining.value = true
   try {
-    const res = await fetch(`/api/invites/${token.value}/accept`, {
+    await apiFetch(`/api/invites/${token.value}/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     })
-
-    if (res.ok) {
-      await router.push('/dashboard')
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    serverError.value = data.message ?? t('common.genericError')
-  } catch {
-    serverError.value = t('common.networkError')
+    await router.push('/dashboard')
+  } catch (err) {
+    serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     joining.value = false
   }
@@ -122,21 +117,14 @@ async function submit() {
 
   loading.value = true
   try {
-    const res = await fetch(`/api/invites/${token.value}/accept`, {
+    await apiFetch(`/api/invites/${token.value}/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: form.value.name, password: form.value.password }),
     })
-
-    if (res.ok) {
-      await router.push({ name: 'sign-in', query: { invited: 'success' } })
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    serverError.value = data.message ?? t('common.genericError')
-  } catch {
-    serverError.value = t('common.networkError')
+    await router.push({ name: 'sign-in', query: { invited: 'success' } })
+  } catch (err) {
+    serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     loading.value = false
   }

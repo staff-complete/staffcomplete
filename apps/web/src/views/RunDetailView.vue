@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useQueryClient } from '@tanstack/vue-query'
 import { authClient } from '../lib/auth-client'
+import { ApiError, apiFetch } from '../lib/api'
 import { useRunDetail } from '../composables/useRunDetail'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
 import { runHealth } from '../lib/runHealth'
@@ -25,18 +26,15 @@ async function reassignStep(stepId: string, assigneeId: string) {
   reassignError.value = ''
   reassigningStepId.value = stepId
   try {
-    const res = await fetch(`/api/runs/${id.value}/steps/${stepId}`, {
+    await apiFetch(`/api/runs/${id.value}/steps/${stepId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assigneeId: assigneeId || null }),
     })
-    if (res.ok) {
-      await queryClient.invalidateQueries({ queryKey: ['runs', id.value] })
-      return
-    }
-    const data = (await res.json()) as { message?: string }
+    await queryClient.invalidateQueries({ queryKey: ['runs', id.value] })
+  } catch (err) {
     reassignErrorStepId.value = stepId
-    reassignError.value = data.message ?? t('common.genericError')
+    reassignError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     reassigningStepId.value = null
   }

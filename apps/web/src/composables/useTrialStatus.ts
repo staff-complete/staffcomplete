@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { apiFetchOrNull } from '../lib/api'
 
 export interface TrialStatus {
   status: string
@@ -13,15 +14,8 @@ const REFETCH_INTERVAL_MS = 60_000
 // this repo has no jsdom/component-mounting test setup (see router/guards.ts
 // for the same dependency-injection-over-DOM-mounting pattern).
 export async function fetchTrialStatus(): Promise<TrialStatus | null> {
-  const res = await fetch('/api/billing/trial-status')
-  if (res.status === 404) {
-    // No subscription row yet — not an error state for the banner to show.
-    return null
-  }
-  if (!res.ok) {
-    throw new Error('Failed to load trial status')
-  }
-  return (await res.json()) as TrialStatus
+  // 404 means no subscription row yet — not an error state for the banner.
+  return apiFetchOrNull<TrialStatus>('/api/billing/trial-status')
 }
 
 export function useTrialStatus() {

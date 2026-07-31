@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
+import { ApiError, apiFetch } from '../lib/api'
 import type { WorkflowTemplateSummary } from '../composables/useWorkflowTemplates'
 
 const props = defineProps<{ templates: WorkflowTemplateSummary[] }>()
@@ -49,24 +50,16 @@ async function submit() {
 
   submitting.value = true
   try {
-    const res = await fetch('/api/runs', {
+    const created = await apiFetch<{ id: string }>('/api/runs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value),
     })
-
-    if (res.ok) {
-      const created = (await res.json()) as { id: string }
-      await queryClient.invalidateQueries({ queryKey: ['runs'] })
-      emit('close')
-      await router.push(`/runs/${created.id}`)
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    serverError.value = data.message ?? t('common.genericError')
-  } catch {
-    serverError.value = t('common.networkError')
+    await queryClient.invalidateQueries({ queryKey: ['runs'] })
+    emit('close')
+    await router.push(`/runs/${created.id}`)
+  } catch (err) {
+    serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     submitting.value = false
   }

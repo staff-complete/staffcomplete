@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { apiFetch } from '../lib/api'
 
 export interface MyTask {
   id: string
@@ -20,12 +21,8 @@ export interface MyTask {
 }
 
 export async function fetchMyTasks(): Promise<MyTask[]> {
-  const res = await fetch('/api/tasks/mine')
-  if (!res.ok) {
-    throw new Error('Failed to load tasks')
-  }
-  const data = (await res.json()) as { tasks: MyTask[] }
-  return data.tasks
+  const { tasks } = await apiFetch<{ tasks: MyTask[] }>('/api/tasks/mine')
+  return tasks
 }
 
 export function useMyTasks() {
@@ -36,12 +33,5 @@ export function useMyTasks() {
 }
 
 export async function completeTask(id: string): Promise<void> {
-  try {
-    const res = await fetch(`/api/tasks/${id}/complete`, { method: 'POST' })
-    if (!res.ok) {
-      throw new Error('Failed to complete task')
-    }
-  } catch (err) {
-    throw err instanceof Error ? err : new Error('Failed to complete task')
-  }
+  await apiFetch(`/api/tasks/${id}/complete`, { method: 'POST' })
 }

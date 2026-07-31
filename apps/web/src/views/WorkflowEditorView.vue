@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { AutomatedActionKey } from '@staffcomplete/shared'
+import { ApiError, apiFetch } from '../lib/api'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { useWorkflowTemplate } from '../composables/useWorkflowTemplates'
@@ -40,6 +41,27 @@ const { data: template, isLoading } = useWorkflowTemplate(id.value)
 
 function invalidate() {
   return queryClient.invalidateQueries({ queryKey: ['workflow-template', id.value] })
+}
+
+// Shared error slot for the editor's inline actions — rename/delete a phase,
+// set dependencies, reorder, delete a step. These have no form of their own
+// to hang a message on, and they used to ignore the response entirely and
+// invalidate regardless, so a rejected write (a dependency cycle, a phase
+// someone else deleted, an expired session) just snapped the UI back with no
+// explanation. Reordering was the worst of it: the row visibly jumped home
+// and nothing said why.
+const actionError = ref('')
+
+async function runAction(action: () => Promise<unknown>) {
+  actionError.value = ''
+  try {
+    await action()
+  } catch (err) {
+    actionError.value = err instanceof ApiError ? err.message : t('common.networkError')
+  }
+  // Refetch either way: on success to pick up the write, on failure to
+  // discard the optimistic local state the user is looking at.
+  await invalidate()
 }
 
 const members = ref<Member[]>([])
@@ -90,17 +112,14 @@ async function saveName() {
   }
   savingName.value = true
   try {
-    const res = await fetch(`/api/workflows/${id.value}`, {
+    await apiFetch(`/api/workflows/${id.value}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(nameForm.value),
     })
-    if (res.ok) {
-      await invalidate()
-    } else {
-      const data = (await res.json()) as { message?: string }
-      nameError.value = data.message ?? t('common.genericError')
-    }
+    await invalidate()
+  } catch (err) {
+    nameError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     savingName.value = false
   }
@@ -120,18 +139,15 @@ async function addPhase() {
   }
   addingPhase.value = true
   try {
-    const res = await fetch(`/api/workflows/${id.value}/phases`, {
+    await apiFetch(`/api/workflows/${id.value}/phases`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newPhaseName.value }),
     })
-    if (res.ok) {
-      newPhaseName.value = ''
-      await invalidate()
-      return
-    }
-    const data = (await res.json()) as { message?: string }
-    phaseError.value = data.message ?? t('common.genericError')
+    newPhaseName.value = ''
+    await invalidate()
+  } catch (err) {
+    phaseError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     addingPhase.value = false
   }
@@ -139,18 +155,20 @@ async function addPhase() {
 
 async function renamePhase(phaseId: string, newName: string) {
   if (isReadOnly.value) return
-  await fetch(`/api/workflows/${id.value}/phases/${phaseId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: newName }),
-  })
-  await invalidate()
+  await runAction(() =>
+    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName }),
+    }),
+  )
 }
 
 async function deletePhase(phaseId: string) {
   if (isReadOnly.value) return
-  await fetch(`/api/workflows/${id.value}/phases/${phaseId}`, { method: 'DELETE' })
-  await invalidate()
+  await runAction(() =>
+    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}`, { method: 'DELETE' }),
+  )
 }
 
 // Replaces the full set of phases :phaseId depends on (ADR-0019) — PhaseCard
@@ -158,12 +176,13 @@ async function deletePhase(phaseId: string) {
 // only round-trips to the server for the authoritative write.
 async function setPhaseDependencies(phaseId: string, dependsOnPhaseIds: string[]) {
   if (isReadOnly.value) return
-  await fetch(`/api/workflows/${id.value}/phases/${phaseId}/dependencies`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dependsOnPhaseIds }),
-  })
-  await invalidate()
+  await runAction(() =>
+    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}/dependencies`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dependsOnPhaseIds }),
+    }),
+  )
 }
 
 const deletePhaseTarget = ref<WorkflowTemplatePhase | null>(null)
@@ -179,12 +198,13 @@ async function reorderPhase(phaseId: string, direction: 'up' | 'down') {
   const nextIds = moveStep(currentIds, phaseId, direction)
   if (nextIds === currentIds) return
 
-  await fetch(`/api/workflows/${id.value}/phase-order`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phaseIds: nextIds }),
-  })
-  await invalidate()
+  await runAction(() =>
+    apiFetch(`/api/workflows/${id.value}/phase-order`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phaseIds: nextIds }),
+    }),
+  )
 }
 
 // Steps: one add-step form per phase, keyed by phaseId. PhaseCard's
@@ -269,20 +289,15 @@ async function addStep(phaseId: string) {
 
   addingStepPhaseId.value = phaseId
   try {
-    const res = await fetch(`/api/workflows/${id.value}/steps`, {
+    await apiFetch(`/api/workflows/${id.value}/steps`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-
-    if (res.ok) {
-      stepForms[phaseId] = emptyStepForm()
-      await invalidate()
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    stepErrors[phaseId] = data.message ?? t('common.genericError')
+    stepForms[phaseId] = emptyStepForm()
+    await invalidate()
+  } catch (err) {
+    stepErrors[phaseId] = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     addingStepPhaseId.value = null
   }
@@ -290,8 +305,9 @@ async function addStep(phaseId: string) {
 
 async function deleteStep(stepId: string) {
   if (isReadOnly.value) return
-  await fetch(`/api/workflows/${id.value}/steps/${stepId}`, { method: 'DELETE' })
-  await invalidate()
+  await runAction(() =>
+    apiFetch(`/api/workflows/${id.value}/steps/${stepId}`, { method: 'DELETE' }),
+  )
 }
 
 function configString(config: unknown, key: string): string {
@@ -371,20 +387,15 @@ async function submitEditStep() {
 
   editSubmitting.value = true
   try {
-    const res = await fetch(`/api/workflows/${id.value}/steps/${editingStepId.value}`, {
+    await apiFetch(`/api/workflows/${id.value}/steps/${editingStepId.value}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-
-    if (res.ok) {
-      editingStepId.value = null
-      await invalidate()
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    editStepError.value = data.message ?? t('common.genericError')
+    editingStepId.value = null
+    await invalidate()
+  } catch (err) {
+    editStepError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     editSubmitting.value = false
   }
@@ -400,12 +411,13 @@ async function reorderStep(
   const nextIds = moveStep(stepIds, stepId, direction)
   if (nextIds === stepIds) return
 
-  await fetch(`/api/workflows/${id.value}/phases/${phaseId}/steps/order`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stepIds: nextIds }),
-  })
-  await invalidate()
+  await runAction(() =>
+    apiFetch(`/api/workflows/${id.value}/phases/${phaseId}/steps/order`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stepIds: nextIds }),
+    }),
+  )
 }
 </script>
 
@@ -506,6 +518,10 @@ async function reorderStep(
 
       <p v-if="template.phases.length === 0" class="mb-4 text-sm text-app-muted">
         {{ t('workflows.editor.noPhases') }}
+      </p>
+
+      <p v-if="actionError" role="alert" class="mb-4 text-[13px] text-app-danger">
+        {{ actionError }}
       </p>
 
       <PhaseFlowDiagram :phases="template.phases" />

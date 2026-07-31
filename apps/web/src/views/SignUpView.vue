@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ApiError, apiFetch } from '../lib/api'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
@@ -82,25 +83,20 @@ async function submit() {
 
   loading.value = true
   try {
-    const res = await fetch('/api/onboard', {
+    await apiFetch('/api/onboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value),
     })
-
-    if (res.ok) {
-      await router.push({ name: 'check-email', query: { email: form.value.email } })
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    if (res.status === 409) {
-      errors.value.email = data.message ?? t('auth.signUp.emailExists')
+    await router.push({ name: 'check-email', query: { email: form.value.email } })
+  } catch (err) {
+    if (!(err instanceof ApiError)) {
+      serverError.value = t('common.networkError')
+    } else if (err.status === 409) {
+      errors.value.email = err.message || t('auth.signUp.emailExists')
     } else {
-      serverError.value = data.message ?? t('common.genericError')
+      serverError.value = err.message || t('common.genericError')
     }
-  } catch {
-    serverError.value = t('common.networkError')
   } finally {
     loading.value = false
   }

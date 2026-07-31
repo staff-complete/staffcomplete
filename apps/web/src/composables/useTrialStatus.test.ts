@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../lib/api'
 import { fetchTrialStatus } from './useTrialStatus'
 
 describe('fetchTrialStatus', () => {
@@ -32,9 +33,17 @@ describe('fetchTrialStatus', () => {
     expect(result).toBeNull()
   })
 
-  it('throws on an unexpected error response', async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 500 }))
+  it('throws an ApiError on an error response that is not 404', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ code: 'FORBIDDEN', message: 'Sign-in required.' }), {
+        status: 403,
+      }),
+    )
 
-    await expect(fetchTrialStatus()).rejects.toThrow('Failed to load trial status')
+    const err = (await fetchTrialStatus().catch((e: unknown) => e)) as ApiError
+
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.status).toBe(403)
+    expect(err.code).toBe('FORBIDDEN')
   })
 })

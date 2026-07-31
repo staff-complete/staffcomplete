@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
+import { ApiError, apiFetch } from '../lib/api'
 import { authClient } from '../lib/auth-client'
 import { useTrialStatus } from '../composables/useTrialStatus'
 import { avatarColorsFor, initialsFor } from '../lib/avatarColors'
@@ -34,11 +35,9 @@ const schema = computed(() =>
 async function loadInvites() {
   loadingInvites.value = true
   try {
-    const res = await fetch('/api/invites')
-    if (res.ok) {
-      const data = (await res.json()) as { invites: Invite[] }
-      invites.value = data.invites
-    }
+    invites.value = (await apiFetch<{ invites: Invite[] }>('/api/invites')).invites
+  } catch (err) {
+    serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
   } finally {
     loadingInvites.value = false
   }
@@ -91,27 +90,24 @@ async function submit() {
 
   loading.value = true
   try {
-    const res = await fetch('/api/invites', {
+    await apiFetch('/api/invites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value),
     })
-
-    if (res.ok) {
-      successMessage.value = t('team.successMessage', { email: form.value.email })
-      form.value = { email: '', role: 'member' }
-      await loadInvites()
-      return
-    }
-
-    const data = (await res.json()) as { message?: string }
-    if (res.status === 409) {
-      errors.value.email = data.message ?? t('team.emailExists')
+    successMessage.value = t('team.successMessage', { email: form.value.email })
+    form.value = { email: '', role: 'member' }
+    await loadInvites()
+  } catch (err) {
+    if (!(err instanceof ApiError)) {
+      serverError.value = t('common.networkError')
+    } else if (err.status === 409) {
+      // ALREADY_MEMBER / INVITE_PENDING — both are about this email, so they
+      // belong on the field rather than in the form-level banner.
+      errors.value.email = err.message || t('team.emailExists')
     } else {
-      serverError.value = data.message ?? t('common.genericError')
+      serverError.value = err.message || t('common.genericError')
     }
-  } catch {
-    serverError.value = t('common.networkError')
   } finally {
     loading.value = false
   }
@@ -120,7 +116,14 @@ async function submit() {
 async function revoke(id: string) {
   if (isReadOnly.value) return
 
-  await fetch(`/api/invites/${id}`, { method: 'DELETE' })
+  // Previously fire-and-forget: a rejected revoke still reloaded the list, so the
+  // invite silently reappeared in the list with no explanation.
+  serverError.value = ''
+  try {
+    await apiFetch(`/api/invites/${id}`, { method: 'DELETE' })
+  } catch (err) {
+    serverError.value = err instanceof ApiError ? err.message : t('common.networkError')
+  }
   await loadInvites()
 }
 </script>
