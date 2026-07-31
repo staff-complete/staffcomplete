@@ -157,7 +157,7 @@ Not recommended as the only option. Annual should be offered as a discount, not 
 
 - Drop per-employee language ($3/$6) → replace with flat monthly ($99/$299)
 - Starter features: add "1 HRIS integration" (BambooHR or HiBob, one of them)
-- Growth features: add "All HRIS integrations" and "role change workflows"
+- Growth features: add "All HRIS integrations" and "role change checklists"
 - Keep "Most Popular" badge on Growth (the 50–150 segment is the core ICP)
 
 ### Annual discount framing
@@ -225,7 +225,7 @@ How to contextualise the price on the landing page or in sales conversations:
 ### Starter features (replace current)
 
 - Google Workspace + Slack integrations
-- Onboarding and offboarding workflows
+- Onboarding and offboarding checklists
 - Manual task fallback with due dates
 - 1 HRIS trigger (BambooHR or HiBob)
 - Unlimited admin seats
@@ -237,7 +237,7 @@ How to contextualise the price on the landing page or in sales conversations:
 - Everything in Starter
 - All HRIS integrations
 - All integrations (GitHub, Jira, Notion and more)
-- Role and team change workflows
+- Role and team change checklists
 - Full audit log + CSV export
 - Unlimited admin seats
 - Priority support

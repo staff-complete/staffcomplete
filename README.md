@@ -52,14 +52,14 @@ A SaaS platform for automating the full employee lifecycle across company system
 
 Full rationale for each choice — including alternatives considered — is recorded in [docs/decisions/](docs/decisions/README.md) (ADRs).
 
-**Data flow:** a lifecycle event (onboarding / role change / offboarding) is raised → queued by the workflow engine (pg-boss) → dispatched to per-system integration handlers (Google Workspace, Slack, GitHub, …) → every step is recorded for audit.
+**Data flow:** a lifecycle event (onboarding / role change / offboarding) is raised → queued by the job queue (pg-boss) → dispatched to per-system integration handlers (Google Workspace, Slack, GitHub, …) → every step is recorded for audit.
 
 ## Design Principles
 
 - Event-driven, integration-first architecture
 - Secure by default: least-privilege access, automatic revocation on offboarding, no hardcoded credentials
 - Full audit trail of every lifecycle action
-- Idempotent workflows — safe to retry
+- Idempotent automation — safe to retry
 - Multi-tenant, isolated at the database level (PostgreSQL RLS)
 
 ---

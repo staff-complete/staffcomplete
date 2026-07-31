@@ -140,7 +140,7 @@ market gaps, and the 30–150 employee segment strategy. Used to inform roadmap 
 
 ---
 
-## Checklist and workflow engine
+## Checklist and automation engine
 
 | Feature                                   | Status      | Competitor coverage   | Notes                                          |
 | ----------------------------------------- | ----------- | --------------------- | ---------------------------------------------- |
