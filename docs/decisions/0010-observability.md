@@ -1,6 +1,6 @@
 # ADR-0010: Observability
 
-- **Status:** accepted
+- **Status:** partially superseded by [ADR-0022](0022-structured-stdout-logging.md) (aggregation and frontend tracking deferred)
 - **Date:** 2026-06-27
 
 ## Context

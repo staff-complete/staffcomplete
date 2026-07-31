@@ -17,7 +17,7 @@ Template: [0000-adr-template.md](0000-adr-template.md)
 | [0007](0007-auth.md)                              | Authentication                                                         | accepted                    |
 | [0008](0008-deployment.md)                        | Deployment and Infrastructure                                          | accepted                    |
 | [0009](0009-ci-cd.md)                             | CI/CD and Code Quality                                                 | partially superseded (0020) |
-| [0010](0010-observability.md)                     | Observability                                                          | accepted                    |
+| [0010](0010-observability.md)                     | Observability                                                          | partially superseded (0022) |
 | [0011](0011-email.md)                             | Transactional Email                                                    | accepted                    |
 | [0012](0012-row-level-security-implementation.md) | Row-Level Security Implementation Mechanism                            | accepted                    |
 | [0013](0013-trunk-based-single-environment.md)    | Trunk-Based Development, Single Environment                            | accepted                    |
@@ -29,3 +29,4 @@ Template: [0000-adr-template.md](0000-adr-template.md)
 | [0019](0019-phase-level-dependencies.md)          | Phase-Level Dependencies                                               | accepted                    |
 | [0020](0020-ssh-commit-signing.md)                | SSH Commit Signing (not GPG)                                           | accepted                    |
 | [0021](0021-plain-tailwind-ui-components.md)      | Plain Tailwind Instead of Shadcn/vue for UI Components                 | accepted                    |
+| [0022](0022-structured-stdout-logging.md)         | Structured stdout Logging, Observability Stack Deferred                | accepted                    |
