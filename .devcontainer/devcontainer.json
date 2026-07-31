@@ -4,6 +4,13 @@
   "service": "app",
   "workspaceFolder": "/workspaces/staffcomplete",
   "postCreateCommand": "pnpm install && ([ -f .env ] || cp .env.example .env)",
+  // The base image is Etc/UTC, so anything rendering "local" time — the
+  // status line's rate-limit reset clock, timestamps in logs — reads as UTC.
+  // Note this is display only: the app itself stores timestamps in UTC and
+  // must keep doing so.
+  "containerEnv": {
+    "TZ": "Asia/Jerusalem"
+  },
   "customizations": {
     "vscode": {
       "settings": {
