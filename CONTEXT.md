@@ -86,6 +86,14 @@ The specific thing an automated step performs, chosen from a fixed registry of s
 actions. Today the registry holds one: sending an email.
 _Avoid_: integration, handler, automation
 
+**Integration**:
+The connection to one external SaaS tool — Slack, Google Workspace, GitHub — that automated
+actions reach the outside world through. One integration per tool, however many actions use
+it. An Automated Action is what the checklist asks for; the Integration is what performs it.
+_Avoid_: connector, plugin, provider
+_Status_: none built yet. The only external service called today is the email provider, from
+the auth module.
+
 **Automation Token**:
 A placeholder such as `[employeeName]` written into an automated action's configuration and
 replaced with the run's real values when the step executes.
