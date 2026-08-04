@@ -158,10 +158,10 @@ describe('completeRunStep', () => {
     ])
   })
 
-  it('sets run.status to completed and reports a newly-unlocked automated step to dispatch', async () => {
+  it('reports a newly-unlocked automated step in the next phase, run still in_progress', async () => {
     mocks.updateReturningMock
       .mockResolvedValueOnce([{ id: 's1', runId: 'r1', status: 'completed' }])
-      .mockResolvedValueOnce([{ id: 'r1', status: 'completed' }])
+      .mockResolvedValueOnce([{ id: 'r1', status: 'in_progress' }])
     mocks.runStepFindManyMock.mockResolvedValue([
       { id: 's1', phaseId: 'p1', type: 'manual', status: 'completed' },
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
@@ -173,9 +173,37 @@ describe('completeRunStep', () => {
 
     const result = await completeRunStep(tx() as never, 's1')
 
-    expect(result.updatedRun).toEqual({ id: 'r1', status: 'completed' })
+    // s2 is still pending, so the run is not finished — assert what the code
+    // writes, not what the update mock was told to echo back.
+    expect(mocks.updateSetMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ status: 'in_progress' }),
+    )
     expect(result.stepsToDispatch).toEqual([
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
     ])
+  })
+
+  it('sets run.status to completed when the step completed was the last one left', async () => {
+    mocks.updateReturningMock
+      .mockResolvedValueOnce([{ id: 's1', runId: 'r1', status: 'completed' }])
+      .mockResolvedValueOnce([{ id: 'r1', status: 'completed' }])
+    mocks.runStepFindManyMock.mockResolvedValue([
+      { id: 's1', phaseId: 'p1', type: 'manual', status: 'completed' },
+      { id: 's2', phaseId: 'p2', type: 'automated', status: 'completed' },
+    ])
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+    mocks.runPhaseDependencyFindManyMock.mockResolvedValue([
+      { phaseId: 'p2', dependsOnPhaseId: 'p1' },
+    ])
+
+    const result = await completeRunStep(tx() as never, 's1')
+
+    expect(mocks.updateSetMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ status: 'completed' }),
+    )
+    // Nothing left to dispatch once every step is done.
+    expect(result.stepsToDispatch).toEqual([])
   })
 })

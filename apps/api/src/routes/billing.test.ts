@@ -73,6 +73,21 @@ describe('GET /api/billing/trial-status', () => {
     expect(json).toMatchObject({ daysRemaining: 0, isReadOnly: true })
   })
 
+  // The other half of the read-only rule: status 'expired' locks the org
+  // regardless of trialEndsAt, which is what the daily scan writes once a
+  // trial lapses.
+  it('reports a subscription already marked expired as read-only', async () => {
+    mocks.subscriptionFindFirstMock.mockResolvedValue({
+      status: 'expired',
+      trialEndsAt: new Date(NOW.getTime() + 5 * 24 * 60 * 60 * 1000),
+    })
+
+    const res = await app.request('/api/billing/trial-status')
+    const json = await res.json()
+
+    expect(json).toMatchObject({ status: 'expired', isReadOnly: true })
+  })
+
   it('reports an active subscription as not read-only even with a past trialEndsAt', async () => {
     mocks.subscriptionFindFirstMock.mockResolvedValue({
       status: 'active',

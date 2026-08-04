@@ -259,12 +259,85 @@ describe('DELETE /api/invites/:id', () => {
 })
 
 describe('GET /api/invites/:token', () => {
-  it('returns 404 for an unknown or expired invite', async () => {
+  it('returns 404 for an unknown invite', async () => {
     mocks.invitationFindFirstMock.mockResolvedValue(null)
 
     const res = await app.request('/api/invites/bad-token')
 
     expect(res.status).toBe(404)
+  })
+
+  // An invite that was already used or revoked must not keep leaking the
+  // organization name and the invited address to whoever holds the link.
+  it('returns 404 for an invite that is no longer pending', async () => {
+    mocks.invitationFindFirstMock.mockResolvedValue({
+      id: 'invite-1',
+      email: 'invitee@example.com',
+      role: 'member',
+      status: 'accepted',
+      expiresAt: new Date(Date.now() + 60_000),
+      organizationId: ADMIN_ORG_ID,
+    })
+
+    const res = await app.request('/api/invites/invite-1')
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 for a pending invite whose expiry has passed', async () => {
+    mocks.invitationFindFirstMock.mockResolvedValue({
+      id: 'invite-1',
+      email: 'invitee@example.com',
+      role: 'member',
+      status: 'pending',
+      expiresAt: new Date(Date.now() - 60_000),
+      organizationId: ADMIN_ORG_ID,
+    })
+
+    const res = await app.request('/api/invites/invite-1')
+
+    expect(res.status).toBe(404)
+  })
+
+  // The common case: opening the link in a browser that is not signed in at
+  // all. There is no session to read an email off, so this must resolve to
+  // false rather than blow up.
+  it('reports sessionMatches false when there is no session at all', async () => {
+    mocks.invitationFindFirstMock.mockResolvedValue({
+      id: 'invite-1',
+      email: 'invitee@example.com',
+      role: 'member',
+      status: 'pending',
+      expiresAt: new Date(Date.now() + 60_000),
+      organizationId: ADMIN_ORG_ID,
+    })
+    mocks.organizationFindFirstMock.mockResolvedValue({ name: 'Acme Co' })
+    mocks.userFindFirstMock.mockResolvedValue(null)
+    mocks.getSessionMock.mockResolvedValue(null)
+
+    const res = await app.request('/api/invites/invite-1')
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ sessionMatches: false })
+  })
+
+  it('reports sessionMatches false when signed in as a different email', async () => {
+    mocks.invitationFindFirstMock.mockResolvedValue({
+      id: 'invite-1',
+      email: 'invitee@example.com',
+      role: 'member',
+      status: 'pending',
+      expiresAt: new Date(Date.now() + 60_000),
+      organizationId: ADMIN_ORG_ID,
+    })
+    mocks.organizationFindFirstMock.mockResolvedValue({ name: 'Acme Co' })
+    mocks.userFindFirstMock.mockResolvedValue(null)
+    mocks.getSessionMock.mockResolvedValue({ user: { email: 'someone.else@example.com' } })
+
+    const res = await app.request('/api/invites/invite-1')
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ accountExists: false, sessionMatches: false })
   })
 
   it('flags accountExists and sessionMatches for the frontend to branch on', async () => {
@@ -303,16 +376,45 @@ describe('POST /api/invites/:token/accept', () => {
     expiresAt: new Date(Date.now() + 60_000),
   }
 
-  it('returns 404 for an unknown or expired invite', async () => {
-    mocks.invitationFindFirstMock.mockResolvedValue(null)
-
-    const res = await app.request('/api/invites/bad-token/accept', {
+  function accept(token: string, body: unknown = {}) {
+    return app.request(`/api/invites/${token}/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     })
+  }
+
+  it('returns 404 for an unknown invite', async () => {
+    mocks.invitationFindFirstMock.mockResolvedValue(null)
+
+    const res = await accept('bad-token')
 
     expect(res.status).toBe(404)
+  })
+
+  // Replaying a used or revoked link must not grant membership a second
+  // time, even when the caller is signed in as the invited address.
+  it('returns 404 for an invite that is no longer pending', async () => {
+    mocks.invitationFindFirstMock.mockResolvedValue({ ...pendingInvite, status: 'accepted' })
+    mocks.getSessionMock.mockResolvedValue({ user: { email: 'invitee@example.com' } })
+
+    const res = await accept('invite-1')
+
+    expect(res.status).toBe(404)
+    expect(mocks.acceptInvitationMock).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 for a pending invite whose expiry has passed', async () => {
+    mocks.invitationFindFirstMock.mockResolvedValue({
+      ...pendingInvite,
+      expiresAt: new Date(Date.now() - 60_000),
+    })
+    mocks.getSessionMock.mockResolvedValue({ user: { email: 'invitee@example.com' } })
+
+    const res = await accept('invite-1')
+
+    expect(res.status).toBe(404)
+    expect(mocks.acceptInvitationMock).not.toHaveBeenCalled()
   })
 
   it('delegates to the plugin when already signed in as the invited email', async () => {

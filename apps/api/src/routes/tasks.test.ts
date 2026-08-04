@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   getSessionMock: vi.fn(),
@@ -63,7 +63,12 @@ function post(path: string) {
   return req(path, { method: 'POST' })
 }
 
+// Due dates here are derived from run.eventDate against the wall clock, so
+// the fixtures below only mean anything relative to a pinned "now". Only Date
+// is faked, so Hono's async request handling still runs on real timers.
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-07-30T00:00:00Z'))
   mocks.getSessionMock.mockReset()
   mocks.memberFindFirstMock.mockReset()
   mocks.runStepFindFirstMock.mockReset()
@@ -77,6 +82,10 @@ beforeEach(() => {
   })
   mocks.completeRunStepMock.mockReset()
   mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('GET /api/tasks/mine', () => {
@@ -128,7 +137,7 @@ describe('GET /api/tasks/mine', () => {
         id: 'rs1',
         title: 'Order laptop',
         dueDate: '2026-08-02',
-        isOverdue: expect.any(Boolean),
+        isOverdue: false,
         isLocked: false,
         run: expect.objectContaining({ id: 'r1', employeeName: 'Jane Doe' }),
       }),
@@ -286,7 +295,10 @@ describe('POST /api/tasks/:id/complete', () => {
     expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledWith(ORG_ID, [])
   })
 
-  it('flips run.status to completed when every step is done', async () => {
+  // completeRunStep is mocked here, so this covers the route's serialization
+  // of its result, not the "is the run finished" logic itself — that lives in
+  // lib/run-steps.test.ts.
+  it('serializes the run status that completeRunStep reports back', async () => {
     memberSession()
     mocks.runStepFindFirstMock.mockResolvedValue({
       id: 'rs1',
@@ -336,13 +348,29 @@ describe('POST /api/tasks/:id/complete', () => {
     mocks.runStepFindManyMock.mockResolvedValueOnce([{ phaseId: 'p1', status: 'pending' }])
     const dispatchable = { id: 'rs2', phaseId: 'p2', type: 'automated', status: 'pending' }
     mocks.completeRunStepMock.mockResolvedValue({
-      updatedStep: { id: 'rs1', runId: 'r1', title: 'Order laptop', status: 'completed' },
-      updatedRun: { id: 'r1', type: 'onboarding', employeeName: 'Jane Doe', status: 'in_progress' },
+      updatedStep: {
+        id: 'rs1',
+        runId: 'r1',
+        title: 'Order laptop',
+        status: 'completed',
+        dueDateOffsetDays: 1,
+      },
+      updatedRun: {
+        id: 'r1',
+        type: 'onboarding',
+        employeeName: 'Jane Doe',
+        eventDate: '2026-08-01',
+        status: 'in_progress',
+      },
       stepsToDispatch: [dispatchable],
     })
 
-    await post('/rs1/complete')
+    const res = await post('/rs1/complete')
 
+    // serializeTask derives a due date from the run, so an incomplete
+    // updatedRun makes this handler throw after dispatching — assert the
+    // status, not just the dispatch call.
+    expect(res.status).toBe(200)
     expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledWith(ORG_ID, [dispatchable])
   })
 })

@@ -415,11 +415,64 @@ describe('PUT /api/checklists/:id/phase-order', () => {
     expect((await res.json()).code).toBe('VALIDATION_ERROR')
   })
 
+  // Every existing id is present, so the "are they all accounted for" half of
+  // the check passes — only the size comparison rejects the smuggled-in id.
+  // Without it the handler would write a position onto a phase belonging to
+  // another checklist template.
+  it('rejects a phaseIds list that adds an id the checklist template does not own', async () => {
+    adminSession()
+    mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+
+    const res = await putJson('/t1/phase-order', { phaseIds: ['p1', 'p2', 'foreign-phase'] })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('VALIDATION_ERROR')
+    expect(mocks.updateSetMock).not.toHaveBeenCalled()
+  })
+
   it('reorders phases by the given phaseIds order', async () => {
     adminSession()
     mocks.phaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
 
     const res = await putJson('/t1/phase-order', { phaseIds: ['p2', 'p1'] })
+
+    expect(res.status).toBe(200)
+    expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 0 })
+    expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 1 })
+  })
+})
+
+describe('PUT /api/checklists/:id/phases/:phaseId/steps/order', () => {
+  it("rejects a stepIds set that does not match the phase's existing steps", async () => {
+    adminSession()
+    mocks.stepFindManyMock.mockResolvedValue([{ id: 's1' }, { id: 's2' }])
+
+    const res = await putJson('/t1/phases/p1/steps/order', { stepIds: ['s1', 's3'] })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('VALIDATION_ERROR')
+    expect(mocks.updateSetMock).not.toHaveBeenCalled()
+  })
+
+  // Same smuggling case as phase-order above: all existing ids plus one more.
+  it('rejects a stepIds list that adds an id the phase does not own', async () => {
+    adminSession()
+    mocks.stepFindManyMock.mockResolvedValue([{ id: 's1' }, { id: 's2' }])
+
+    const res = await putJson('/t1/phases/p1/steps/order', {
+      stepIds: ['s1', 's2', 'foreign-step'],
+    })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('VALIDATION_ERROR')
+    expect(mocks.updateSetMock).not.toHaveBeenCalled()
+  })
+
+  it('reorders steps by the given stepIds order', async () => {
+    adminSession()
+    mocks.stepFindManyMock.mockResolvedValue([{ id: 's1' }, { id: 's2' }])
+
+    const res = await putJson('/t1/phases/p1/steps/order', { stepIds: ['s2', 's1'] })
 
     expect(res.status).toBe(200)
     expect(mocks.updateSetMock).toHaveBeenCalledWith({ position: 0 })

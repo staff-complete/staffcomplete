@@ -94,6 +94,29 @@ describe('runTrialLifecycleScan', () => {
     expect(mocks.updateMock).not.toHaveBeenCalled()
   })
 
+  // The two rows either side of REMINDER_WINDOW_DAYS. 3 days left is inside
+  // the window and must send; 4 must not — this is the boundary the whole
+  // reminder is specified around, so pin it from both directions.
+  it('sends the reminder at exactly 3 days remaining', async () => {
+    mocks.subscriptionFindManyMock.mockResolvedValue([
+      trialingOrg({ organizationId: 'org-1', trialEndsAt: new Date(NOW.getTime() + 3 * DAY_MS) }),
+    ])
+
+    await runTrialLifecycleScan()
+
+    expect(mocks.sendAuthEmailMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not send the reminder at 4 days remaining', async () => {
+    mocks.subscriptionFindManyMock.mockResolvedValue([
+      trialingOrg({ organizationId: 'org-1', trialEndsAt: new Date(NOW.getTime() + 4 * DAY_MS) }),
+    ])
+
+    await runTrialLifecycleScan()
+
+    expect(mocks.sendAuthEmailMock).not.toHaveBeenCalled()
+  })
+
   it('skips an org with more than 3 days remaining', async () => {
     mocks.subscriptionFindManyMock.mockResolvedValue([
       trialingOrg({

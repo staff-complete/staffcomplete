@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   getSessionMock: vi.fn(),
@@ -99,7 +99,13 @@ const VALID_RUN_INPUT = {
   eventDate: '2026-08-01',
 }
 
+// The overdue math in GET /api/runs reads the wall clock, so every eventDate
+// below is only meaningful relative to a pinned "now" — without this the
+// suite silently changes meaning as real time passes. Only Date is faked so
+// Hono's async request handling still runs on real timers.
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-07-30T00:00:00Z'))
   mocks.getSessionMock.mockReset()
   mocks.memberFindFirstMock.mockReset()
   mocks.templateFindFirstMock.mockReset()
@@ -124,6 +130,10 @@ beforeEach(() => {
   mocks.updateWhereMock.mockReset().mockReturnValue({ returning: mocks.updateReturningMock })
   mocks.updateReturningMock.mockReset()
   mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('admin gate', () => {
@@ -163,6 +173,8 @@ describe('GET /api/runs', () => {
         createdAt: new Date(),
       },
     ])
+    // Deliberately asymmetric — two completed against one pending, so a
+    // count that filtered on the wrong side of the comparison would differ.
     mocks.runStepFindManyMock.mockResolvedValue([
       {
         runId: 'r1',
@@ -173,10 +185,17 @@ describe('GET /api/runs', () => {
       },
       {
         runId: 'r1',
+        status: 'completed',
+        title: 'Create accounts',
+        dueDateOffsetDays: 0,
+        position: 1,
+      },
+      {
+        runId: 'r1',
         status: 'pending',
         title: 'Schedule orientation',
         dueDateOffsetDays: 1,
-        position: 1,
+        position: 2,
       },
     ])
 
@@ -187,8 +206,8 @@ describe('GET /api/runs', () => {
     expect(json.runs).toEqual([
       expect.objectContaining({
         id: 'r1',
-        stepCount: 2,
-        completedStepCount: 1,
+        stepCount: 3,
+        completedStepCount: 2,
         overdueStepCount: 0,
         overdueStepTitle: null,
       }),
@@ -209,13 +228,16 @@ describe('GET /api/runs', () => {
         createdAt: new Date(),
       },
     ])
+    // Returned out of position order on purpose: the list endpoint's step
+    // query has no ORDER BY, so the sort in the handler is the only thing
+    // deciding which overdue step's title is surfaced.
     mocks.runStepFindManyMock.mockResolvedValue([
       {
         runId: 'r1',
-        status: 'completed',
-        title: 'Revoke access',
-        dueDateOffsetDays: 0,
-        position: 0,
+        status: 'pending',
+        title: 'Exit interview',
+        dueDateOffsetDays: 3,
+        position: 3,
       },
       {
         runId: 'r1',
@@ -226,8 +248,15 @@ describe('GET /api/runs', () => {
       },
       {
         runId: 'r1',
+        status: 'completed',
+        title: 'Revoke access',
+        dueDateOffsetDays: 0,
+        position: 0,
+      },
+      {
+        runId: 'r1',
         status: 'pending',
-        title: 'Exit interview',
+        title: 'Confirm handover',
         dueDateOffsetDays: 2,
         position: 2,
       },
@@ -240,7 +269,9 @@ describe('GET /api/runs', () => {
     expect(json.runs).toEqual([
       expect.objectContaining({
         id: 'r1',
-        overdueStepCount: 2,
+        // The completed step is never overdue, whatever its due date.
+        overdueStepCount: 3,
+        // Lowest position among the overdue steps, not first-returned.
         overdueStepTitle: 'Collect laptop',
       }),
     ])
