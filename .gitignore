@@ -50,3 +50,7 @@ Thumbs.db
 # Claude
 .claude/settings.local.json
 .claude/hooks/__pycache__/
+
+# Mutation testing (Stryker)
+.stryker-tmp/
+.stryker-reports/

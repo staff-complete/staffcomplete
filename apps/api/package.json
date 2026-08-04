@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "dotenv -e ../../.env -- tsx src/db/migrate.ts && pnpm run db:setup-roles",
     "db:push": "dotenv -e ../../.env -- drizzle-kit push",
-    "db:setup-roles": "dotenv -e ../../.env -- tsx src/db/setup-tenant-role.ts"
+    "db:setup-roles": "dotenv -e ../../.env -- tsx src/db/setup-tenant-role.ts",
+    "test:mutation": "TENANT_DATABASE_URL=postgres://localhost:5432/staffcomplete AUTH_SECRET=test-secret stryker run"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.10",
@@ -29,6 +30,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/node": "^26.0.1",
     "@vitest/coverage-v8": "^4.1.9",
     "dotenv-cli": "^11.0.0",

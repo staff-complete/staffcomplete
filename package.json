@@ -13,7 +13,8 @@
     "format": "oxfmt --ignore-path .oxfmtignore --ignore-path .gitignore .",
     "format:check": "oxfmt --check --ignore-path .oxfmtignore --ignore-path .gitignore .",
     "cspell": "cspell \"**\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:mutation": "turbo test:mutation"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.1.0",
