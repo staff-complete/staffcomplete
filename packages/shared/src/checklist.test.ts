@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { createStepSchema, updateStepSchema } from './checklist.js'
+import {
+  checklistTypeSchema,
+  createChecklistTemplateSchema,
+  createPhaseSchema,
+  createStepSchema,
+  reorderPhasesSchema,
+  updateStepSchema,
+} from './checklist.js'
 
 const VALID_EMAIL_CONFIG = {
   to: '[employeeEmail]',
@@ -121,5 +128,52 @@ describe('updateStepSchema', () => {
     const result = updateStepSchema.safeParse({ title: 'Renamed' })
 
     expect(result.success).toBe(true)
+  })
+})
+
+describe('checklistTypeSchema', () => {
+  it('accepts the two lifecycle events that exist today', () => {
+    expect(checklistTypeSchema.safeParse('onboarding').success).toBe(true)
+    expect(checklistTypeSchema.safeParse('offboarding').success).toBe(true)
+  })
+
+  // role_change is named in the domain model but not built — it must not
+  // slip through as a valid checklist type until it is.
+  it('rejects a lifecycle event that is not implemented', () => {
+    expect(checklistTypeSchema.safeParse('role_change').success).toBe(false)
+  })
+})
+
+describe('createChecklistTemplateSchema', () => {
+  it('accepts a two-character name — the shortest allowed', () => {
+    const result = createChecklistTemplateSchema.safeParse({ name: 'IT', type: 'onboarding' })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a one-character name', () => {
+    const result = createChecklistTemplateSchema.safeParse({ name: 'I', type: 'onboarding' })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a template with no type', () => {
+    const result = createChecklistTemplateSchema.safeParse({ name: 'Engineering onboarding' })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('createPhaseSchema', () => {
+  it('accepts a two-character name and rejects a shorter one', () => {
+    expect(createPhaseSchema.safeParse({ name: 'IT' }).success).toBe(true)
+    expect(createPhaseSchema.safeParse({ name: 'I' }).success).toBe(false)
+  })
+})
+
+describe('reorderPhasesSchema', () => {
+  it('requires at least one phase id', () => {
+    expect(reorderPhasesSchema.safeParse({ phaseIds: ['p1'] }).success).toBe(true)
+    expect(reorderPhasesSchema.safeParse({ phaseIds: [] }).success).toBe(false)
   })
 })

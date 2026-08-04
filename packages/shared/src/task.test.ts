@@ -35,4 +35,22 @@ describe('isTaskOverdue', () => {
   it('is not overdue when pending and the due date has not arrived yet', () => {
     expect(isTaskOverdue('2026-07-10', 'pending', new Date('2026-07-01T00:00:00Z'))).toBe(false)
   })
+
+  // The boundary, pinned in both directions. Note what this documents: the
+  // cutoff is midnight UTC *of* the due date, so a task is reported overdue
+  // for the whole of the day it is due — "due today" and "overdue" are the
+  // same state here. That may not be the intent; these tests describe the
+  // behavior as built, so a deliberate change to it shows up as a failure
+  // rather than passing unnoticed.
+  it('is not overdue at the exact start of its due date', () => {
+    expect(isTaskOverdue('2026-07-01', 'pending', new Date('2026-07-01T00:00:00Z'))).toBe(false)
+  })
+
+  it('is already overdue one second into its due date', () => {
+    expect(isTaskOverdue('2026-07-01', 'pending', new Date('2026-07-01T00:00:01Z'))).toBe(true)
+  })
+
+  it('is overdue late on its due date', () => {
+    expect(isTaskOverdue('2026-07-01', 'pending', new Date('2026-07-01T23:59:59Z'))).toBe(true)
+  })
 })
