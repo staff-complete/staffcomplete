@@ -16,6 +16,16 @@ function respond(status: number, body?: unknown, init?: { text?: string }) {
   )
 }
 
+// `respond` couples the body to a content-length: 0 header, which is exactly
+// what a real 204 and a real empty 200 do *not* have in common — these cases
+// need the two decided independently.
+function respondRaw(status: number, body: string | null, headers: Record<string, string> = {}) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(new Response(body, { status, statusText: '', headers })),
+  )
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
 })
@@ -62,6 +72,30 @@ describe('apiFetch', () => {
     respond(204)
 
     await expect(apiFetch('/api/tasks/1/complete', { method: 'POST' })).resolves.toBeUndefined()
+  })
+
+  it('treats a 204 as empty even without a content-length header', async () => {
+    respondRaw(204, null)
+
+    await expect(apiFetch('/api/tasks/1/complete', { method: 'POST' })).resolves.toBeUndefined()
+  })
+
+  it('treats any success with content-length 0 as empty, not just a 204', async () => {
+    respondRaw(200, '', { 'content-length': '0' })
+
+    await expect(apiFetch('/api/invites/x', { method: 'DELETE' })).resolves.toBeUndefined()
+  })
+
+  it('falls back to UNKNOWN when the error body is JSON without the usual envelope', async () => {
+    respondRaw(400, JSON.stringify({ error: 'something went wrong' }), {
+      'content-type': 'application/json',
+    })
+
+    const err = (await apiFetch('/api/runs').catch((e: unknown) => e)) as ApiError
+
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.code).toBe('UNKNOWN')
+    expect(err.message).toBe('')
   })
 
   it('lets a network failure propagate as-is, not as an ApiError', async () => {
