@@ -138,7 +138,7 @@ Not recommended as the only option. Annual should be offered as a discount, not 
 
 ## 4. Recommended model
 
-**Flat tiers, monthly or annual, with a 14-day free trial.**
+**Flat tiers, monthly or annual, with a 30-day free trial.**
 
 ### Tier structure
 
@@ -171,7 +171,7 @@ Do not say "16% off" — it sounds small. "2 months free" sounds like real money
 
 ### Free trial
 
-- 14 days, no card required
+- 30 days, no card required
 - Full access to Growth tier features (maximises aha moment)
 - After trial: pick a plan or downgrade
 - This is a standard B2B SaaS trial structure that converts well with HR buyers
@@ -246,7 +246,7 @@ How to contextualise the price on the landing page or in sales conversations:
 
 ## 8. Decided
 
-- **Free plan:** No free tier in v1. Free trial (14 days) is enough. A free plan risks commoditising
+- **Free plan:** No free tier in v1. Free trial (30 days) is enough. A free plan risks commoditising
   the product before the brand is established.
 - **Admin seats:** Unlimited HR admin seats included on all tiers. No per-seat pricing.
 - **Headcount overage:** Not a hard block. Notify at 45 employees (Starter) or 145 employees

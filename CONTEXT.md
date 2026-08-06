@@ -41,7 +41,7 @@ _Avoid_: staff member, hire, worker
 ## Subscription
 
 **Trial**:
-The 14-day period an organization gets on first login, after which it must subscribe to keep
+The 30-day period an organization gets on first login, after which it must subscribe to keep
 creating templates and runs.
 _Avoid_: free tier, evaluation
 
