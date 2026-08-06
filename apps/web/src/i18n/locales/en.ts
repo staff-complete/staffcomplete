@@ -50,7 +50,7 @@ const en = {
     },
     signUp: {
       title: 'Create your account',
-      subtitle: 'Start your free 14-day trial. No card required.',
+      subtitle: 'Start your free 30-day trial. No card required.',
       nameLabel: 'Full name',
       namePlaceholder: 'Jane Smith',
       emailLabel: 'Work email',

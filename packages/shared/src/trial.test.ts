@@ -6,9 +6,9 @@ const DAY_MS = 24 * 60 * 60 * 1000
 describe('computeTrialState', () => {
   it('reports the full window right after the trial starts', () => {
     const now = new Date('2026-07-01T00:00:00Z')
-    const trialEndsAt = new Date(now.getTime() + 14 * DAY_MS)
+    const trialEndsAt = new Date(now.getTime() + 30 * DAY_MS)
 
-    expect(computeTrialState(trialEndsAt, now)).toEqual({ daysRemaining: 14, isExpired: false })
+    expect(computeTrialState(trialEndsAt, now)).toEqual({ daysRemaining: 30, isExpired: false })
   })
 
   it('reports exactly 3 days remaining at the reminder boundary', () => {

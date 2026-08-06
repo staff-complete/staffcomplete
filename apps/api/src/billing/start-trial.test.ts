@@ -33,7 +33,7 @@ describe('startTrialIfNeeded', () => {
     vi.useRealTimers()
   })
 
-  it('inserts a trialing subscription 14 days out, scoped to the organization', async () => {
+  it('inserts a trialing subscription 30 days out, scoped to the organization', async () => {
     vi.setSystemTime(new Date('2026-07-01T00:00:00Z'))
 
     await startTrialIfNeeded('org-1')
@@ -44,7 +44,7 @@ describe('startTrialIfNeeded', () => {
       organizationId: 'org-1',
       status: 'trialing',
       trialStartedAt: new Date('2026-07-01T00:00:00Z'),
-      trialEndsAt: new Date('2026-07-15T00:00:00Z'),
+      trialEndsAt: new Date('2026-07-31T00:00:00Z'),
     })
   })
 

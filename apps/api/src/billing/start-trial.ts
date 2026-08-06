@@ -1,4 +1,5 @@
 import { addDays } from 'date-fns'
+import { TRIAL_LENGTH_DAYS } from '@staffcomplete/shared'
 import { withTenant } from '../db/index.js'
 import { subscription } from '../db/schema.js'
 
@@ -7,7 +8,7 @@ import { subscription } from '../db/schema.js'
 // application logic guessing "is this the first login" (ADR-0015).
 export async function startTrialIfNeeded(organizationId: string): Promise<void> {
   const now = new Date()
-  const trialEndsAt = addDays(now, 14)
+  const trialEndsAt = addDays(now, TRIAL_LENGTH_DAYS)
   await withTenant(organizationId, (tx) =>
     tx
       .insert(subscription)
