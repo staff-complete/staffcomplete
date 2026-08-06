@@ -99,6 +99,13 @@
       "when": 1784984129998,
       "tag": "0013_add_phase_dependencies",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786041808999,
+      "tag": "0014_extend_trials_to_30_days",
+      "breakpoints": true
     }
   ]
 }
