@@ -23,10 +23,25 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd()
-const DIR = path.join(ROOT, 'docs/codemap')
-const JSON_PATH = path.join(DIR, 'codemap.json')
-const HTML_PATH = path.join(DIR, 'codemap.html')
-const LOCK_PATH = path.join(DIR, 'codemap.lock')
+
+// Single gate for every repo-relative path this tool touches. Paths come from
+// `git ls-files` and from codemap.json, both of which live in the repo — but
+// codemap.json is an editable file, so a `../..` in a node path should not be
+// able to send fs.readFileSync outside the checkout. Resolving and asserting
+// containment makes that structural rather than assumed, and gives static
+// analysis one reviewed construction site instead of sixteen scattered ones.
+function repoPath(...parts) {
+  const abs = path.resolve(ROOT, ...parts) // nosemgrep: contained below
+  if (abs !== ROOT && !abs.startsWith(ROOT + path.sep)) {
+    throw new Error(`refusing to touch a path outside the repo: ${parts.join('/')}`)
+  }
+  return abs
+}
+const exists = (p) => fs.existsSync(repoPath(p))
+const DIR = repoPath('docs/codemap')
+const JSON_PATH = repoPath('docs/codemap/codemap.json')
+const HTML_PATH = repoPath('docs/codemap/codemap.html')
+const LOCK_PATH = repoPath('docs/codemap/codemap.lock')
 const EXCLUDE = /(^|\/)(node_modules|dist|build|coverage|\.turbo)\//
 const CHECK_ONLY = process.argv.includes('--check')
 
@@ -102,7 +117,7 @@ const trackedDirty =
 const norm = (s) => s.replace(/\s+/g, ' ').trim()
 const srcCache = new Map()
 function readSrc(p) {
-  const abs = path.join(ROOT, p)
+  const abs = repoPath(p)
   if (!srcCache.has(abs)) {
     srcCache.set(
       abs,
@@ -130,9 +145,9 @@ function locate(p, symbol, recordedLine) {
     (t) => t.length >= 2,
   )
 
-  const exists =
+  const found =
     norm(src).includes(needle) || (toks.length > 0 && toks.every((t) => src.includes(t)))
-  if (!exists) return { ok: false }
+  if (!found) return { ok: false }
 
   // rarest identifier = most distinctive anchor
   let anchor = null
@@ -170,14 +185,12 @@ const lineFixes = []
 
 // every path the map names must still exist
 for (const n of map.nodes) {
-  if (!fs.existsSync(path.join(ROOT, n.path)))
-    problems.push(`node \`${n.id}\` path gone: ${n.path}`)
+  if (!exists(n.path)) problems.push(`node \`${n.id}\` path gone: ${n.path}`)
   for (const g of n.grouped_files || []) {
-    if (!fs.existsSync(path.join(ROOT, g)))
-      problems.push(`node \`${n.id}\` grouped file gone: ${g}`)
+    if (!exists(g)) problems.push(`node \`${n.id}\` grouped file gone: ${g}`)
   }
   for (const t of n.tests) {
-    if (!fs.existsSync(path.join(ROOT, t))) problems.push(`node \`${n.id}\` test gone: ${t}`)
+    if (!exists(t)) problems.push(`node \`${n.id}\` test gone: ${t}`)
   }
 }
 
@@ -185,7 +198,7 @@ for (const n of map.nodes) {
 function checkEvidence(items, label) {
   for (const e of items) {
     if (!e.path || !e.symbol) continue
-    if (!fs.existsSync(path.join(ROOT, e.path))) {
+    if (!exists(e.path)) {
       problems.push(`${label} evidence path gone: ${e.path}`)
       continue
     }
