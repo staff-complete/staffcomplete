@@ -64,6 +64,16 @@
             "command": "echo 'Reminder - zero-exception rules from CLAUDE.md: never commit directly to main; a PR must exist before pushing to main; commits are SSH-signed (not GPG); ADRs are immutable (never edit, only flip Status to superseded); never modify a migration already merged to main.'"
           }
         ]
+      },
+      {
+        "matcher": "startup|resume|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/codemap-status.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SessionEnd": [
