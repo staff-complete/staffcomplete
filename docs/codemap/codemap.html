@@ -387,8 +387,8 @@
 
     <script id="cm-data" type="application/json">
       {
-        "generated_at": "2026-08-07T17:53:17Z",
-        "generated_from_commit": "963db1fd468629cba7343435182b53a2f5c8191c",
+        "generated_at": "2026-08-07T18:10:22Z",
+        "generated_from_commit": "e9d1b6c1e636de377773a909a6f971aafc116738",
         "scope": ["apps/api", "apps/web", "packages/shared"],
         "nodes": [
           {
@@ -2365,6 +2365,35 @@
         }
       }
 
+      // --- DOM builders ---------------------------------------------------
+      // The panel and the node boxes are assembled with createElement +
+      // textContent rather than innerHTML. Every string below is map data read
+      // from the embedded <script> block, and CodeQL is right that DOM text
+      // flowing into innerHTML is a sink — hand-escaping does not clear that
+      // path. Removing the sink does, and costs nothing here.
+      function el(tag, attrs, ...kids) {
+        const node = document.createElement(tag)
+        for (const [k, v] of Object.entries(attrs || {})) {
+          if (v == null) continue
+          if (k === 'onclick') node.onclick = v
+          else if (k === 'class') node.className = v
+          else node.setAttribute(k, v)
+        }
+        for (const kid of kids.flat()) {
+          if (kid == null || kid === false) continue
+          node.appendChild(typeof kid === 'object' ? kid : document.createTextNode(String(kid)))
+        }
+        return node
+      }
+      const svgEl = (tag, attrs) => {
+        const n = document.createElementNS('http://www.w3.org/2000/svg', tag)
+        for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v)
+        return n
+      }
+      const h3 = (t) => el('h3', null, t)
+      const code = (t) => el('code', null, t)
+      const empty = (t) => el('p', { class: 'empty' }, t)
+
       const nodeEls = DATA.nodes.map((n) => {
         const p = pos.get(n.id)
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
@@ -2373,25 +2402,12 @@
         const color = TYPE_COLOR[n.role] || '#8b949e'
         const label = n.label || n.id
         const short = n.path.replace(/^apps\/|^packages\//, '')
-        g.innerHTML =
-          '<rect width="' +
-          NW +
-          '" height="' +
-          NH +
-          '" stroke="' +
-          color +
-          '"/>' +
-          '<rect x="0" y="0" width="4" height="' +
-          NH +
-          '" fill="' +
-          color +
-          '" rx="2"/>' +
-          '<text class="n-label" x="13" y="22">' +
-          esc(label) +
-          '</text>' +
-          '<text class="n-path" x="13" y="38">' +
-          esc(short) +
-          '</text>'
+        g.append(
+          svgEl('rect', { width: NW, height: NH, stroke: color }),
+          svgEl('rect', { x: 0, y: 0, width: 4, height: NH, fill: color, rx: 2 }),
+          Object.assign(svgEl('text', { class: 'n-label', x: 13, y: 22 }), { textContent: label }),
+          Object.assign(svgEl('text', { class: 'n-path', x: 13, y: 38 }), { textContent: short }),
+        )
         g.onclick = (ev) => {
           ev.stopPropagation()
           selectedNode = selectedNode === n.id ? null : n.id
@@ -2402,13 +2418,6 @@
         gN.appendChild(g)
         return { n, g }
       })
-
-      function esc(s) {
-        return String(s).replace(
-          /[&<>"']/g,
-          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-        )
-      }
 
       // ---- drag nodes ----
       function makeDraggable(g, id) {
@@ -2575,221 +2584,215 @@
         renderPanel()
       }
 
-      function link(id) {
+      function nodeLink(id) {
         const n = byId.get(id)
-        return (
-          '<span class="rel" data-goto="' + id + '">' + esc(n ? n.label || n.id : id) + '</span>'
+        return el(
+          'span',
+          {
+            class: 'rel',
+            onclick: () => {
+              selectedNode = id
+              selectedFlow = null
+              render()
+            },
+          },
+          n ? n.label || n.id : id,
         )
       }
+      function flowLink(id) {
+        const f = flowById.get(id)
+        return el(
+          'span',
+          {
+            class: 'rel',
+            onclick: () => {
+              selectedFlow = id
+              selectedNode = null
+              render()
+            },
+          },
+          f ? f.name : id,
+        )
+      }
+      // one edge as a list item: "<target> <type>" then "path:line"
+      const edgeItem = (e, otherId) =>
+        el(
+          'li',
+          null,
+          nodeLink(otherId),
+          ' ',
+          code(e.type),
+          el('br'),
+          code(e.evidence.path + ':' + e.evidence.line),
+        )
 
       function renderPanel() {
-        const el = document.getElementById('panel')
+        const panel = document.getElementById('panel')
+        panel.replaceChildren()
+
         if (selectedFlow) {
           const f = flowById.get(selectedFlow)
-          el.innerHTML =
-            '<h2>' +
-            esc(f.name) +
-            '</h2>' +
-            '<div class="sub">flow · ' +
-            esc(f.id) +
-            '</div>' +
-            '<h3>Trigger</h3><p>' +
-            esc(f.trigger) +
-            '</p>' +
-            '<h3>Path (' +
-            f.steps.length +
-            ' steps)</h3><ol style="padding-left:18px;margin:0">' +
-            f.steps.map((s) => '<li>' + link(s) + '</li>').join('') +
-            '</ol>' +
-            '<h3>Outcome</h3><p>' +
-            esc(f.outcome) +
-            '</p>'
-          wireLinks(el)
+          panel.append(
+            el('h2', null, f.name),
+            el('div', { class: 'sub' }, 'flow · ' + f.id),
+            h3('Trigger'),
+            el('p', null, f.trigger),
+            h3('Path (' + f.steps.length + ' steps)'),
+            el(
+              'ol',
+              { style: 'padding-left:18px;margin:0' },
+              f.steps.map((s) => el('li', null, nodeLink(s))),
+            ),
+            h3('Outcome'),
+            el('p', null, f.outcome),
+          )
           return
         }
+
         if (!selectedNode) {
-          el.innerHTML =
-            '<h2>Code map</h2>' +
-            '<div class="sub">' +
-            esc(REPO) +
-            ' @ ' +
-            esc((DATA.generated_from_commit || '').slice(0, 7)) +
-            '</div>' +
-            '<p class="hint">Click any module to see its upstream callers, downstream dependencies, tests and flows. Pick a flow above to light up its whole path.</p>' +
-            '<h3>Controls</h3><ul class="hint">' +
-            '<li><span class="kbd">click</span> a module — highlight its neighborhood</li>' +
-            '<li><span class="kbd">drag</span> a module — reposition it</li>' +
-            '<li><span class="kbd">drag</span> background — pan · <span class="kbd">wheel</span> — zoom</li>' +
-            '<li><span class="kbd">search</span> — matches ids, paths, symbols, constraints</li>' +
-            '</ul>' +
-            '<h3>Flows</h3><ul>' +
-            DATA.flows
-              .map(
-                (f) =>
-                  '<li><span class="rel" data-flow="' + f.id + '">' + esc(f.name) + '</span></li>',
-              )
-              .join('') +
-            '</ul>' +
-            '<h3>Scope</h3><ul>' +
-            DATA.scope.map((s) => '<li><code>' + esc(s) + '</code></li>').join('') +
-            '</ul>'
-          wireLinks(el)
+          panel.append(
+            el('h2', null, 'Code map'),
+            el(
+              'div',
+              { class: 'sub' },
+              REPO + ' @ ' + (DATA.generated_from_commit || '').slice(0, 7),
+            ),
+            el(
+              'p',
+              { class: 'hint' },
+              'Click any module to see its upstream callers, downstream dependencies, tests and flows. Pick a flow above to light up its whole path.',
+            ),
+            h3('Controls'),
+            el(
+              'ul',
+              { class: 'hint' },
+              el(
+                'li',
+                null,
+                el('span', { class: 'kbd' }, 'click'),
+                ' a module — highlight its neighborhood',
+              ),
+              el('li', null, el('span', { class: 'kbd' }, 'drag'), ' a module — reposition it'),
+              el(
+                'li',
+                null,
+                el('span', { class: 'kbd' }, 'drag'),
+                ' background — pan · ',
+                el('span', { class: 'kbd' }, 'wheel'),
+                ' — zoom',
+              ),
+              el(
+                'li',
+                null,
+                el('span', { class: 'kbd' }, 'search'),
+                ' — matches ids, paths, symbols, constraints',
+              ),
+            ),
+            h3('Flows'),
+            el(
+              'ul',
+              null,
+              DATA.flows.map((f) => el('li', null, flowLink(f.id))),
+            ),
+            h3('Scope'),
+            el(
+              'ul',
+              null,
+              DATA.scope.map((s) => el('li', null, code(s))),
+            ),
+          )
           return
         }
+
         const n = byId.get(selectedNode)
-        const ups = [...upstream.get(n.id)],
-          downs = [...downstream.get(n.id)]
+        const ups = [...upstream.get(n.id)]
+        const downs = [...downstream.get(n.id)]
         const fl = flowsOf.get(n.id) || []
         const edgesIn = DATA.edges.filter((e) => e.to === n.id)
         const edgesOut = DATA.edges.filter((e) => e.from === n.id)
-        el.innerHTML =
-          '<span class="pill" style="background:' +
-          (TYPE_COLOR[n.role] || '#8b949e') +
-          '">' +
-          esc(TYPE_LABEL[n.role] || n.role) +
-          '</span>' +
-          '<h2>' +
-          esc(n.label || n.id) +
-          '</h2>' +
-          '<div class="sub">' +
-          esc(n.path) +
-          '</div>' +
-          (n.summary ? '<p>' + esc(n.summary) + '</p>' : '') +
-          section(
-            'Upstream callers (' + ups.length + ')',
-            ups.length
-              ? '<ul>' +
-                  edgesIn
-                    .map(
-                      (e) =>
-                        '<li>' +
-                        link(e.from) +
-                        ' <code>' +
-                        esc(e.type) +
-                        '</code><br><code>' +
-                        esc(e.evidence.path) +
-                        ':' +
-                        e.evidence.line +
-                        '</code></li>',
-                    )
-                    .join('') +
-                  '</ul>'
-              : '<p class="empty">None — nothing in scope calls into this.</p>',
-          ) +
-          section(
-            'Downstream dependencies (' + downs.length + ')',
-            downs.length
-              ? '<ul>' +
-                  edgesOut
-                    .map(
-                      (e) =>
-                        '<li>' +
-                        link(e.to) +
-                        ' <code>' +
-                        esc(e.type) +
-                        '</code><br><code>' +
-                        esc(e.evidence.path) +
-                        ':' +
-                        e.evidence.line +
-                        '</code></li>',
-                    )
-                    .join('') +
-                  '</ul>'
-              : '<p class="empty">None — this is a leaf.</p>',
-          ) +
-          section(
-            'Flows (' + fl.length + ')',
-            fl.length
-              ? '<ul>' +
-                  fl
-                    .map(
-                      (id) =>
-                        '<li><span class="rel" data-flow="' +
-                        id +
-                        '">' +
-                        esc(flowById.get(id).name) +
-                        '</span></li>',
-                    )
-                    .join('') +
-                  '</ul>'
-              : '<p class="empty">Not part of a mapped flow.</p>',
-          ) +
-          section(
-            'Tests (' + n.tests.length + ')',
-            n.tests.length
-              ? '<ul>' +
-                  n.tests.map((t) => '<li><code>' + esc(t) + '</code></li>').join('') +
-                  '</ul>'
-              : '<p class="empty">No tests reference this module directly.</p>',
-          ) +
-          section(
-            'Entrypoints',
-            '<ul>' +
-              n.entrypoints
-                .map(
-                  (e) =>
-                    '<li><code>' +
-                    esc(e.symbol) +
-                    '</code><br><code>' +
-                    esc(e.path) +
-                    ':' +
-                    e.line +
-                    '</code></li>',
-                )
-                .join('') +
-              '</ul>',
-          ) +
-          (n.grouped_files && n.grouped_files.length
-            ? section(
-                'Grouped files',
-                '<ul>' +
-                  n.grouped_files.map((f) => '<li><code>' + esc(f) + '</code></li>').join('') +
-                  '</ul>',
+
+        panel.append(
+          el(
+            'span',
+            { class: 'pill', style: 'background:' + (TYPE_COLOR[n.role] || '#8b949e') },
+            TYPE_LABEL[n.role] || n.role,
+          ),
+          el('h2', null, n.label || n.id),
+          el('div', { class: 'sub' }, n.path),
+          n.summary ? el('p', null, n.summary) : null,
+
+          h3('Upstream callers (' + ups.length + ')'),
+          ups.length
+            ? el(
+                'ul',
+                null,
+                edgesIn.map((e) => edgeItem(e, e.from)),
               )
-            : '') +
-          section(
-            'Constraints',
-            n.constraints.length
-              ? '<ul>' + n.constraints.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>'
-              : '<p class="empty">None recorded.</p>',
-          ) +
-          section(
-            'Evidence',
-            '<ul>' +
-              n.evidence
-                .map(
-                  (e) =>
-                    '<li><code>' +
-                    esc(e.path) +
-                    ':' +
-                    e.line +
-                    '</code><br><code>' +
-                    esc(e.symbol) +
-                    '</code></li>',
-                )
-                .join('') +
-              '</ul>',
-          )
-        wireLinks(el)
-      }
-      function section(title, body) {
-        return '<h3>' + esc(title) + '</h3>' + body
-      }
-      function wireLinks(el) {
-        el.querySelectorAll('[data-goto]').forEach((s) => {
-          s.onclick = () => {
-            selectedNode = s.dataset.goto
-            selectedFlow = null
-            render()
-          }
-        })
-        el.querySelectorAll('[data-flow]').forEach((s) => {
-          s.onclick = () => {
-            selectedFlow = s.dataset.flow
-            selectedNode = null
-            render()
-          }
-        })
+            : empty('None — nothing in scope calls into this.'),
+
+          h3('Downstream dependencies (' + downs.length + ')'),
+          downs.length
+            ? el(
+                'ul',
+                null,
+                edgesOut.map((e) => edgeItem(e, e.to)),
+              )
+            : empty('None — this is a leaf.'),
+
+          h3('Flows (' + fl.length + ')'),
+          fl.length
+            ? el(
+                'ul',
+                null,
+                fl.map((id) => el('li', null, flowLink(id))),
+              )
+            : empty('Not part of a mapped flow.'),
+
+          h3('Tests (' + n.tests.length + ')'),
+          n.tests.length
+            ? el(
+                'ul',
+                null,
+                n.tests.map((t) => el('li', null, code(t))),
+              )
+            : empty('No tests reference this module directly.'),
+
+          h3('Entrypoints'),
+          el(
+            'ul',
+            null,
+            n.entrypoints.map((e) =>
+              el('li', null, code(e.symbol), el('br'), code(e.path + ':' + e.line)),
+            ),
+          ),
+
+          n.grouped_files && n.grouped_files.length ? h3('Grouped files') : null,
+          n.grouped_files && n.grouped_files.length
+            ? el(
+                'ul',
+                null,
+                n.grouped_files.map((f) => el('li', null, code(f))),
+              )
+            : null,
+
+          h3('Constraints'),
+          n.constraints.length
+            ? el(
+                'ul',
+                null,
+                n.constraints.map((c) => el('li', null, c)),
+              )
+            : empty('None recorded.'),
+
+          h3('Evidence'),
+          el(
+            'ul',
+            null,
+            n.evidence.map((e) =>
+              el('li', null, code(e.path + ':' + e.line), el('br'), code(e.symbol)),
+            ),
+          ),
+        )
       }
 
       window.addEventListener('resize', fit)

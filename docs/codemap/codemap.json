@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-07T17:53:17Z",
-  "generated_from_commit": "963db1fd468629cba7343435182b53a2f5c8191c",
+  "generated_at": "2026-08-07T18:10:22Z",
+  "generated_from_commit": "e9d1b6c1e636de377773a909a6f971aafc116738",
   "scope": ["apps/api", "apps/web", "packages/shared"],
   "nodes": [
     {

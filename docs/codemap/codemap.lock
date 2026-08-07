@@ -1,13 +1,13 @@
 {
   "lock_version": 1,
-  "generated_at": "2026-08-07T17:53:17Z",
-  "commit": "963db1fd468629cba7343435182b53a2f5c8191c",
-  "commit_short": "963db1f",
+  "generated_at": "2026-08-07T18:10:22Z",
+  "commit": "e9d1b6c1e636de377773a909a6f971aafc116738",
+  "commit_short": "e9d1b6c",
   "branch": "chore/codemap-freshness-workflow",
   "working_tree_dirty": true,
-  "working_tree_note": "No tracked file had uncommitted modifications at generation time, so the map reflects committed state exactly. The only entry in `git status --porcelain` is the untracked docs/codemap/ directory these three artifacts live in, which is outside scanned_scope and does not affect any fingerprint.",
-  "previous_lock_found": false,
-  "previous_lock_note": "No docs/codemap/codemap.lock existed before this run, so every module was treated as new and the full map was generated.",
+  "working_tree_note": "Refreshed against a working tree with uncommitted tracked changes; fingerprints describe the files on disk, not the commit named above.",
+  "previous_lock_found": true,
+  "previous_lock_note": "Auto-refreshed in place by .claude/hooks/codemap-refresh.mjs — derived fields only (fingerprints, commit, timestamp, evidence line numbers). Nodes, edges and flows were verified against the tree and left untouched.",
   "scanned_scope": [
     "apps/api",
     "apps/web",
@@ -97,5 +97,6 @@
     "docs/codemap/codemap.json",
     "docs/codemap/codemap.lock"
   ],
-  "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three."
+  "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three.",
+  "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash."
 }

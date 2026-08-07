@@ -231,8 +231,18 @@ if (uncovered.length) {
 }
 
 // ---- decide ------------------------------------------------------------
-const commitStale = lock.commit !== head
-const nothingToDo = !drifted.length && !commitStale && !lineFixes.length
+// A commit-hash mismatch is NOT drift, and must never trigger a write.
+//
+// This hook runs *before* the commit exists, so the newest SHA it can record is
+// the parent of the commit being made. Treating that as staleness meant every
+// commit rewrote the map, which made the next commit stale again — an endless
+// loop that touched docs/codemap/ in every commit forever.
+//
+// Content is the only thing that can be stale. The recorded commit is
+// informational, refreshed opportunistically whenever content genuinely
+// changes, and expected to lag by one commit.
+const commitLagsBehind = lock.commit !== head
+const nothingToDo = !drifted.length && !lineFixes.length
 
 if (problems.length) {
   out(
@@ -255,8 +265,8 @@ if (nothingToDo) {
 
 const summary = []
 if (drifted.length) summary.push(`fingerprints: ${drifted.map((m) => m.id).join(', ')}`)
-if (commitStale) summary.push(`commit ${lock.commit.slice(0, 7)} → ${head.slice(0, 7)}`)
 if (lineFixes.length) summary.push(`${lineFixes.length} evidence line(s)`)
+if (commitLagsBehind) summary.push(`commit → ${head.slice(0, 7)}`)
 
 if (CHECK_ONLY) {
   out(
@@ -284,6 +294,8 @@ lock.working_tree_note = trackedDirty
 lock.previous_lock_found = true
 lock.previous_lock_note =
   'Auto-refreshed in place by .claude/hooks/codemap-refresh.mjs — derived fields only (fingerprints, commit, timestamp, evidence line numbers). Nodes, edges and flows were verified against the tree and left untouched.'
+lock.commit_note =
+  'Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.'
 for (const m of lock.modules) {
   const found = modules.find((x) => x.path === m.path)
   if (found) {
