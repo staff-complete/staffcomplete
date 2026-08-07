@@ -1,0 +1,101 @@
+{
+  "lock_version": 1,
+  "generated_at": "2026-08-07T17:25:02Z",
+  "commit": "217beaccb48bee824527fd0137d5dce50879a73a",
+  "commit_short": "217beac",
+  "branch": "feat/extend-trial-to-30-days",
+  "working_tree_dirty": false,
+  "working_tree_note": "No tracked file had uncommitted modifications at generation time, so the map reflects committed state exactly. The only entry in `git status --porcelain` is the untracked docs/codemap/ directory these three artifacts live in, which is outside scanned_scope and does not affect any fingerprint.",
+  "previous_lock_found": false,
+  "previous_lock_note": "No docs/codemap/codemap.lock existed before this run, so every module was treated as new and the full map was generated.",
+  "scanned_scope": [
+    "apps/api",
+    "apps/web",
+    "packages/shared"
+  ],
+  "excluded_directories": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".turbo",
+    ".git"
+  ],
+  "excluded_note": "Exclusions are applied to tracked paths only; untracked and git-ignored files are never scanned because the file list comes from `git ls-files`.",
+  "fingerprint_algorithm": {
+    "name": "sha256-of-sorted-path-blob-pairs",
+    "hash": "sha256",
+    "source_list": "git ls-files <module>, filtered by excluded_directories, sorted bytewise ascending",
+    "per_file": "git hash-object <path> (git blob SHA-1 of the current working-tree contents)",
+    "record_format": "<path>\\0<blob_sha1>\\n",
+    "digest": "sha256 over the concatenation of all records, lowercase hex",
+    "deterministic": true,
+    "reproduce": "for f in $(git ls-files <module> | grep -vE '(^|/)(node_modules|dist|build|coverage|\\.turbo)/' | sort); do printf '%s\\0%s\\n' \"$f\" \"$(git hash-object \"$f\")\"; done | sha256sum"
+  },
+  "modules": [
+    {
+      "id": "apps/api",
+      "path": "apps/api",
+      "tracked_files": 73,
+      "fingerprint": "sha256:42f0fae6d70699940e5e97c8597d5e0c564188e93a3e560e5ae0109f7809cebf",
+      "nodes": [
+        "api-app",
+        "api-auth",
+        "api-org-auth",
+        "api-onboard",
+        "api-invites",
+        "api-checklists",
+        "api-runs",
+        "api-tasks",
+        "api-billing",
+        "api-activity",
+        "api-run-steps",
+        "api-jobs",
+        "api-db",
+        "api-queue"
+      ]
+    },
+    {
+      "id": "apps/web",
+      "path": "apps/web",
+      "tracked_files": 90,
+      "fingerprint": "sha256:9546b08548670d4675c3725182d20bf1c03a952aabe49171aeee5819cddf8244",
+      "nodes": [
+        "web-spa",
+        "web-composables",
+        "web-client-lib"
+      ]
+    },
+    {
+      "id": "packages/shared",
+      "path": "packages/shared",
+      "tracked_files": 19,
+      "fingerprint": "sha256:5b6b260e2bfa85ea3d499a3451b95e0d887c7cdddd61d0dc03b6acf0f5a7d698",
+      "nodes": [
+        "shared-domain"
+      ]
+    }
+  ],
+  "external_nodes": [
+    {
+      "id": "postgres",
+      "reason": "Not a tracked module; represented from connection evidence in apps/api/src/db/index.ts and apps/api/src/queue/index.ts."
+    },
+    {
+      "id": "resend",
+      "reason": "Not a tracked module; represented from the SDK call site in apps/api/src/auth.ts."
+    }
+  ],
+  "counts": {
+    "nodes": 20,
+    "edges": 69,
+    "flows": 5,
+    "unknown_relationships": 0
+  },
+  "artifacts": [
+    "docs/codemap/codemap.html",
+    "docs/codemap/codemap.json",
+    "docs/codemap/codemap.lock"
+  ],
+  "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three."
+}

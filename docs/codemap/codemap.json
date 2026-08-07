@@ -1,0 +1,1478 @@
+{
+  "generated_at": "2026-08-07T17:25:02Z",
+  "generated_from_commit": "217beaccb48bee824527fd0137d5dce50879a73a",
+  "scope": ["apps/api", "apps/web", "packages/shared"],
+  "nodes": [
+    {
+      "id": "web-spa",
+      "path": "apps/web/src",
+      "role": "frontend",
+      "label": "Web SPA (Vue 3)",
+      "summary": "Vue 3 single-page app: entry point, router with auth guards, views, components, layouts and i18n. Groups views/, components/, layouts/, router/, i18n/, App.vue and main.ts.",
+      "grouped_files": [
+        "apps/web/src/main.ts",
+        "apps/web/src/App.vue",
+        "apps/web/src/router/index.ts",
+        "apps/web/src/router/guards.ts",
+        "apps/web/src/views",
+        "apps/web/src/components",
+        "apps/web/src/layouts/AppShellLayout.vue",
+        "apps/web/src/i18n"
+      ],
+      "entrypoints": [
+        { "symbol": "createApp", "path": "apps/web/src/main.ts", "line": 8 },
+        { "symbol": "router", "path": "apps/web/src/router/index.ts", "line": 1 },
+        { "symbol": "requireAuth", "path": "apps/web/src/router/guards.ts", "line": 6 }
+      ],
+      "tests": ["apps/web/src/index.test.ts", "apps/web/src/router/guards.test.ts"],
+      "constraints": [
+        "SPA is served as static files by the API's serveStatic fallback (apps/api/src/index.ts:39-40), so all non-/api routes must resolve to index.html.",
+        "Locale set includes an RTL locale (he); direction is derived via textDirection from @staffcomplete/shared."
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/main.ts",
+          "symbol": "createApp(App).use(createPinia()).use(router).use(VueQueryPlugin).use(i18n).mount('#app')",
+          "line": 8
+        },
+        { "path": "apps/web/src/router/index.ts", "symbol": "router.beforeEach", "line": 112 }
+      ]
+    },
+    {
+      "id": "web-composables",
+      "path": "apps/web/src/composables",
+      "role": "frontend",
+      "label": "Composables (data access)",
+      "summary": "Vue composables that own all server-state fetching for the SPA: tasks, runs, checklists, activity and trial status.",
+      "grouped_files": [
+        "apps/web/src/composables/useActivity.ts",
+        "apps/web/src/composables/useMyTasks.ts",
+        "apps/web/src/composables/useRuns.ts",
+        "apps/web/src/composables/useRunDetail.ts",
+        "apps/web/src/composables/useChecklistTemplates.ts",
+        "apps/web/src/composables/useTrialStatus.ts",
+        "apps/web/src/composables/useActionConfigFields.ts"
+      ],
+      "entrypoints": [
+        { "symbol": "useMyTasks", "path": "apps/web/src/composables/useMyTasks.ts", "line": 28 },
+        { "symbol": "useRuns", "path": "apps/web/src/composables/useRuns.ts", "line": 24 },
+        {
+          "symbol": "useChecklistTemplates",
+          "path": "apps/web/src/composables/useChecklistTemplates.ts",
+          "line": 61
+        },
+        {
+          "symbol": "useTrialStatus",
+          "path": "apps/web/src/composables/useTrialStatus.ts",
+          "line": 21
+        },
+        { "symbol": "useActivity", "path": "apps/web/src/composables/useActivity.ts", "line": 18 }
+      ],
+      "tests": [
+        "apps/web/src/composables/useActivity.test.ts",
+        "apps/web/src/composables/useTrialStatus.test.ts"
+      ],
+      "constraints": [
+        "Every network call goes through apiFetch/apiFetchOrNull — no direct fetch() in composables."
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/composables/useMyTasks.ts",
+          "symbol": "apiFetch<{ tasks: MyTask[] }>('/api/tasks/mine')",
+          "line": 24
+        },
+        {
+          "path": "apps/web/src/composables/useTrialStatus.ts",
+          "symbol": "apiFetchOrNull<TrialStatus>('/api/billing/trial-status')",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "id": "web-client-lib",
+      "path": "apps/web/src/lib",
+      "role": "frontend",
+      "label": "Web client lib",
+      "summary": "HTTP client wrapper (apiFetch, ApiError), the Better Auth browser client, and pure view helpers (run health, reorder, phase diagram, avatar colors, load errors).",
+      "grouped_files": [
+        "apps/web/src/lib/api.ts",
+        "apps/web/src/lib/auth-client.ts",
+        "apps/web/src/lib/runHealth.ts",
+        "apps/web/src/lib/reorderSteps.ts",
+        "apps/web/src/lib/phaseFlowDiagram.ts",
+        "apps/web/src/lib/avatarColors.ts",
+        "apps/web/src/lib/loadError.ts",
+        "apps/web/src/lib/stepForm.ts"
+      ],
+      "entrypoints": [
+        { "symbol": "apiFetch", "path": "apps/web/src/lib/api.ts", "line": 46 },
+        { "symbol": "apiFetchOrNull", "path": "apps/web/src/lib/api.ts", "line": 75 },
+        { "symbol": "authClient", "path": "apps/web/src/lib/auth-client.ts", "line": 5 }
+      ],
+      "tests": [
+        "apps/web/src/lib/api.test.ts",
+        "apps/web/src/lib/runHealth.test.ts",
+        "apps/web/src/lib/reorderSteps.test.ts",
+        "apps/web/src/lib/phaseFlowDiagram.test.ts",
+        "apps/web/src/lib/avatarColors.test.ts",
+        "apps/web/src/lib/loadError.test.ts"
+      ],
+      "constraints": [
+        "authClient registers the organization plugin with a locale additionalField that must stay in sync with the server-side plugin config in apps/api/src/auth.ts."
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/lib/api.ts",
+          "symbol": "const res = await fetch(path, init)",
+          "line": 54
+        },
+        {
+          "path": "apps/web/src/lib/auth-client.ts",
+          "symbol": "createAuthClient({ plugins: [organizationClient(...)] })",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "id": "shared-domain",
+      "path": "packages/shared/src",
+      "role": "shared",
+      "label": "@staffcomplete/shared",
+      "summary": "Source of truth for cross-app types: Zod schemas (sign-up, checklist, run, task) and pure domain logic (trial state, phase unlocking, automation config, locale). Also declares the Queue interface the API's pg-boss adapter implements.",
+      "grouped_files": [
+        "packages/shared/src/index.ts",
+        "packages/shared/src/trial.ts",
+        "packages/shared/src/phase.ts",
+        "packages/shared/src/task.ts",
+        "packages/shared/src/run.ts",
+        "packages/shared/src/checklist.ts",
+        "packages/shared/src/automation.ts",
+        "packages/shared/src/locale.ts",
+        "packages/shared/src/queue.ts"
+      ],
+      "entrypoints": [
+        { "symbol": "computeTrialState", "path": "packages/shared/src/trial.ts", "line": 13 },
+        { "symbol": "TRIAL_LENGTH_DAYS", "path": "packages/shared/src/trial.ts", "line": 3 },
+        { "symbol": "computeUnlockedPhaseIds", "path": "packages/shared/src/phase.ts", "line": 37 },
+        {
+          "symbol": "parseAutomatedActionConfig",
+          "path": "packages/shared/src/automation.ts",
+          "line": 75
+        },
+        { "symbol": "Queue", "path": "packages/shared/src/queue.ts", "line": 27 },
+        { "symbol": "signUpSchema", "path": "packages/shared/src/index.ts", "line": 56 }
+      ],
+      "tests": [
+        "packages/shared/src/index.test.ts",
+        "packages/shared/src/trial.test.ts",
+        "packages/shared/src/phase.test.ts",
+        "packages/shared/src/task.test.ts",
+        "packages/shared/src/checklist.test.ts",
+        "packages/shared/src/automation.test.ts"
+      ],
+      "constraints": [
+        "Must stay dependency-free of both apps — imported by apps/api and apps/web alike.",
+        "TRIAL_LENGTH_DAYS is the single source of the trial window; apps/api/src/billing/start-trial.ts must read it rather than hardcoding a number."
+      ],
+      "evidence": [
+        {
+          "path": "packages/shared/src/trial.ts",
+          "symbol": "export const TRIAL_LENGTH_DAYS = 30",
+          "line": 3
+        },
+        {
+          "path": "packages/shared/src/index.ts",
+          "symbol": "export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "id": "api-app",
+      "path": "apps/api/src/index.ts",
+      "role": "api",
+      "label": "API app (Hono)",
+      "summary": "Hono application root: mounts every router under /api, delegates /api/auth/** to Better Auth, serves the built SPA, and on direct execution boots the queue, registers job handlers and schedules the daily trial cron.",
+      "grouped_files": ["apps/api/src/index.ts"],
+      "entrypoints": [
+        { "symbol": "app", "path": "apps/api/src/index.ts", "line": 25 },
+        { "symbol": "TRIAL_LIFECYCLE_SCAN_CRON", "path": "apps/api/src/index.ts", "line": 23 }
+      ],
+      "tests": ["apps/api/src/index.test.ts"],
+      "constraints": [
+        "Queue boot and job registration only run when the module is the process entrypoint (process.argv[1] check), so importing app in tests does not start pg-boss.",
+        "serveStatic fallbacks are registered last so they never shadow /api routes."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/index.ts",
+          "symbol": "app.route('/api/runs', runsRouter)",
+          "line": 35
+        },
+        {
+          "path": "apps/api/src/index.ts",
+          "symbol": "queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)",
+          "line": 49
+        }
+      ]
+    },
+    {
+      "id": "api-auth",
+      "path": "apps/api/src/auth.ts",
+      "role": "api",
+      "label": "Auth (Better Auth)",
+      "summary": "Better Auth instance with the Drizzle adapter and organization plugin. Owns session creation hooks, email verification, password reset, invitation email, and the shared sendAuthEmail/escapeHtml helpers used by jobs and routes.",
+      "grouped_files": ["apps/api/src/auth.ts"],
+      "entrypoints": [
+        { "symbol": "auth", "path": "apps/api/src/auth.ts", "line": 82 },
+        { "symbol": "handleSessionCreate", "path": "apps/api/src/auth.ts", "line": 65 },
+        { "symbol": "sendAuthEmail", "path": "apps/api/src/auth.ts", "line": 48 },
+        { "symbol": "escapeHtml", "path": "apps/api/src/auth.ts", "line": 30 }
+      ],
+      "tests": ["apps/api/src/auth.test.ts"],
+      "constraints": [
+        "AUTH_SECRET is required with no fallback — the module throws at import time if unset.",
+        "handleSessionCreate defaults activeOrganizationId to the user's first membership; a one-org-per-user assumption noted in the source.",
+        "Trial start is fired from the session-create hook and must never block sign-in — failures are logged, not thrown."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/auth.ts",
+          "symbol": "throw new Error('AUTH_SECRET environment variable is required')",
+          "line": 22
+        },
+        {
+          "path": "apps/api/src/auth.ts",
+          "symbol": "databaseHooks: { session: { create: { before: handleSessionCreate } } }",
+          "line": 129
+        }
+      ]
+    },
+    {
+      "id": "api-org-auth",
+      "path": "apps/api/src/middleware/org-auth.ts",
+      "role": "api",
+      "label": "orgAuth middleware + session",
+      "summary": "Single gate for org-scoped routes: resolves the session, the caller's membership and (on mutations only) the org's trial state in one pass, then stashes OrgAuth on the Hono context. Groups the resolveOrgSession helper.",
+      "grouped_files": ["apps/api/src/middleware/org-auth.ts", "apps/api/src/lib/session.ts"],
+      "entrypoints": [
+        { "symbol": "orgAuth", "path": "apps/api/src/middleware/org-auth.ts", "line": 48 },
+        { "symbol": "OrgAuth", "path": "apps/api/src/middleware/org-auth.ts", "line": 16 },
+        { "symbol": "resolveOrgSession", "path": "apps/api/src/lib/session.ts", "line": 13 }
+      ],
+      "tests": ["apps/api/src/middleware/org-auth.test.ts"],
+      "constraints": [
+        "Reads (GET/HEAD) skip the subscription lookup entirely — an expired trial is read-only, not locked out (ADR-0015).",
+        "Returns 402 TRIAL_EXPIRED for locked orgs and 403 for missing session or insufficient role; both admin-failure and no-session cases share one message on purpose.",
+        "membership is reported as null rather than rejected — routes decide what it means."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/middleware/org-auth.ts",
+          "symbol": "const needsTrialCheck = c.req.method !== 'GET' && c.req.method !== 'HEAD'",
+          "line": 59
+        },
+        {
+          "path": "apps/api/src/middleware/org-auth.ts",
+          "symbol": "{ code: 'TRIAL_EXPIRED', message: 'Your trial has ended. Subscribe to continue.' }, 402",
+          "line": 96
+        }
+      ]
+    },
+    {
+      "id": "api-onboard",
+      "path": "apps/api/src/routes/onboard.ts",
+      "role": "route",
+      "label": "POST /api/onboard",
+      "summary": "Public sign-up route: creates the user and organization through Better Auth, rolling back the user row if org creation fails.",
+      "grouped_files": ["apps/api/src/routes/onboard.ts"],
+      "entrypoints": [
+        { "symbol": "onboardRouter", "path": "apps/api/src/routes/onboard.ts", "line": 33 }
+      ],
+      "tests": ["apps/api/src/routes/onboard.test.ts"],
+      "constraints": [
+        "Unauthenticated by design — the only org-creating route with no orgAuth guard.",
+        "Compensating delete of the user row on failure keeps a half-created account from blocking a retry."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/onboard.ts",
+          "symbol": "onboardRouter.post('/', zValidator('json', signUpSchema), ...)",
+          "line": 35
+        },
+        {
+          "path": "apps/api/src/routes/onboard.ts",
+          "symbol": "await db.delete(user).where(eq(user.id, userId))",
+          "line": 95
+        }
+      ]
+    },
+    {
+      "id": "api-invites",
+      "path": "apps/api/src/routes/invites.ts",
+      "role": "route",
+      "label": "/api/invites",
+      "summary": "Admin-only invite listing, creation and revocation, plus two public token routes for viewing and accepting an invitation.",
+      "grouped_files": ["apps/api/src/routes/invites.ts"],
+      "entrypoints": [
+        { "symbol": "invitesRouter", "path": "apps/api/src/routes/invites.ts", "line": 26 }
+      ],
+      "tests": ["apps/api/src/routes/invites.test.ts"],
+      "constraints": [
+        "orgAuth is applied per-route, not router-wide, because GET /:token and POST /:token/accept must stay public for the invited user.",
+        "Public token lookups are a deliberate cross-tenant carve-out (ADR-0012)."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/invites.ts",
+          "symbol": "invitesRouter.get('/', orgAuth({ admin: true }), ...)",
+          "line": 28
+        },
+        {
+          "path": "apps/api/src/routes/invites.ts",
+          "symbol": "invitesRouter.post('/:token/accept', zValidator('json', acceptInviteSchema), ...)",
+          "line": 141
+        }
+      ]
+    },
+    {
+      "id": "api-checklists",
+      "path": "apps/api/src/routes/checklists.ts",
+      "role": "route",
+      "label": "/api/checklists",
+      "summary": "Admin CRUD for checklist templates, their phases, steps and phase dependencies — the templates that runs are instantiated from.",
+      "grouped_files": ["apps/api/src/routes/checklists.ts"],
+      "entrypoints": [
+        { "symbol": "checklistsRouter", "path": "apps/api/src/routes/checklists.ts", "line": 26 }
+      ],
+      "tests": ["apps/api/src/routes/checklists.test.ts"],
+      "constraints": [
+        "Router-wide orgAuth({ admin: true }) — no non-admin access to template editing.",
+        "Assignee references are validated against org membership via assertValidAssignee."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/checklists.ts",
+          "symbol": "checklistsRouter.use('*', orgAuth({ admin: true }))",
+          "line": 28
+        },
+        {
+          "path": "apps/api/src/routes/checklists.ts",
+          "symbol": "checklistsRouter.post('/', zValidator('json', createChecklistTemplateSchema), ...)",
+          "line": 95
+        }
+      ]
+    },
+    {
+      "id": "api-runs",
+      "path": "apps/api/src/routes/runs.ts",
+      "role": "route",
+      "label": "/api/runs",
+      "summary": "Admin routes to list, read and start runs. Creating a run snapshots a checklist template into run/runPhase/runPhaseDependency/runStep rows and then dispatches whatever automated steps are immediately unlocked.",
+      "grouped_files": ["apps/api/src/routes/runs.ts"],
+      "entrypoints": [
+        { "symbol": "runsRouter", "path": "apps/api/src/routes/runs.ts", "line": 27 }
+      ],
+      "tests": ["apps/api/src/routes/runs.test.ts"],
+      "constraints": [
+        "dispatchAutomatedSteps is called after the creating transaction commits, never inside it.",
+        "Template phase ids are remapped to run phase ids when copying dependency edges."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/runs.ts",
+          "symbol": "runsRouter.post('/', zValidator('json', createRunSchema), ...)",
+          "line": 163
+        },
+        {
+          "path": "apps/api/src/routes/runs.ts",
+          "symbol": "await dispatchAutomatedSteps(",
+          "line": 318
+        }
+      ]
+    },
+    {
+      "id": "api-tasks",
+      "path": "apps/api/src/routes/tasks.ts",
+      "role": "route",
+      "label": "/api/tasks",
+      "summary": "Non-admin routes for the assignee's own work: GET /mine lists unlocked assigned steps, POST /:id/complete completes a step and dispatches anything the completion unlocked.",
+      "grouped_files": ["apps/api/src/routes/tasks.ts"],
+      "entrypoints": [
+        { "symbol": "tasksRouter", "path": "apps/api/src/routes/tasks.ts", "line": 14 }
+      ],
+      "tests": ["apps/api/src/routes/tasks.test.ts"],
+      "constraints": [
+        "Uses orgAuth() without admin — this is the one router ordinary members reach.",
+        "A null membership is treated as \"no tasks assigned\" rather than an error.",
+        "Dispatch happens after the transaction returned by completeRunStep commits."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/tasks.ts",
+          "symbol": "tasksRouter.use('*', orgAuth())",
+          "line": 17
+        },
+        {
+          "path": "apps/api/src/routes/tasks.ts",
+          "symbol": "await dispatchAutomatedSteps(organizationId, result.stepsToDispatch)",
+          "line": 178
+        }
+      ]
+    },
+    {
+      "id": "api-billing",
+      "path": "apps/api/src/routes/billing.ts",
+      "role": "route",
+      "label": "/api/billing + trial start",
+      "summary": "Exposes GET /trial-status for the web trial banner, and owns startTrialIfNeeded — the idempotent insert that opens a 30-day trial on first login.",
+      "grouped_files": ["apps/api/src/routes/billing.ts", "apps/api/src/billing/start-trial.ts"],
+      "entrypoints": [
+        { "symbol": "billingRouter", "path": "apps/api/src/routes/billing.ts", "line": 8 },
+        { "symbol": "startTrialIfNeeded", "path": "apps/api/src/billing/start-trial.ts", "line": 9 }
+      ],
+      "tests": ["apps/api/src/routes/billing.test.ts", "apps/api/src/billing/start-trial.test.ts"],
+      "constraints": [
+        "Idempotency is enforced by onConflictDoNothing on the subscription primary key, not by application logic (ADR-0015).",
+        "Trial length must come from TRIAL_LENGTH_DAYS in @staffcomplete/shared.",
+        "trial-status uses resolveOrgSession directly — it needs neither a role check nor a member id."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/billing/start-trial.ts",
+          "symbol": "const trialEndsAt = addDays(now, TRIAL_LENGTH_DAYS)",
+          "line": 11
+        },
+        {
+          "path": "apps/api/src/billing/start-trial.ts",
+          "symbol": ".onConflictDoNothing({ target: subscription.organizationId })",
+          "line": 17
+        },
+        {
+          "path": "apps/api/src/routes/billing.ts",
+          "symbol": "billingRouter.get('/trial-status', ...)",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "id": "api-activity",
+      "path": "apps/api/src/routes/activity.ts",
+      "role": "route",
+      "label": "GET /api/activity",
+      "summary": "Admin-only read model that joins recent runs and steps into a single activity feed for the dashboard.",
+      "grouped_files": ["apps/api/src/routes/activity.ts"],
+      "entrypoints": [
+        { "symbol": "activityRouter", "path": "apps/api/src/routes/activity.ts", "line": 7 }
+      ],
+      "tests": ["apps/api/src/routes/activity.test.ts"],
+      "constraints": ["Read-only; router-wide orgAuth({ admin: true })."],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/activity.ts",
+          "symbol": "activityRouter.use('*', orgAuth({ admin: true }))",
+          "line": 9
+        },
+        {
+          "path": "apps/api/src/routes/activity.ts",
+          "symbol": "const { runs, steps } = await withTenant(organizationId, ...)",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "api-run-steps",
+      "path": "apps/api/src/lib/run-steps.ts",
+      "role": "worker",
+      "label": "Run-step engine",
+      "summary": "The orchestration core shared by routes and jobs: selects which automated steps are dispatchable, enqueues them, and completes a step while re-deriving run status and the next unlocked phase. Groups the assignee validator.",
+      "grouped_files": ["apps/api/src/lib/run-steps.ts", "apps/api/src/lib/assignee.ts"],
+      "entrypoints": [
+        { "symbol": "selectStepsToDispatch", "path": "apps/api/src/lib/run-steps.ts", "line": 23 },
+        { "symbol": "dispatchAutomatedSteps", "path": "apps/api/src/lib/run-steps.ts", "line": 43 },
+        { "symbol": "completeRunStep", "path": "apps/api/src/lib/run-steps.ts", "line": 62 },
+        {
+          "symbol": "AUTOMATED_STEP_EXECUTE_JOB",
+          "path": "apps/api/src/lib/run-steps.ts",
+          "line": 10
+        }
+      ],
+      "tests": ["apps/api/src/lib/run-steps.test.ts"],
+      "constraints": [
+        "dispatchAutomatedSteps must only be called after the producing transaction commits — enqueuing inside it risks queuing work for a write that rolls back.",
+        "singletonKey on the step id dedups racing completions so a step cannot be double-enqueued or double-sent.",
+        "completeRunStep does not enqueue; it returns steps for the caller to dispatch."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/lib/run-steps.ts",
+          "symbol": "queue.enqueue({ name: AUTOMATED_STEP_EXECUTE_JOB, data: { runStepId: step.id, organizationId } }, { singletonKey: step.id, retryLimit: 5, retryBackoff: true })",
+          "line": 49
+        },
+        {
+          "path": "apps/api/src/lib/run-steps.ts",
+          "symbol": "const stepsToDispatch = selectStepsToDispatch(phases, dependencies, siblingSteps)",
+          "line": 100
+        }
+      ]
+    },
+    {
+      "id": "api-jobs",
+      "path": "apps/api/src/jobs",
+      "role": "worker",
+      "label": "Background jobs",
+      "summary": "Two pg-boss handlers: execute-automated-step runs a step's action (currently email.send) then completes and cascades it; trial-lifecycle-scan is the daily cross-tenant sweep that sends 3-day reminders and flips expired trials.",
+      "grouped_files": [
+        "apps/api/src/jobs/execute-automated-step.ts",
+        "apps/api/src/jobs/trial-lifecycle-scan.ts"
+      ],
+      "entrypoints": [
+        {
+          "symbol": "executeAutomatedStep",
+          "path": "apps/api/src/jobs/execute-automated-step.ts",
+          "line": 28
+        },
+        {
+          "symbol": "runTrialLifecycleScan",
+          "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+          "line": 18
+        }
+      ],
+      "tests": [
+        "apps/api/src/jobs/execute-automated-step.test.ts",
+        "apps/api/src/jobs/trial-lifecycle-scan.test.ts"
+      ],
+      "constraints": [
+        "The Resend call happens outside any transaction; reads and the completion write are two separate short transactions.",
+        "Transient send failures throw so pg-boss retries; data-integrity failures log and return without retrying.",
+        "trial-lifecycle-scan is cross-tenant by design and uses the superuser db connection, not withTenant (ADR-0012, ADR-0015).",
+        "One org's failure must not abort the rest of the scan."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/jobs/execute-automated-step.ts",
+          "symbol": "const { stepsToDispatch } = await withTenant(organizationId, (tx) => completeRunStep(tx, runStepId))",
+          "line": 78
+        },
+        {
+          "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+          "symbol": "await db.update(subscription).set({ status: 'expired' })",
+          "line": 48
+        },
+        {
+          "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+          "symbol": "const REMINDER_WINDOW_DAYS = 3",
+          "line": 10
+        }
+      ]
+    },
+    {
+      "id": "api-db",
+      "path": "apps/api/src/db",
+      "role": "data",
+      "label": "Drizzle schema + RLS",
+      "summary": "Drizzle schema with inline row-level-security policies, the dual connection pools (superuser db and restricted tenantDb), the withTenant transaction helper, and the SQL migration history through 0014.",
+      "grouped_files": [
+        "apps/api/src/db/index.ts",
+        "apps/api/src/db/schema.ts",
+        "apps/api/src/db/migrate.ts",
+        "apps/api/src/db/setup-tenant-role.ts",
+        "apps/api/src/db/migrations"
+      ],
+      "entrypoints": [
+        { "symbol": "db", "path": "apps/api/src/db/index.ts", "line": 11 },
+        { "symbol": "tenantDb", "path": "apps/api/src/db/index.ts", "line": 32 },
+        { "symbol": "withTenant", "path": "apps/api/src/db/index.ts", "line": 46 },
+        { "symbol": "subscription", "path": "apps/api/src/db/schema.ts", "line": 140 },
+        { "symbol": "runStep", "path": "apps/api/src/db/schema.ts", "line": 357 }
+      ],
+      "tests": [],
+      "constraints": [
+        "TENANT_DATABASE_URL is required with no fallback — the module throws at import time if unset.",
+        "Every tenant-scoped table carries organizationId plus an inline pgPolicy keyed off current_setting('app.organization_id', true) and .enableRLS().",
+        "A bare tenantDb query outside withTenant sees zero rows; always go through withTenant.",
+        "Migrations run as the owner role, which is not subject to the tenant-scoped policies."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/db/index.ts",
+          "symbol": "throw new Error('TENANT_DATABASE_URL environment variable is required')",
+          "line": 24
+        },
+        {
+          "path": "apps/api/src/db/index.ts",
+          "symbol": "select set_config('app.organization_id', ${organizationId}, true)",
+          "line": 51
+        },
+        {
+          "path": "apps/api/src/db/schema.ts",
+          "symbol": "pgPolicy(`${tableName}_tenant_isolation`",
+          "line": 48
+        }
+      ]
+    },
+    {
+      "id": "api-queue",
+      "path": "apps/api/src/queue",
+      "role": "queue",
+      "label": "Queue (pg-boss adapter)",
+      "summary": "PgBossQueue implements the shared Queue interface over pg-boss, which stores its own job tables in the same Postgres instance. Connects as the superuser because pg-boss must create its schema.",
+      "grouped_files": ["apps/api/src/queue/index.ts", "apps/api/src/queue/pg-boss-queue.ts"],
+      "entrypoints": [
+        { "symbol": "queue", "path": "apps/api/src/queue/index.ts", "line": 12 },
+        { "symbol": "startQueue", "path": "apps/api/src/queue/index.ts", "line": 14 },
+        { "symbol": "stopQueue", "path": "apps/api/src/queue/index.ts", "line": 18 },
+        { "symbol": "PgBossQueue", "path": "apps/api/src/queue/pg-boss-queue.ts", "line": 8 }
+      ],
+      "tests": [],
+      "constraints": [
+        "pg-boss needs DDL rights, so it uses DATABASE_URL (superuser) and not the restricted tenant role (ADR-0012).",
+        "Constructing PgBoss opens no connection, so module-load-time construction is safe.",
+        "Application code depends on the Queue interface, not pg-boss directly."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/queue/index.ts",
+          "symbol": "const boss = new PgBoss(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete')",
+          "line": 10
+        },
+        {
+          "path": "apps/api/src/queue/pg-boss-queue.ts",
+          "symbol": "export class PgBossQueue implements Queue",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "id": "postgres",
+      "path": "apps/api/src/db/index.ts",
+      "role": "external",
+      "label": "PostgreSQL",
+      "summary": "External datastore. Holds both the application schema (RLS-protected tenant tables) and pg-boss's job tables, reached through two roles: the owner/superuser and the restricted staffcomplete_tenant role.",
+      "grouped_files": [],
+      "entrypoints": [
+        {
+          "symbol": "postgres(process.env.DATABASE_URL ...)",
+          "path": "apps/api/src/db/index.ts",
+          "line": 6
+        },
+        {
+          "symbol": "postgres(tenantDatabaseUrl ...)",
+          "path": "apps/api/src/db/index.ts",
+          "line": 27
+        }
+      ],
+      "tests": [],
+      "constraints": [
+        "Tenant isolation is enforced in the database via RLS, never by application-level filtering alone.",
+        "Two pools with max: 10 each; the tenant pool authenticates as a role without BYPASSRLS."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/db/index.ts",
+          "symbol": "const sql = postgres(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete', { max: 10, idle_timeout: 20 })",
+          "line": 6
+        },
+        { "path": "apps/api/src/db/setup-tenant-role.ts", "symbol": "setup-tenant-role", "line": 1 }
+      ]
+    },
+    {
+      "id": "resend",
+      "path": "apps/api/src/auth.ts",
+      "role": "external",
+      "label": "Resend (email)",
+      "summary": "External transactional email provider. Every outbound email in the system — verification, password reset, invitation, trial reminder, and automated email.send steps — goes through the single sendAuthEmail wrapper.",
+      "grouped_files": [],
+      "entrypoints": [{ "symbol": "sendAuthEmail", "path": "apps/api/src/auth.ts", "line": 48 }],
+      "tests": [],
+      "constraints": [
+        "All HTML interpolation is escaped via escapeHtml before send; the `to` address is deliberately not escaped.",
+        "A send failure in a job throws so pg-boss retries with backoff."
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/auth.ts",
+          "symbol": "const resend = new Resend(process.env.RESEND_API_KEY)",
+          "line": 49
+        },
+        {
+          "path": "apps/api/src/auth.ts",
+          "symbol": "resend.emails.send({ from: AUTH_EMAIL_FROM, to, subject, html })",
+          "line": 50
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "web-spa",
+      "to": "web-composables",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/web/src/views/RunsView.vue",
+        "symbol": "import { useRuns, type RunSummary } from '../composables/useRuns'",
+        "line": 7
+      }
+    },
+    {
+      "from": "web-spa",
+      "to": "web-client-lib",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/web/src/router/index.ts",
+        "symbol": "import { authClient } from '../lib/auth-client'",
+        "line": 2
+      }
+    },
+    {
+      "from": "web-spa",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/web/src/views/BillingView.vue",
+        "symbol": "@staffcomplete/shared",
+        "line": 1
+      }
+    },
+    {
+      "from": "web-composables",
+      "to": "web-client-lib",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/web/src/composables/useMyTasks.ts",
+        "symbol": "import { apiFetch } from '../lib/api'",
+        "line": 2
+      }
+    },
+    {
+      "from": "web-composables",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/web/src/composables/useRunDetail.ts",
+        "symbol": "import type { AutomatedActionKey } from '@staffcomplete/shared'",
+        "line": 3
+      }
+    },
+    {
+      "from": "web-client-lib",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/web/src/lib/auth-client.ts",
+        "symbol": "import { DEFAULT_LOCALE } from '@staffcomplete/shared'",
+        "line": 3
+      }
+    },
+    {
+      "from": "web-client-lib",
+      "to": "api-app",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/web/src/lib/api.ts",
+        "symbol": "const res = await fetch(path, init)",
+        "line": 54
+      }
+    },
+    {
+      "from": "web-client-lib",
+      "to": "api-auth",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/web/src/lib/auth-client.ts",
+        "symbol": "createAuthClient",
+        "line": 5
+      }
+    },
+    {
+      "from": "web-composables",
+      "to": "api-tasks",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/web/src/composables/useMyTasks.ts",
+        "symbol": "apiFetch<{ tasks: MyTask[] }>('/api/tasks/mine')",
+        "line": 24
+      }
+    },
+    {
+      "from": "web-composables",
+      "to": "api-runs",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/web/src/composables/useRuns.ts",
+        "symbol": "apiFetch<{ runs: RunSummary[] }>('/api/runs')",
+        "line": 20
+      }
+    },
+    {
+      "from": "web-composables",
+      "to": "api-checklists",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/web/src/composables/useChecklistTemplates.ts",
+        "symbol": "apiFetch<{ checklists: ChecklistTemplateSummary[] }>('/api/checklists')",
+        "line": 55
+      }
+    },
+    {
+      "from": "web-composables",
+      "to": "api-billing",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/web/src/composables/useTrialStatus.ts",
+        "symbol": "apiFetchOrNull<TrialStatus>('/api/billing/trial-status')",
+        "line": 18
+      }
+    },
+    {
+      "from": "web-composables",
+      "to": "api-activity",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/web/src/composables/useActivity.ts",
+        "symbol": "apiFetch<{ events: ActivityEvent[] }>('/api/activity')",
+        "line": 14
+      }
+    },
+
+    {
+      "from": "api-app",
+      "to": "api-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "import { auth } from './auth.js'",
+        "line": 5
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-onboard",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "app.route('/api/onboard', onboardRouter)",
+        "line": 31
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-invites",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "app.route('/api/invites', invitesRouter)",
+        "line": 32
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-billing",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "app.route('/api/billing', billingRouter)",
+        "line": 33
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-checklists",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "app.route('/api/checklists', checklistsRouter)",
+        "line": 34
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-runs",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "app.route('/api/runs', runsRouter)",
+        "line": 35
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-tasks",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "app.route('/api/tasks', tasksRouter)",
+        "line": 36
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-activity",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "app.route('/api/activity', activityRouter)",
+        "line": 37
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-jobs",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "import { executeAutomatedStep } from './jobs/execute-automated-step.js'",
+        "line": 6
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-run-steps",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "import { AUTOMATED_STEP_EXECUTE_JOB } from './lib/run-steps.js'",
+        "line": 9
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-queue",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "import { queue, startQueue, stopQueue } from './queue/index.js'",
+        "line": 10
+      }
+    },
+    {
+      "from": "api-app",
+      "to": "api-queue",
+      "type": "publishes",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "await queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)",
+        "line": 49
+      }
+    },
+    {
+      "from": "api-jobs",
+      "to": "api-queue",
+      "type": "subscribes",
+      "evidence": {
+        "path": "apps/api/src/index.ts",
+        "symbol": "queue.process<ExecuteAutomatedStepPayload>(AUTOMATED_STEP_EXECUTE_JOB, (job) => executeAutomatedStep(job.data))",
+        "line": 50
+      }
+    },
+
+    {
+      "from": "api-auth",
+      "to": "api-billing",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/auth.ts",
+        "symbol": "import { startTrialIfNeeded } from './billing/start-trial.js'",
+        "line": 7
+      }
+    },
+    {
+      "from": "api-auth",
+      "to": "api-db",
+      "type": "reads",
+      "evidence": {
+        "path": "apps/api/src/auth.ts",
+        "symbol": "db.query.member.findFirst",
+        "line": 66
+      }
+    },
+    {
+      "from": "api-auth",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/auth.ts",
+        "symbol": "drizzleAdapter(db, { provider: 'pg', schema: {...} })",
+        "line": 96
+      }
+    },
+    {
+      "from": "api-auth",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/auth.ts",
+        "symbol": "import { DEFAULT_LOCALE } from '@staffcomplete/shared'",
+        "line": 6
+      }
+    },
+    {
+      "from": "api-auth",
+      "to": "resend",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/api/src/auth.ts",
+        "symbol": "resend.emails.send({ from: AUTH_EMAIL_FROM, to, subject, html })",
+        "line": 50
+      }
+    },
+
+    {
+      "from": "api-org-auth",
+      "to": "api-auth",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/api/src/lib/session.ts",
+        "symbol": "await auth.api.getSession({ headers: c.req.raw.headers })",
+        "line": 14
+      }
+    },
+    {
+      "from": "api-org-auth",
+      "to": "api-db",
+      "type": "reads",
+      "evidence": {
+        "path": "apps/api/src/middleware/org-auth.ts",
+        "symbol": "db.query.member.findFirst",
+        "line": 62
+      }
+    },
+    {
+      "from": "api-org-auth",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/middleware/org-auth.ts",
+        "symbol": "import { computeTrialState } from '@staffcomplete/shared'",
+        "line": 3
+      }
+    },
+
+    {
+      "from": "api-onboard",
+      "to": "api-auth",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/api/src/routes/onboard.ts",
+        "symbol": "import { auth, escapeHtml, sendAuthEmail } from '../auth.js'",
+        "line": 6
+      }
+    },
+    {
+      "from": "api-onboard",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/routes/onboard.ts",
+        "symbol": "await db.delete(user).where(eq(user.id, userId))",
+        "line": 95
+      }
+    },
+    {
+      "from": "api-onboard",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": { "path": "apps/api/src/routes/onboard.ts", "symbol": "signUpSchema", "line": 35 }
+    },
+
+    {
+      "from": "api-invites",
+      "to": "api-org-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/invites.ts",
+        "symbol": "import { orgAuth } from '../middleware/org-auth.js'",
+        "line": 9
+      }
+    },
+    {
+      "from": "api-invites",
+      "to": "api-auth",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/api/src/routes/invites.ts",
+        "symbol": "import { auth } from '../auth.js'",
+        "line": 6
+      }
+    },
+    {
+      "from": "api-invites",
+      "to": "api-db",
+      "type": "reads",
+      "evidence": {
+        "path": "apps/api/src/routes/invites.ts",
+        "symbol": "await withTenant(organizationId, (tx) => ...)",
+        "line": 35
+      }
+    },
+
+    {
+      "from": "api-checklists",
+      "to": "api-org-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/checklists.ts",
+        "symbol": "checklistsRouter.use('*', orgAuth({ admin: true }))",
+        "line": 28
+      }
+    },
+    {
+      "from": "api-checklists",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/routes/checklists.ts",
+        "symbol": "await withTenant(organizationId, (tx) => tx.insert(...))",
+        "line": 100
+      }
+    },
+    {
+      "from": "api-checklists",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/checklists.ts",
+        "symbol": "createChecklistTemplateSchema",
+        "line": 95
+      }
+    },
+
+    {
+      "from": "api-runs",
+      "to": "api-org-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/runs.ts",
+        "symbol": "runsRouter.use('*', orgAuth({ admin: true }))",
+        "line": 29
+      }
+    },
+    {
+      "from": "api-runs",
+      "to": "api-run-steps",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/runs.ts",
+        "symbol": "import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'",
+        "line": 24
+      }
+    },
+    {
+      "from": "api-runs",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/routes/runs.ts",
+        "symbol": "await withTenant(organizationId, async (tx) => ...)",
+        "line": 169
+      }
+    },
+    {
+      "from": "api-runs",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/runs.ts",
+        "symbol": "createRunSchema",
+        "line": 163
+      }
+    },
+
+    {
+      "from": "api-tasks",
+      "to": "api-org-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/tasks.ts",
+        "symbol": "tasksRouter.use('*', orgAuth())",
+        "line": 17
+      }
+    },
+    {
+      "from": "api-tasks",
+      "to": "api-run-steps",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/tasks.ts",
+        "symbol": "import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'",
+        "line": 11
+      }
+    },
+    {
+      "from": "api-tasks",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/routes/tasks.ts",
+        "symbol": "await withTenant(organizationId, async (tx) => ...)",
+        "line": 122
+      }
+    },
+    {
+      "from": "api-tasks",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/tasks.ts",
+        "symbol": "computeUnlockedPhaseIds",
+        "line": 3
+      }
+    },
+
+    {
+      "from": "api-billing",
+      "to": "api-org-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/billing.ts",
+        "symbol": "import { resolveOrgSession } from '../lib/session.js'",
+        "line": 6
+      }
+    },
+    {
+      "from": "api-billing",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/billing/start-trial.ts",
+        "symbol": "tx.insert(subscription).values({ organizationId, status: 'trialing', trialStartedAt: now, trialEndsAt })",
+        "line": 14
+      }
+    },
+    {
+      "from": "api-billing",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/billing/start-trial.ts",
+        "symbol": "import { TRIAL_LENGTH_DAYS } from '@staffcomplete/shared'",
+        "line": 2
+      }
+    },
+
+    {
+      "from": "api-activity",
+      "to": "api-org-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/routes/activity.ts",
+        "symbol": "import { orgAuth } from '../middleware/org-auth.js'",
+        "line": 3
+      }
+    },
+    {
+      "from": "api-activity",
+      "to": "api-db",
+      "type": "reads",
+      "evidence": {
+        "path": "apps/api/src/routes/activity.ts",
+        "symbol": "await withTenant(organizationId, async (tx) => ({ runs, steps }))",
+        "line": 17
+      }
+    },
+
+    {
+      "from": "api-run-steps",
+      "to": "api-queue",
+      "type": "publishes",
+      "evidence": {
+        "path": "apps/api/src/lib/run-steps.ts",
+        "symbol": "queue.enqueue({ name: AUTOMATED_STEP_EXECUTE_JOB, ... }, { singletonKey: step.id, retryLimit: 5, retryBackoff: true })",
+        "line": 49
+      }
+    },
+    {
+      "from": "api-run-steps",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/lib/run-steps.ts",
+        "symbol": "tx.update(runStep).set({ status: 'completed', completedAt: new Date() })",
+        "line": 70
+      }
+    },
+    {
+      "from": "api-run-steps",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/lib/run-steps.ts",
+        "symbol": "import { computeUnlockedPhaseIds, isStepLocked } from '@staffcomplete/shared'",
+        "line": 2
+      }
+    },
+
+    {
+      "from": "api-jobs",
+      "to": "api-run-steps",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/jobs/execute-automated-step.ts",
+        "symbol": "import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'",
+        "line": 11
+      }
+    },
+    {
+      "from": "api-jobs",
+      "to": "api-db",
+      "type": "reads",
+      "evidence": {
+        "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+        "symbol": "db.query.subscription.findMany({ where: eq(subscription.status, 'trialing') })",
+        "line": 21
+      }
+    },
+    {
+      "from": "api-jobs",
+      "to": "api-db",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+        "symbol": "db.update(subscription).set({ status: 'expired' })",
+        "line": 48
+      }
+    },
+    {
+      "from": "api-jobs",
+      "to": "api-auth",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/jobs/execute-automated-step.ts",
+        "symbol": "import { escapeHtml, sendAuthEmail } from '../auth.js'",
+        "line": 8
+      }
+    },
+    {
+      "from": "api-jobs",
+      "to": "resend",
+      "type": "calls",
+      "evidence": {
+        "path": "apps/api/src/jobs/execute-automated-step.ts",
+        "symbol": "result = await sendAuthEmail(to, subject, html)",
+        "line": 113
+      }
+    },
+    {
+      "from": "api-jobs",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/jobs/execute-automated-step.ts",
+        "symbol": "import { isAutomatedActionKey, parseAutomatedActionConfig, substituteAutomationTokens } from '@staffcomplete/shared'",
+        "line": 2
+      }
+    },
+
+    {
+      "from": "api-queue",
+      "to": "shared-domain",
+      "type": "imports",
+      "evidence": {
+        "path": "apps/api/src/queue/index.ts",
+        "symbol": "import type { Queue } from '@staffcomplete/shared'",
+        "line": 2
+      }
+    },
+    {
+      "from": "api-queue",
+      "to": "postgres",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/queue/index.ts",
+        "symbol": "new PgBoss(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete')",
+        "line": 10
+      }
+    },
+    {
+      "from": "api-db",
+      "to": "postgres",
+      "type": "reads",
+      "evidence": {
+        "path": "apps/api/src/db/index.ts",
+        "symbol": "postgres(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete', { max: 10, idle_timeout: 20 })",
+        "line": 6
+      }
+    },
+    {
+      "from": "api-db",
+      "to": "postgres",
+      "type": "writes",
+      "evidence": {
+        "path": "apps/api/src/db/index.ts",
+        "symbol": "tenantDb.transaction(async (tx) => { await tx.execute(rawSql`select set_config('app.organization_id', ...)`) })",
+        "line": 50
+      }
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow-signup-trial",
+      "name": "Sign-up → organization → 30-day trial",
+      "trigger": "POST /api/onboard from the sign-up form, followed by the first session creation",
+      "steps": [
+        "web-spa",
+        "web-client-lib",
+        "api-app",
+        "api-onboard",
+        "api-auth",
+        "api-billing",
+        "api-db",
+        "postgres",
+        "resend"
+      ],
+      "outcome": "User and organization rows exist, a verification email is sent, and the first session creation fires handleSessionCreate → startTrialIfNeeded, inserting a subscription row with status 'trialing' and trialEndsAt = now + TRIAL_LENGTH_DAYS (30). The insert is idempotent via onConflictDoNothing."
+    },
+    {
+      "id": "flow-start-run",
+      "name": "Start a run → dispatch automated steps → send email",
+      "trigger": "POST /api/runs (admin) with a checklist template id",
+      "steps": [
+        "web-spa",
+        "web-composables",
+        "web-client-lib",
+        "api-app",
+        "api-org-auth",
+        "api-runs",
+        "api-db",
+        "api-run-steps",
+        "api-queue",
+        "api-jobs",
+        "resend"
+      ],
+      "outcome": "The template is snapshotted into run, runPhase, runPhaseDependency and runStep rows inside one tenant transaction. After it commits, every automated step in an unlocked phase is enqueued (singletonKey = step id, retryLimit 5); the execute-automated-step handler sends the email via Resend, completes the step, and cascades into any newly unlocked steps."
+    },
+    {
+      "id": "flow-complete-task",
+      "name": "Complete a task → unlock next phase → cascade",
+      "trigger": "POST /api/tasks/:id/complete by the assigned member",
+      "steps": [
+        "web-spa",
+        "web-composables",
+        "web-client-lib",
+        "api-app",
+        "api-org-auth",
+        "api-tasks",
+        "api-run-steps",
+        "api-db",
+        "api-queue",
+        "api-jobs"
+      ],
+      "outcome": "completeRunStep marks the step completed, re-derives run.status (completed when every sibling step is), and computes which automated steps the completion just unlocked. Those are dispatched only after the transaction commits, so the next phase's automation begins."
+    },
+    {
+      "id": "flow-trial-lifecycle",
+      "name": "Daily trial lifecycle scan",
+      "trigger": "pg-boss cron '0 13 * * *' on the trial-lifecycle-scan queue",
+      "steps": ["api-queue", "api-app", "api-jobs", "api-db", "postgres", "resend"],
+      "outcome": "Every trialing subscription is checked cross-tenant on the superuser connection: expired ones flip to status 'expired'; ones within 3 days of expiry get a reminder email to all admins/owners, with trialReminderSentAt written immediately after each send so a crash or second run cannot double-send."
+    },
+    {
+      "id": "flow-trial-enforcement",
+      "name": "Trial-expiry enforcement on mutations",
+      "trigger": "Any non-GET request to an org-scoped route",
+      "steps": ["web-client-lib", "api-app", "api-org-auth", "api-db", "shared-domain"],
+      "outcome": "orgAuth resolves session and membership, and for mutations loads the subscription and evaluates computeTrialState. A row that is 'expired', or 'trialing' but past trialEndsAt, returns 402 TRIAL_EXPIRED. GET/HEAD skip the lookup entirely, keeping expired orgs read-only rather than locked out."
+    }
+  ],
+  "unknowns": []
+}

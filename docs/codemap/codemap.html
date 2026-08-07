@@ -1,0 +1,2662 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StaffComplete — Code Map</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --panel-2: #1c2129;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --dim: 0.1;
+        --frontend: #58a6ff;
+        --shared: #d2a8ff;
+        --api: #3fb950;
+        --route: #56d4dd;
+        --worker: #e3b341;
+        --data: #ff7b72;
+        --queue: #ffa657;
+        --external: #8b949e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font:
+          13px/1.5 ui-sans-serif,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      a {
+        color: var(--frontend);
+      }
+
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+        flex: none;
+      }
+      header h1 {
+        font-size: 15px;
+        margin: 0;
+        letter-spacing: 0.2px;
+      }
+      header .meta {
+        color: var(--muted);
+        font-size: 11.5px;
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      header .meta code {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 11px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+        flex: none;
+      }
+      input[type='search'] {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 5px 9px;
+        width: 210px;
+        font: inherit;
+      }
+      input[type='search']:focus {
+        outline: none;
+        border-color: var(--frontend);
+      }
+      button {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font: inherit;
+      }
+      button:hover {
+        border-color: var(--muted);
+      }
+      button.active {
+        border-color: var(--frontend);
+        color: var(--frontend);
+      }
+      .sep {
+        width: 1px;
+        height: 20px;
+        background: var(--border);
+      }
+      .label {
+        color: var(--muted);
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+      }
+
+      .legend {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .legend button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 9px;
+        font-size: 11.5px;
+      }
+      .legend button.off {
+        opacity: 0.35;
+        text-decoration: line-through;
+      }
+      .swatch {
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+        flex: none;
+      }
+
+      .flows {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .flows button {
+        font-size: 11.5px;
+        padding: 4px 9px;
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+      #stage {
+        flex: 1;
+        position: relative;
+        min-width: 0;
+      }
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: grab;
+      }
+      svg.panning {
+        cursor: grabbing;
+      }
+
+      .boundary rect {
+        fill: rgba(255, 255, 255, 0.018);
+        stroke: var(--border);
+        stroke-dasharray: 5 4;
+        rx: 12;
+      }
+      .boundary text {
+        fill: var(--muted);
+        font-size: 10.5px;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+      }
+
+      .edge {
+        fill: none;
+        stroke-width: 1.4;
+        opacity: 0.5;
+      }
+      .edge.hl {
+        opacity: 1;
+        stroke-width: 2.6;
+      }
+      .edge.dim {
+        opacity: var(--dim);
+      }
+      .edge-label {
+        fill: var(--muted);
+        font-size: 9px;
+        text-anchor: middle;
+        pointer-events: none;
+        opacity: 0;
+      }
+      .edge-label.hl {
+        opacity: 1;
+        fill: var(--text);
+      }
+
+      .node {
+        cursor: pointer;
+      }
+      .node rect {
+        rx: 7;
+        fill: var(--panel);
+        stroke-width: 1.6;
+        transition: fill 0.12s;
+      }
+      .node:hover rect {
+        fill: var(--panel-2);
+      }
+      .node text {
+        pointer-events: none;
+      }
+      .node .n-label {
+        fill: var(--text);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .node .n-path {
+        fill: var(--muted);
+        font-size: 9.5px;
+        font-family: ui-monospace, monospace;
+      }
+      .node.dim {
+        opacity: var(--dim);
+      }
+      .node.sel rect {
+        stroke-width: 3;
+        fill: var(--panel-2);
+      }
+      .node.up rect {
+        stroke-dasharray: 4 3;
+      }
+      .node.down rect {
+        stroke-dasharray: 4 3;
+      }
+      .node.hidden {
+        display: none;
+      }
+      .node .badge {
+        font-size: 9px;
+        fill: var(--bg);
+        font-weight: 700;
+      }
+
+      aside {
+        width: 340px;
+        flex: none;
+        border-left: 1px solid var(--border);
+        background: var(--panel);
+        overflow-y: auto;
+        padding: 14px 16px 40px;
+      }
+      aside h2 {
+        font-size: 14px;
+        margin: 0 0 2px;
+      }
+      aside .sub {
+        color: var(--muted);
+        font-family: ui-monospace, monospace;
+        font-size: 10.5px;
+        word-break: break-all;
+        margin-bottom: 10px;
+      }
+      aside h3 {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        color: var(--muted);
+        margin: 16px 0 6px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 3px;
+      }
+      aside p {
+        margin: 0 0 8px;
+      }
+      aside ul {
+        margin: 0;
+        padding-left: 16px;
+      }
+      aside li {
+        margin-bottom: 5px;
+      }
+      aside code {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 0 4px;
+        font-size: 10.5px;
+        font-family: ui-monospace, monospace;
+        word-break: break-all;
+      }
+      .pill {
+        display: inline-block;
+        border-radius: 10px;
+        padding: 1px 8px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #0d1117;
+        margin-bottom: 8px;
+      }
+      .rel {
+        cursor: pointer;
+        color: var(--frontend);
+      }
+      .rel:hover {
+        text-decoration: underline;
+      }
+      .empty {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 11.5px;
+      }
+      .kbd {
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        border-radius: 3px;
+        padding: 0 4px;
+        font-size: 10.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="repo-name">—</h1>
+      <div class="meta">
+        <span>generated <code id="gen-time">—</code></span>
+        <span>commit <code id="gen-commit">—</code></span>
+        <span>scope <code id="gen-scope">—</code></span>
+        <span id="gen-counts"></span>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Search modules, paths, symbols…" />
+      <div class="sep"></div>
+      <span class="label">Types</span>
+      <div class="legend" id="legend"></div>
+      <div class="sep"></div>
+      <span class="label">Flows</span>
+      <div class="flows" id="flow-buttons"></div>
+      <div class="sep"></div>
+      <button id="reset">Reset view</button>
+    </div>
+
+    <main>
+      <div id="stage">
+        <svg id="svg">
+          <defs id="defs"></defs>
+          <g id="viewport">
+            <g id="g-boundaries"></g>
+            <g id="g-edges"></g>
+            <g id="g-edge-labels"></g>
+            <g id="g-nodes"></g>
+          </g>
+        </svg>
+      </div>
+      <aside id="panel"></aside>
+    </main>
+
+    <script id="cm-data" type="application/json">
+      {
+        "generated_at": "2026-08-07T17:25:02Z",
+        "generated_from_commit": "217beaccb48bee824527fd0137d5dce50879a73a",
+        "scope": ["apps/api", "apps/web", "packages/shared"],
+        "nodes": [
+          {
+            "id": "web-spa",
+            "path": "apps/web/src",
+            "role": "frontend",
+            "label": "Web SPA (Vue 3)",
+            "summary": "Vue 3 single-page app: entry point, router with auth guards, views, components, layouts and i18n. Groups views/, components/, layouts/, router/, i18n/, App.vue and main.ts.",
+            "grouped_files": [
+              "apps/web/src/main.ts",
+              "apps/web/src/App.vue",
+              "apps/web/src/router/index.ts",
+              "apps/web/src/router/guards.ts",
+              "apps/web/src/views",
+              "apps/web/src/components",
+              "apps/web/src/layouts/AppShellLayout.vue",
+              "apps/web/src/i18n"
+            ],
+            "entrypoints": [
+              { "symbol": "createApp", "path": "apps/web/src/main.ts", "line": 8 },
+              { "symbol": "router", "path": "apps/web/src/router/index.ts", "line": 1 },
+              { "symbol": "requireAuth", "path": "apps/web/src/router/guards.ts", "line": 6 }
+            ],
+            "tests": ["apps/web/src/index.test.ts", "apps/web/src/router/guards.test.ts"],
+            "constraints": [
+              "SPA is served as static files by the API's serveStatic fallback (apps/api/src/index.ts:39-40), so all non-/api routes must resolve to index.html.",
+              "Locale set includes an RTL locale (he); direction is derived via textDirection from @staffcomplete/shared."
+            ],
+            "evidence": [
+              {
+                "path": "apps/web/src/main.ts",
+                "symbol": "createApp(App).use(createPinia()).use(router).use(VueQueryPlugin).use(i18n).mount('#app')",
+                "line": 8
+              },
+              { "path": "apps/web/src/router/index.ts", "symbol": "router.beforeEach", "line": 112 }
+            ]
+          },
+          {
+            "id": "web-composables",
+            "path": "apps/web/src/composables",
+            "role": "frontend",
+            "label": "Composables (data access)",
+            "summary": "Vue composables that own all server-state fetching for the SPA: tasks, runs, checklists, activity and trial status.",
+            "grouped_files": [
+              "apps/web/src/composables/useActivity.ts",
+              "apps/web/src/composables/useMyTasks.ts",
+              "apps/web/src/composables/useRuns.ts",
+              "apps/web/src/composables/useRunDetail.ts",
+              "apps/web/src/composables/useChecklistTemplates.ts",
+              "apps/web/src/composables/useTrialStatus.ts",
+              "apps/web/src/composables/useActionConfigFields.ts"
+            ],
+            "entrypoints": [
+              {
+                "symbol": "useMyTasks",
+                "path": "apps/web/src/composables/useMyTasks.ts",
+                "line": 28
+              },
+              { "symbol": "useRuns", "path": "apps/web/src/composables/useRuns.ts", "line": 24 },
+              {
+                "symbol": "useChecklistTemplates",
+                "path": "apps/web/src/composables/useChecklistTemplates.ts",
+                "line": 61
+              },
+              {
+                "symbol": "useTrialStatus",
+                "path": "apps/web/src/composables/useTrialStatus.ts",
+                "line": 21
+              },
+              {
+                "symbol": "useActivity",
+                "path": "apps/web/src/composables/useActivity.ts",
+                "line": 18
+              }
+            ],
+            "tests": [
+              "apps/web/src/composables/useActivity.test.ts",
+              "apps/web/src/composables/useTrialStatus.test.ts"
+            ],
+            "constraints": [
+              "Every network call goes through apiFetch/apiFetchOrNull — no direct fetch() in composables."
+            ],
+            "evidence": [
+              {
+                "path": "apps/web/src/composables/useMyTasks.ts",
+                "symbol": "apiFetch<{ tasks: MyTask[] }>('/api/tasks/mine')",
+                "line": 24
+              },
+              {
+                "path": "apps/web/src/composables/useTrialStatus.ts",
+                "symbol": "apiFetchOrNull<TrialStatus>('/api/billing/trial-status')",
+                "line": 18
+              }
+            ]
+          },
+          {
+            "id": "web-client-lib",
+            "path": "apps/web/src/lib",
+            "role": "frontend",
+            "label": "Web client lib",
+            "summary": "HTTP client wrapper (apiFetch, ApiError), the Better Auth browser client, and pure view helpers (run health, reorder, phase diagram, avatar colors, load errors).",
+            "grouped_files": [
+              "apps/web/src/lib/api.ts",
+              "apps/web/src/lib/auth-client.ts",
+              "apps/web/src/lib/runHealth.ts",
+              "apps/web/src/lib/reorderSteps.ts",
+              "apps/web/src/lib/phaseFlowDiagram.ts",
+              "apps/web/src/lib/avatarColors.ts",
+              "apps/web/src/lib/loadError.ts",
+              "apps/web/src/lib/stepForm.ts"
+            ],
+            "entrypoints": [
+              { "symbol": "apiFetch", "path": "apps/web/src/lib/api.ts", "line": 46 },
+              { "symbol": "apiFetchOrNull", "path": "apps/web/src/lib/api.ts", "line": 75 },
+              { "symbol": "authClient", "path": "apps/web/src/lib/auth-client.ts", "line": 5 }
+            ],
+            "tests": [
+              "apps/web/src/lib/api.test.ts",
+              "apps/web/src/lib/runHealth.test.ts",
+              "apps/web/src/lib/reorderSteps.test.ts",
+              "apps/web/src/lib/phaseFlowDiagram.test.ts",
+              "apps/web/src/lib/avatarColors.test.ts",
+              "apps/web/src/lib/loadError.test.ts"
+            ],
+            "constraints": [
+              "authClient registers the organization plugin with a locale additionalField that must stay in sync with the server-side plugin config in apps/api/src/auth.ts."
+            ],
+            "evidence": [
+              {
+                "path": "apps/web/src/lib/api.ts",
+                "symbol": "const res = await fetch(path, init)",
+                "line": 54
+              },
+              {
+                "path": "apps/web/src/lib/auth-client.ts",
+                "symbol": "createAuthClient({ plugins: [organizationClient(...)] })",
+                "line": 5
+              }
+            ]
+          },
+          {
+            "id": "shared-domain",
+            "path": "packages/shared/src",
+            "role": "shared",
+            "label": "@staffcomplete/shared",
+            "summary": "Source of truth for cross-app types: Zod schemas (sign-up, checklist, run, task) and pure domain logic (trial state, phase unlocking, automation config, locale). Also declares the Queue interface the API's pg-boss adapter implements.",
+            "grouped_files": [
+              "packages/shared/src/index.ts",
+              "packages/shared/src/trial.ts",
+              "packages/shared/src/phase.ts",
+              "packages/shared/src/task.ts",
+              "packages/shared/src/run.ts",
+              "packages/shared/src/checklist.ts",
+              "packages/shared/src/automation.ts",
+              "packages/shared/src/locale.ts",
+              "packages/shared/src/queue.ts"
+            ],
+            "entrypoints": [
+              { "symbol": "computeTrialState", "path": "packages/shared/src/trial.ts", "line": 13 },
+              { "symbol": "TRIAL_LENGTH_DAYS", "path": "packages/shared/src/trial.ts", "line": 3 },
+              {
+                "symbol": "computeUnlockedPhaseIds",
+                "path": "packages/shared/src/phase.ts",
+                "line": 37
+              },
+              {
+                "symbol": "parseAutomatedActionConfig",
+                "path": "packages/shared/src/automation.ts",
+                "line": 75
+              },
+              { "symbol": "Queue", "path": "packages/shared/src/queue.ts", "line": 27 },
+              { "symbol": "signUpSchema", "path": "packages/shared/src/index.ts", "line": 56 }
+            ],
+            "tests": [
+              "packages/shared/src/index.test.ts",
+              "packages/shared/src/trial.test.ts",
+              "packages/shared/src/phase.test.ts",
+              "packages/shared/src/task.test.ts",
+              "packages/shared/src/checklist.test.ts",
+              "packages/shared/src/automation.test.ts"
+            ],
+            "constraints": [
+              "Must stay dependency-free of both apps — imported by apps/api and apps/web alike.",
+              "TRIAL_LENGTH_DAYS is the single source of the trial window; apps/api/src/billing/start-trial.ts must read it rather than hardcoding a number."
+            ],
+            "evidence": [
+              {
+                "path": "packages/shared/src/trial.ts",
+                "symbol": "export const TRIAL_LENGTH_DAYS = 30",
+                "line": 3
+              },
+              {
+                "path": "packages/shared/src/index.ts",
+                "symbol": "export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'",
+                "line": 25
+              }
+            ]
+          },
+          {
+            "id": "api-app",
+            "path": "apps/api/src/index.ts",
+            "role": "api",
+            "label": "API app (Hono)",
+            "summary": "Hono application root: mounts every router under /api, delegates /api/auth/** to Better Auth, serves the built SPA, and on direct execution boots the queue, registers job handlers and schedules the daily trial cron.",
+            "grouped_files": ["apps/api/src/index.ts"],
+            "entrypoints": [
+              { "symbol": "app", "path": "apps/api/src/index.ts", "line": 25 },
+              { "symbol": "TRIAL_LIFECYCLE_SCAN_CRON", "path": "apps/api/src/index.ts", "line": 23 }
+            ],
+            "tests": ["apps/api/src/index.test.ts"],
+            "constraints": [
+              "Queue boot and job registration only run when the module is the process entrypoint (process.argv[1] check), so importing app in tests does not start pg-boss.",
+              "serveStatic fallbacks are registered last so they never shadow /api routes."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/index.ts",
+                "symbol": "app.route('/api/runs', runsRouter)",
+                "line": 35
+              },
+              {
+                "path": "apps/api/src/index.ts",
+                "symbol": "queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)",
+                "line": 49
+              }
+            ]
+          },
+          {
+            "id": "api-auth",
+            "path": "apps/api/src/auth.ts",
+            "role": "api",
+            "label": "Auth (Better Auth)",
+            "summary": "Better Auth instance with the Drizzle adapter and organization plugin. Owns session creation hooks, email verification, password reset, invitation email, and the shared sendAuthEmail/escapeHtml helpers used by jobs and routes.",
+            "grouped_files": ["apps/api/src/auth.ts"],
+            "entrypoints": [
+              { "symbol": "auth", "path": "apps/api/src/auth.ts", "line": 82 },
+              { "symbol": "handleSessionCreate", "path": "apps/api/src/auth.ts", "line": 65 },
+              { "symbol": "sendAuthEmail", "path": "apps/api/src/auth.ts", "line": 48 },
+              { "symbol": "escapeHtml", "path": "apps/api/src/auth.ts", "line": 30 }
+            ],
+            "tests": ["apps/api/src/auth.test.ts"],
+            "constraints": [
+              "AUTH_SECRET is required with no fallback — the module throws at import time if unset.",
+              "handleSessionCreate defaults activeOrganizationId to the user's first membership; a one-org-per-user assumption noted in the source.",
+              "Trial start is fired from the session-create hook and must never block sign-in — failures are logged, not thrown."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/auth.ts",
+                "symbol": "throw new Error('AUTH_SECRET environment variable is required')",
+                "line": 22
+              },
+              {
+                "path": "apps/api/src/auth.ts",
+                "symbol": "databaseHooks: { session: { create: { before: handleSessionCreate } } }",
+                "line": 129
+              }
+            ]
+          },
+          {
+            "id": "api-org-auth",
+            "path": "apps/api/src/middleware/org-auth.ts",
+            "role": "api",
+            "label": "orgAuth middleware + session",
+            "summary": "Single gate for org-scoped routes: resolves the session, the caller's membership and (on mutations only) the org's trial state in one pass, then stashes OrgAuth on the Hono context. Groups the resolveOrgSession helper.",
+            "grouped_files": ["apps/api/src/middleware/org-auth.ts", "apps/api/src/lib/session.ts"],
+            "entrypoints": [
+              { "symbol": "orgAuth", "path": "apps/api/src/middleware/org-auth.ts", "line": 48 },
+              { "symbol": "OrgAuth", "path": "apps/api/src/middleware/org-auth.ts", "line": 16 },
+              { "symbol": "resolveOrgSession", "path": "apps/api/src/lib/session.ts", "line": 13 }
+            ],
+            "tests": ["apps/api/src/middleware/org-auth.test.ts"],
+            "constraints": [
+              "Reads (GET/HEAD) skip the subscription lookup entirely — an expired trial is read-only, not locked out (ADR-0015).",
+              "Returns 402 TRIAL_EXPIRED for locked orgs and 403 for missing session or insufficient role; both admin-failure and no-session cases share one message on purpose.",
+              "membership is reported as null rather than rejected — routes decide what it means."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/middleware/org-auth.ts",
+                "symbol": "const needsTrialCheck = c.req.method !== 'GET' && c.req.method !== 'HEAD'",
+                "line": 59
+              },
+              {
+                "path": "apps/api/src/middleware/org-auth.ts",
+                "symbol": "{ code: 'TRIAL_EXPIRED', message: 'Your trial has ended. Subscribe to continue.' }, 402",
+                "line": 96
+              }
+            ]
+          },
+          {
+            "id": "api-onboard",
+            "path": "apps/api/src/routes/onboard.ts",
+            "role": "route",
+            "label": "POST /api/onboard",
+            "summary": "Public sign-up route: creates the user and organization through Better Auth, rolling back the user row if org creation fails.",
+            "grouped_files": ["apps/api/src/routes/onboard.ts"],
+            "entrypoints": [
+              { "symbol": "onboardRouter", "path": "apps/api/src/routes/onboard.ts", "line": 33 }
+            ],
+            "tests": ["apps/api/src/routes/onboard.test.ts"],
+            "constraints": [
+              "Unauthenticated by design — the only org-creating route with no orgAuth guard.",
+              "Compensating delete of the user row on failure keeps a half-created account from blocking a retry."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/routes/onboard.ts",
+                "symbol": "onboardRouter.post('/', zValidator('json', signUpSchema), ...)",
+                "line": 35
+              },
+              {
+                "path": "apps/api/src/routes/onboard.ts",
+                "symbol": "await db.delete(user).where(eq(user.id, userId))",
+                "line": 95
+              }
+            ]
+          },
+          {
+            "id": "api-invites",
+            "path": "apps/api/src/routes/invites.ts",
+            "role": "route",
+            "label": "/api/invites",
+            "summary": "Admin-only invite listing, creation and revocation, plus two public token routes for viewing and accepting an invitation.",
+            "grouped_files": ["apps/api/src/routes/invites.ts"],
+            "entrypoints": [
+              { "symbol": "invitesRouter", "path": "apps/api/src/routes/invites.ts", "line": 26 }
+            ],
+            "tests": ["apps/api/src/routes/invites.test.ts"],
+            "constraints": [
+              "orgAuth is applied per-route, not router-wide, because GET /:token and POST /:token/accept must stay public for the invited user.",
+              "Public token lookups are a deliberate cross-tenant carve-out (ADR-0012)."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/routes/invites.ts",
+                "symbol": "invitesRouter.get('/', orgAuth({ admin: true }), ...)",
+                "line": 28
+              },
+              {
+                "path": "apps/api/src/routes/invites.ts",
+                "symbol": "invitesRouter.post('/:token/accept', zValidator('json', acceptInviteSchema), ...)",
+                "line": 141
+              }
+            ]
+          },
+          {
+            "id": "api-checklists",
+            "path": "apps/api/src/routes/checklists.ts",
+            "role": "route",
+            "label": "/api/checklists",
+            "summary": "Admin CRUD for checklist templates, their phases, steps and phase dependencies — the templates that runs are instantiated from.",
+            "grouped_files": ["apps/api/src/routes/checklists.ts"],
+            "entrypoints": [
+              {
+                "symbol": "checklistsRouter",
+                "path": "apps/api/src/routes/checklists.ts",
+                "line": 26
+              }
+            ],
+            "tests": ["apps/api/src/routes/checklists.test.ts"],
+            "constraints": [
+              "Router-wide orgAuth({ admin: true }) — no non-admin access to template editing.",
+              "Assignee references are validated against org membership via assertValidAssignee."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/routes/checklists.ts",
+                "symbol": "checklistsRouter.use('*', orgAuth({ admin: true }))",
+                "line": 28
+              },
+              {
+                "path": "apps/api/src/routes/checklists.ts",
+                "symbol": "checklistsRouter.post('/', zValidator('json', createChecklistTemplateSchema), ...)",
+                "line": 95
+              }
+            ]
+          },
+          {
+            "id": "api-runs",
+            "path": "apps/api/src/routes/runs.ts",
+            "role": "route",
+            "label": "/api/runs",
+            "summary": "Admin routes to list, read and start runs. Creating a run snapshots a checklist template into run/runPhase/runPhaseDependency/runStep rows and then dispatches whatever automated steps are immediately unlocked.",
+            "grouped_files": ["apps/api/src/routes/runs.ts"],
+            "entrypoints": [
+              { "symbol": "runsRouter", "path": "apps/api/src/routes/runs.ts", "line": 27 }
+            ],
+            "tests": ["apps/api/src/routes/runs.test.ts"],
+            "constraints": [
+              "dispatchAutomatedSteps is called after the creating transaction commits, never inside it.",
+              "Template phase ids are remapped to run phase ids when copying dependency edges."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/routes/runs.ts",
+                "symbol": "runsRouter.post('/', zValidator('json', createRunSchema), ...)",
+                "line": 163
+              },
+              {
+                "path": "apps/api/src/routes/runs.ts",
+                "symbol": "await dispatchAutomatedSteps(",
+                "line": 318
+              }
+            ]
+          },
+          {
+            "id": "api-tasks",
+            "path": "apps/api/src/routes/tasks.ts",
+            "role": "route",
+            "label": "/api/tasks",
+            "summary": "Non-admin routes for the assignee's own work: GET /mine lists unlocked assigned steps, POST /:id/complete completes a step and dispatches anything the completion unlocked.",
+            "grouped_files": ["apps/api/src/routes/tasks.ts"],
+            "entrypoints": [
+              { "symbol": "tasksRouter", "path": "apps/api/src/routes/tasks.ts", "line": 14 }
+            ],
+            "tests": ["apps/api/src/routes/tasks.test.ts"],
+            "constraints": [
+              "Uses orgAuth() without admin — this is the one router ordinary members reach.",
+              "A null membership is treated as \"no tasks assigned\" rather than an error.",
+              "Dispatch happens after the transaction returned by completeRunStep commits."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/routes/tasks.ts",
+                "symbol": "tasksRouter.use('*', orgAuth())",
+                "line": 17
+              },
+              {
+                "path": "apps/api/src/routes/tasks.ts",
+                "symbol": "await dispatchAutomatedSteps(organizationId, result.stepsToDispatch)",
+                "line": 178
+              }
+            ]
+          },
+          {
+            "id": "api-billing",
+            "path": "apps/api/src/routes/billing.ts",
+            "role": "route",
+            "label": "/api/billing + trial start",
+            "summary": "Exposes GET /trial-status for the web trial banner, and owns startTrialIfNeeded — the idempotent insert that opens a 30-day trial on first login.",
+            "grouped_files": [
+              "apps/api/src/routes/billing.ts",
+              "apps/api/src/billing/start-trial.ts"
+            ],
+            "entrypoints": [
+              { "symbol": "billingRouter", "path": "apps/api/src/routes/billing.ts", "line": 8 },
+              {
+                "symbol": "startTrialIfNeeded",
+                "path": "apps/api/src/billing/start-trial.ts",
+                "line": 9
+              }
+            ],
+            "tests": [
+              "apps/api/src/routes/billing.test.ts",
+              "apps/api/src/billing/start-trial.test.ts"
+            ],
+            "constraints": [
+              "Idempotency is enforced by onConflictDoNothing on the subscription primary key, not by application logic (ADR-0015).",
+              "Trial length must come from TRIAL_LENGTH_DAYS in @staffcomplete/shared.",
+              "trial-status uses resolveOrgSession directly — it needs neither a role check nor a member id."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/billing/start-trial.ts",
+                "symbol": "const trialEndsAt = addDays(now, TRIAL_LENGTH_DAYS)",
+                "line": 11
+              },
+              {
+                "path": "apps/api/src/billing/start-trial.ts",
+                "symbol": ".onConflictDoNothing({ target: subscription.organizationId })",
+                "line": 17
+              },
+              {
+                "path": "apps/api/src/routes/billing.ts",
+                "symbol": "billingRouter.get('/trial-status', ...)",
+                "line": 12
+              }
+            ]
+          },
+          {
+            "id": "api-activity",
+            "path": "apps/api/src/routes/activity.ts",
+            "role": "route",
+            "label": "GET /api/activity",
+            "summary": "Admin-only read model that joins recent runs and steps into a single activity feed for the dashboard.",
+            "grouped_files": ["apps/api/src/routes/activity.ts"],
+            "entrypoints": [
+              { "symbol": "activityRouter", "path": "apps/api/src/routes/activity.ts", "line": 7 }
+            ],
+            "tests": ["apps/api/src/routes/activity.test.ts"],
+            "constraints": ["Read-only; router-wide orgAuth({ admin: true })."],
+            "evidence": [
+              {
+                "path": "apps/api/src/routes/activity.ts",
+                "symbol": "activityRouter.use('*', orgAuth({ admin: true }))",
+                "line": 9
+              },
+              {
+                "path": "apps/api/src/routes/activity.ts",
+                "symbol": "const { runs, steps } = await withTenant(organizationId, ...)",
+                "line": 17
+              }
+            ]
+          },
+          {
+            "id": "api-run-steps",
+            "path": "apps/api/src/lib/run-steps.ts",
+            "role": "worker",
+            "label": "Run-step engine",
+            "summary": "The orchestration core shared by routes and jobs: selects which automated steps are dispatchable, enqueues them, and completes a step while re-deriving run status and the next unlocked phase. Groups the assignee validator.",
+            "grouped_files": ["apps/api/src/lib/run-steps.ts", "apps/api/src/lib/assignee.ts"],
+            "entrypoints": [
+              {
+                "symbol": "selectStepsToDispatch",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 23
+              },
+              {
+                "symbol": "dispatchAutomatedSteps",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 43
+              },
+              { "symbol": "completeRunStep", "path": "apps/api/src/lib/run-steps.ts", "line": 62 },
+              {
+                "symbol": "AUTOMATED_STEP_EXECUTE_JOB",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 10
+              }
+            ],
+            "tests": ["apps/api/src/lib/run-steps.test.ts"],
+            "constraints": [
+              "dispatchAutomatedSteps must only be called after the producing transaction commits — enqueuing inside it risks queuing work for a write that rolls back.",
+              "singletonKey on the step id dedups racing completions so a step cannot be double-enqueued or double-sent.",
+              "completeRunStep does not enqueue; it returns steps for the caller to dispatch."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/lib/run-steps.ts",
+                "symbol": "queue.enqueue({ name: AUTOMATED_STEP_EXECUTE_JOB, data: { runStepId: step.id, organizationId } }, { singletonKey: step.id, retryLimit: 5, retryBackoff: true })",
+                "line": 49
+              },
+              {
+                "path": "apps/api/src/lib/run-steps.ts",
+                "symbol": "const stepsToDispatch = selectStepsToDispatch(phases, dependencies, siblingSteps)",
+                "line": 100
+              }
+            ]
+          },
+          {
+            "id": "api-jobs",
+            "path": "apps/api/src/jobs",
+            "role": "worker",
+            "label": "Background jobs",
+            "summary": "Two pg-boss handlers: execute-automated-step runs a step's action (currently email.send) then completes and cascades it; trial-lifecycle-scan is the daily cross-tenant sweep that sends 3-day reminders and flips expired trials.",
+            "grouped_files": [
+              "apps/api/src/jobs/execute-automated-step.ts",
+              "apps/api/src/jobs/trial-lifecycle-scan.ts"
+            ],
+            "entrypoints": [
+              {
+                "symbol": "executeAutomatedStep",
+                "path": "apps/api/src/jobs/execute-automated-step.ts",
+                "line": 28
+              },
+              {
+                "symbol": "runTrialLifecycleScan",
+                "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+                "line": 18
+              }
+            ],
+            "tests": [
+              "apps/api/src/jobs/execute-automated-step.test.ts",
+              "apps/api/src/jobs/trial-lifecycle-scan.test.ts"
+            ],
+            "constraints": [
+              "The Resend call happens outside any transaction; reads and the completion write are two separate short transactions.",
+              "Transient send failures throw so pg-boss retries; data-integrity failures log and return without retrying.",
+              "trial-lifecycle-scan is cross-tenant by design and uses the superuser db connection, not withTenant (ADR-0012, ADR-0015).",
+              "One org's failure must not abort the rest of the scan."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/jobs/execute-automated-step.ts",
+                "symbol": "const { stepsToDispatch } = await withTenant(organizationId, (tx) => completeRunStep(tx, runStepId))",
+                "line": 78
+              },
+              {
+                "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+                "symbol": "await db.update(subscription).set({ status: 'expired' })",
+                "line": 48
+              },
+              {
+                "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+                "symbol": "const REMINDER_WINDOW_DAYS = 3",
+                "line": 10
+              }
+            ]
+          },
+          {
+            "id": "api-db",
+            "path": "apps/api/src/db",
+            "role": "data",
+            "label": "Drizzle schema + RLS",
+            "summary": "Drizzle schema with inline row-level-security policies, the dual connection pools (superuser db and restricted tenantDb), the withTenant transaction helper, and the SQL migration history through 0014.",
+            "grouped_files": [
+              "apps/api/src/db/index.ts",
+              "apps/api/src/db/schema.ts",
+              "apps/api/src/db/migrate.ts",
+              "apps/api/src/db/setup-tenant-role.ts",
+              "apps/api/src/db/migrations"
+            ],
+            "entrypoints": [
+              { "symbol": "db", "path": "apps/api/src/db/index.ts", "line": 11 },
+              { "symbol": "tenantDb", "path": "apps/api/src/db/index.ts", "line": 32 },
+              { "symbol": "withTenant", "path": "apps/api/src/db/index.ts", "line": 46 },
+              { "symbol": "subscription", "path": "apps/api/src/db/schema.ts", "line": 140 },
+              { "symbol": "runStep", "path": "apps/api/src/db/schema.ts", "line": 357 }
+            ],
+            "tests": [],
+            "constraints": [
+              "TENANT_DATABASE_URL is required with no fallback — the module throws at import time if unset.",
+              "Every tenant-scoped table carries organizationId plus an inline pgPolicy keyed off current_setting('app.organization_id', true) and .enableRLS().",
+              "A bare tenantDb query outside withTenant sees zero rows; always go through withTenant.",
+              "Migrations run as the owner role, which is not subject to the tenant-scoped policies."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/db/index.ts",
+                "symbol": "throw new Error('TENANT_DATABASE_URL environment variable is required')",
+                "line": 24
+              },
+              {
+                "path": "apps/api/src/db/index.ts",
+                "symbol": "select set_config('app.organization_id', ${organizationId}, true)",
+                "line": 51
+              },
+              {
+                "path": "apps/api/src/db/schema.ts",
+                "symbol": "pgPolicy(`${tableName}_tenant_isolation`",
+                "line": 48
+              }
+            ]
+          },
+          {
+            "id": "api-queue",
+            "path": "apps/api/src/queue",
+            "role": "queue",
+            "label": "Queue (pg-boss adapter)",
+            "summary": "PgBossQueue implements the shared Queue interface over pg-boss, which stores its own job tables in the same Postgres instance. Connects as the superuser because pg-boss must create its schema.",
+            "grouped_files": ["apps/api/src/queue/index.ts", "apps/api/src/queue/pg-boss-queue.ts"],
+            "entrypoints": [
+              { "symbol": "queue", "path": "apps/api/src/queue/index.ts", "line": 12 },
+              { "symbol": "startQueue", "path": "apps/api/src/queue/index.ts", "line": 14 },
+              { "symbol": "stopQueue", "path": "apps/api/src/queue/index.ts", "line": 18 },
+              { "symbol": "PgBossQueue", "path": "apps/api/src/queue/pg-boss-queue.ts", "line": 8 }
+            ],
+            "tests": [],
+            "constraints": [
+              "pg-boss needs DDL rights, so it uses DATABASE_URL (superuser) and not the restricted tenant role (ADR-0012).",
+              "Constructing PgBoss opens no connection, so module-load-time construction is safe.",
+              "Application code depends on the Queue interface, not pg-boss directly."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/queue/index.ts",
+                "symbol": "const boss = new PgBoss(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete')",
+                "line": 10
+              },
+              {
+                "path": "apps/api/src/queue/pg-boss-queue.ts",
+                "symbol": "export class PgBossQueue implements Queue",
+                "line": 8
+              }
+            ]
+          },
+          {
+            "id": "postgres",
+            "path": "apps/api/src/db/index.ts",
+            "role": "external",
+            "label": "PostgreSQL",
+            "summary": "External datastore. Holds both the application schema (RLS-protected tenant tables) and pg-boss's job tables, reached through two roles: the owner/superuser and the restricted staffcomplete_tenant role.",
+            "grouped_files": [],
+            "entrypoints": [
+              {
+                "symbol": "postgres(process.env.DATABASE_URL ...)",
+                "path": "apps/api/src/db/index.ts",
+                "line": 6
+              },
+              {
+                "symbol": "postgres(tenantDatabaseUrl ...)",
+                "path": "apps/api/src/db/index.ts",
+                "line": 27
+              }
+            ],
+            "tests": [],
+            "constraints": [
+              "Tenant isolation is enforced in the database via RLS, never by application-level filtering alone.",
+              "Two pools with max: 10 each; the tenant pool authenticates as a role without BYPASSRLS."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/db/index.ts",
+                "symbol": "const sql = postgres(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete', { max: 10, idle_timeout: 20 })",
+                "line": 6
+              },
+              {
+                "path": "apps/api/src/db/setup-tenant-role.ts",
+                "symbol": "setup-tenant-role",
+                "line": 1
+              }
+            ]
+          },
+          {
+            "id": "resend",
+            "path": "apps/api/src/auth.ts",
+            "role": "external",
+            "label": "Resend (email)",
+            "summary": "External transactional email provider. Every outbound email in the system — verification, password reset, invitation, trial reminder, and automated email.send steps — goes through the single sendAuthEmail wrapper.",
+            "grouped_files": [],
+            "entrypoints": [
+              { "symbol": "sendAuthEmail", "path": "apps/api/src/auth.ts", "line": 48 }
+            ],
+            "tests": [],
+            "constraints": [
+              "All HTML interpolation is escaped via escapeHtml before send; the `to` address is deliberately not escaped.",
+              "A send failure in a job throws so pg-boss retries with backoff."
+            ],
+            "evidence": [
+              {
+                "path": "apps/api/src/auth.ts",
+                "symbol": "const resend = new Resend(process.env.RESEND_API_KEY)",
+                "line": 49
+              },
+              {
+                "path": "apps/api/src/auth.ts",
+                "symbol": "resend.emails.send({ from: AUTH_EMAIL_FROM, to, subject, html })",
+                "line": 50
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "web-spa",
+            "to": "web-composables",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/web/src/views/RunsView.vue",
+              "symbol": "import { useRuns, type RunSummary } from '../composables/useRuns'",
+              "line": 7
+            }
+          },
+          {
+            "from": "web-spa",
+            "to": "web-client-lib",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/web/src/router/index.ts",
+              "symbol": "import { authClient } from '../lib/auth-client'",
+              "line": 2
+            }
+          },
+          {
+            "from": "web-spa",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/web/src/views/BillingView.vue",
+              "symbol": "@staffcomplete/shared",
+              "line": 1
+            }
+          },
+          {
+            "from": "web-composables",
+            "to": "web-client-lib",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/web/src/composables/useMyTasks.ts",
+              "symbol": "import { apiFetch } from '../lib/api'",
+              "line": 2
+            }
+          },
+          {
+            "from": "web-composables",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/web/src/composables/useRunDetail.ts",
+              "symbol": "import type { AutomatedActionKey } from '@staffcomplete/shared'",
+              "line": 3
+            }
+          },
+          {
+            "from": "web-client-lib",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/web/src/lib/auth-client.ts",
+              "symbol": "import { DEFAULT_LOCALE } from '@staffcomplete/shared'",
+              "line": 3
+            }
+          },
+          {
+            "from": "web-client-lib",
+            "to": "api-app",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/web/src/lib/api.ts",
+              "symbol": "const res = await fetch(path, init)",
+              "line": 54
+            }
+          },
+          {
+            "from": "web-client-lib",
+            "to": "api-auth",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/web/src/lib/auth-client.ts",
+              "symbol": "createAuthClient",
+              "line": 5
+            }
+          },
+          {
+            "from": "web-composables",
+            "to": "api-tasks",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/web/src/composables/useMyTasks.ts",
+              "symbol": "apiFetch<{ tasks: MyTask[] }>('/api/tasks/mine')",
+              "line": 24
+            }
+          },
+          {
+            "from": "web-composables",
+            "to": "api-runs",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/web/src/composables/useRuns.ts",
+              "symbol": "apiFetch<{ runs: RunSummary[] }>('/api/runs')",
+              "line": 20
+            }
+          },
+          {
+            "from": "web-composables",
+            "to": "api-checklists",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/web/src/composables/useChecklistTemplates.ts",
+              "symbol": "apiFetch<{ checklists: ChecklistTemplateSummary[] }>('/api/checklists')",
+              "line": 55
+            }
+          },
+          {
+            "from": "web-composables",
+            "to": "api-billing",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/web/src/composables/useTrialStatus.ts",
+              "symbol": "apiFetchOrNull<TrialStatus>('/api/billing/trial-status')",
+              "line": 18
+            }
+          },
+          {
+            "from": "web-composables",
+            "to": "api-activity",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/web/src/composables/useActivity.ts",
+              "symbol": "apiFetch<{ events: ActivityEvent[] }>('/api/activity')",
+              "line": 14
+            }
+          },
+
+          {
+            "from": "api-app",
+            "to": "api-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "import { auth } from './auth.js'",
+              "line": 5
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-onboard",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "app.route('/api/onboard', onboardRouter)",
+              "line": 31
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-invites",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "app.route('/api/invites', invitesRouter)",
+              "line": 32
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-billing",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "app.route('/api/billing', billingRouter)",
+              "line": 33
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-checklists",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "app.route('/api/checklists', checklistsRouter)",
+              "line": 34
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-runs",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "app.route('/api/runs', runsRouter)",
+              "line": 35
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-tasks",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "app.route('/api/tasks', tasksRouter)",
+              "line": 36
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-activity",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "app.route('/api/activity', activityRouter)",
+              "line": 37
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-jobs",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "import { executeAutomatedStep } from './jobs/execute-automated-step.js'",
+              "line": 6
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-run-steps",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "import { AUTOMATED_STEP_EXECUTE_JOB } from './lib/run-steps.js'",
+              "line": 9
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-queue",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "import { queue, startQueue, stopQueue } from './queue/index.js'",
+              "line": 10
+            }
+          },
+          {
+            "from": "api-app",
+            "to": "api-queue",
+            "type": "publishes",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "await queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)",
+              "line": 49
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-queue",
+            "type": "subscribes",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "queue.process<ExecuteAutomatedStepPayload>(AUTOMATED_STEP_EXECUTE_JOB, (job) => executeAutomatedStep(job.data))",
+              "line": 50
+            }
+          },
+
+          {
+            "from": "api-auth",
+            "to": "api-billing",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/auth.ts",
+              "symbol": "import { startTrialIfNeeded } from './billing/start-trial.js'",
+              "line": 7
+            }
+          },
+          {
+            "from": "api-auth",
+            "to": "api-db",
+            "type": "reads",
+            "evidence": {
+              "path": "apps/api/src/auth.ts",
+              "symbol": "db.query.member.findFirst",
+              "line": 66
+            }
+          },
+          {
+            "from": "api-auth",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/auth.ts",
+              "symbol": "drizzleAdapter(db, { provider: 'pg', schema: {...} })",
+              "line": 96
+            }
+          },
+          {
+            "from": "api-auth",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/auth.ts",
+              "symbol": "import { DEFAULT_LOCALE } from '@staffcomplete/shared'",
+              "line": 6
+            }
+          },
+          {
+            "from": "api-auth",
+            "to": "resend",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/api/src/auth.ts",
+              "symbol": "resend.emails.send({ from: AUTH_EMAIL_FROM, to, subject, html })",
+              "line": 50
+            }
+          },
+
+          {
+            "from": "api-org-auth",
+            "to": "api-auth",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/api/src/lib/session.ts",
+              "symbol": "await auth.api.getSession({ headers: c.req.raw.headers })",
+              "line": 14
+            }
+          },
+          {
+            "from": "api-org-auth",
+            "to": "api-db",
+            "type": "reads",
+            "evidence": {
+              "path": "apps/api/src/middleware/org-auth.ts",
+              "symbol": "db.query.member.findFirst",
+              "line": 62
+            }
+          },
+          {
+            "from": "api-org-auth",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/middleware/org-auth.ts",
+              "symbol": "import { computeTrialState } from '@staffcomplete/shared'",
+              "line": 3
+            }
+          },
+
+          {
+            "from": "api-onboard",
+            "to": "api-auth",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/api/src/routes/onboard.ts",
+              "symbol": "import { auth, escapeHtml, sendAuthEmail } from '../auth.js'",
+              "line": 6
+            }
+          },
+          {
+            "from": "api-onboard",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/routes/onboard.ts",
+              "symbol": "await db.delete(user).where(eq(user.id, userId))",
+              "line": 95
+            }
+          },
+          {
+            "from": "api-onboard",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/onboard.ts",
+              "symbol": "signUpSchema",
+              "line": 35
+            }
+          },
+
+          {
+            "from": "api-invites",
+            "to": "api-org-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/invites.ts",
+              "symbol": "import { orgAuth } from '../middleware/org-auth.js'",
+              "line": 9
+            }
+          },
+          {
+            "from": "api-invites",
+            "to": "api-auth",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/api/src/routes/invites.ts",
+              "symbol": "import { auth } from '../auth.js'",
+              "line": 6
+            }
+          },
+          {
+            "from": "api-invites",
+            "to": "api-db",
+            "type": "reads",
+            "evidence": {
+              "path": "apps/api/src/routes/invites.ts",
+              "symbol": "await withTenant(organizationId, (tx) => ...)",
+              "line": 35
+            }
+          },
+
+          {
+            "from": "api-checklists",
+            "to": "api-org-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/checklists.ts",
+              "symbol": "checklistsRouter.use('*', orgAuth({ admin: true }))",
+              "line": 28
+            }
+          },
+          {
+            "from": "api-checklists",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/routes/checklists.ts",
+              "symbol": "await withTenant(organizationId, (tx) => tx.insert(...))",
+              "line": 100
+            }
+          },
+          {
+            "from": "api-checklists",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/checklists.ts",
+              "symbol": "createChecklistTemplateSchema",
+              "line": 95
+            }
+          },
+
+          {
+            "from": "api-runs",
+            "to": "api-org-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/runs.ts",
+              "symbol": "runsRouter.use('*', orgAuth({ admin: true }))",
+              "line": 29
+            }
+          },
+          {
+            "from": "api-runs",
+            "to": "api-run-steps",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/runs.ts",
+              "symbol": "import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'",
+              "line": 24
+            }
+          },
+          {
+            "from": "api-runs",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/routes/runs.ts",
+              "symbol": "await withTenant(organizationId, async (tx) => ...)",
+              "line": 169
+            }
+          },
+          {
+            "from": "api-runs",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/runs.ts",
+              "symbol": "createRunSchema",
+              "line": 163
+            }
+          },
+
+          {
+            "from": "api-tasks",
+            "to": "api-org-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/tasks.ts",
+              "symbol": "tasksRouter.use('*', orgAuth())",
+              "line": 17
+            }
+          },
+          {
+            "from": "api-tasks",
+            "to": "api-run-steps",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/tasks.ts",
+              "symbol": "import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'",
+              "line": 11
+            }
+          },
+          {
+            "from": "api-tasks",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/routes/tasks.ts",
+              "symbol": "await withTenant(organizationId, async (tx) => ...)",
+              "line": 122
+            }
+          },
+          {
+            "from": "api-tasks",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/tasks.ts",
+              "symbol": "computeUnlockedPhaseIds",
+              "line": 3
+            }
+          },
+
+          {
+            "from": "api-billing",
+            "to": "api-org-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/billing.ts",
+              "symbol": "import { resolveOrgSession } from '../lib/session.js'",
+              "line": 6
+            }
+          },
+          {
+            "from": "api-billing",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/billing/start-trial.ts",
+              "symbol": "tx.insert(subscription).values({ organizationId, status: 'trialing', trialStartedAt: now, trialEndsAt })",
+              "line": 14
+            }
+          },
+          {
+            "from": "api-billing",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/billing/start-trial.ts",
+              "symbol": "import { TRIAL_LENGTH_DAYS } from '@staffcomplete/shared'",
+              "line": 2
+            }
+          },
+
+          {
+            "from": "api-activity",
+            "to": "api-org-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/routes/activity.ts",
+              "symbol": "import { orgAuth } from '../middleware/org-auth.js'",
+              "line": 3
+            }
+          },
+          {
+            "from": "api-activity",
+            "to": "api-db",
+            "type": "reads",
+            "evidence": {
+              "path": "apps/api/src/routes/activity.ts",
+              "symbol": "await withTenant(organizationId, async (tx) => ({ runs, steps }))",
+              "line": 17
+            }
+          },
+
+          {
+            "from": "api-run-steps",
+            "to": "api-queue",
+            "type": "publishes",
+            "evidence": {
+              "path": "apps/api/src/lib/run-steps.ts",
+              "symbol": "queue.enqueue({ name: AUTOMATED_STEP_EXECUTE_JOB, ... }, { singletonKey: step.id, retryLimit: 5, retryBackoff: true })",
+              "line": 49
+            }
+          },
+          {
+            "from": "api-run-steps",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/lib/run-steps.ts",
+              "symbol": "tx.update(runStep).set({ status: 'completed', completedAt: new Date() })",
+              "line": 70
+            }
+          },
+          {
+            "from": "api-run-steps",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/lib/run-steps.ts",
+              "symbol": "import { computeUnlockedPhaseIds, isStepLocked } from '@staffcomplete/shared'",
+              "line": 2
+            }
+          },
+
+          {
+            "from": "api-jobs",
+            "to": "api-run-steps",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/jobs/execute-automated-step.ts",
+              "symbol": "import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'",
+              "line": 11
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-db",
+            "type": "reads",
+            "evidence": {
+              "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+              "symbol": "db.query.subscription.findMany({ where: eq(subscription.status, 'trialing') })",
+              "line": 21
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
+              "symbol": "db.update(subscription).set({ status: 'expired' })",
+              "line": 48
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-auth",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/jobs/execute-automated-step.ts",
+              "symbol": "import { escapeHtml, sendAuthEmail } from '../auth.js'",
+              "line": 8
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "resend",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/api/src/jobs/execute-automated-step.ts",
+              "symbol": "result = await sendAuthEmail(to, subject, html)",
+              "line": 113
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/jobs/execute-automated-step.ts",
+              "symbol": "import { isAutomatedActionKey, parseAutomatedActionConfig, substituteAutomationTokens } from '@staffcomplete/shared'",
+              "line": 2
+            }
+          },
+
+          {
+            "from": "api-queue",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/queue/index.ts",
+              "symbol": "import type { Queue } from '@staffcomplete/shared'",
+              "line": 2
+            }
+          },
+          {
+            "from": "api-queue",
+            "to": "postgres",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/queue/index.ts",
+              "symbol": "new PgBoss(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete')",
+              "line": 10
+            }
+          },
+          {
+            "from": "api-db",
+            "to": "postgres",
+            "type": "reads",
+            "evidence": {
+              "path": "apps/api/src/db/index.ts",
+              "symbol": "postgres(process.env.DATABASE_URL ?? 'postgres://localhost:5432/staffcomplete', { max: 10, idle_timeout: 20 })",
+              "line": 6
+            }
+          },
+          {
+            "from": "api-db",
+            "to": "postgres",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/db/index.ts",
+              "symbol": "tenantDb.transaction(async (tx) => { await tx.execute(rawSql`select set_config('app.organization_id', ...)`) })",
+              "line": 50
+            }
+          }
+        ],
+        "flows": [
+          {
+            "id": "flow-signup-trial",
+            "name": "Sign-up → organization → 30-day trial",
+            "trigger": "POST /api/onboard from the sign-up form, followed by the first session creation",
+            "steps": [
+              "web-spa",
+              "web-client-lib",
+              "api-app",
+              "api-onboard",
+              "api-auth",
+              "api-billing",
+              "api-db",
+              "postgres",
+              "resend"
+            ],
+            "outcome": "User and organization rows exist, a verification email is sent, and the first session creation fires handleSessionCreate → startTrialIfNeeded, inserting a subscription row with status 'trialing' and trialEndsAt = now + TRIAL_LENGTH_DAYS (30). The insert is idempotent via onConflictDoNothing."
+          },
+          {
+            "id": "flow-start-run",
+            "name": "Start a run → dispatch automated steps → send email",
+            "trigger": "POST /api/runs (admin) with a checklist template id",
+            "steps": [
+              "web-spa",
+              "web-composables",
+              "web-client-lib",
+              "api-app",
+              "api-org-auth",
+              "api-runs",
+              "api-db",
+              "api-run-steps",
+              "api-queue",
+              "api-jobs",
+              "resend"
+            ],
+            "outcome": "The template is snapshotted into run, runPhase, runPhaseDependency and runStep rows inside one tenant transaction. After it commits, every automated step in an unlocked phase is enqueued (singletonKey = step id, retryLimit 5); the execute-automated-step handler sends the email via Resend, completes the step, and cascades into any newly unlocked steps."
+          },
+          {
+            "id": "flow-complete-task",
+            "name": "Complete a task → unlock next phase → cascade",
+            "trigger": "POST /api/tasks/:id/complete by the assigned member",
+            "steps": [
+              "web-spa",
+              "web-composables",
+              "web-client-lib",
+              "api-app",
+              "api-org-auth",
+              "api-tasks",
+              "api-run-steps",
+              "api-db",
+              "api-queue",
+              "api-jobs"
+            ],
+            "outcome": "completeRunStep marks the step completed, re-derives run.status (completed when every sibling step is), and computes which automated steps the completion just unlocked. Those are dispatched only after the transaction commits, so the next phase's automation begins."
+          },
+          {
+            "id": "flow-trial-lifecycle",
+            "name": "Daily trial lifecycle scan",
+            "trigger": "pg-boss cron '0 13 * * *' on the trial-lifecycle-scan queue",
+            "steps": ["api-queue", "api-app", "api-jobs", "api-db", "postgres", "resend"],
+            "outcome": "Every trialing subscription is checked cross-tenant on the superuser connection: expired ones flip to status 'expired'; ones within 3 days of expiry get a reminder email to all admins/owners, with trialReminderSentAt written immediately after each send so a crash or second run cannot double-send."
+          },
+          {
+            "id": "flow-trial-enforcement",
+            "name": "Trial-expiry enforcement on mutations",
+            "trigger": "Any non-GET request to an org-scoped route",
+            "steps": ["web-client-lib", "api-app", "api-org-auth", "api-db", "shared-domain"],
+            "outcome": "orgAuth resolves session and membership, and for mutations loads the subscription and evaluates computeTrialState. A row that is 'expired', or 'trialing' but past trialEndsAt, returns 402 TRIAL_EXPIRED. GET/HEAD skip the lookup entirely, keeping expired orgs read-only rather than locked out."
+          }
+        ],
+        "unknowns": []
+      }
+    </script>
+    <script>
+      const DATA = JSON.parse(document.getElementById('cm-data').textContent)
+      const REPO = 'staff-complete/staffcomplete'
+
+      const TYPE_COLOR = {
+        frontend: '#58a6ff',
+        shared: '#d2a8ff',
+        api: '#3fb950',
+        route: '#56d4dd',
+        worker: '#e3b341',
+        data: '#ff7b72',
+        queue: '#ffa657',
+        external: '#8b949e',
+      }
+      const TYPE_LABEL = {
+        frontend: 'Frontend',
+        shared: 'Shared contracts',
+        api: 'API core',
+        route: 'HTTP route',
+        worker: 'Worker / engine',
+        data: 'Data layer',
+        queue: 'Queue',
+        external: 'External',
+      }
+      const EDGE_COLOR = {
+        imports: '#7d8590',
+        calls: '#58a6ff',
+        reads: '#3fb950',
+        writes: '#ff7b72',
+        publishes: '#ffa657',
+        subscribes: '#d2a8ff',
+      }
+
+      // ---- layout: columns + barycenter sweeps to reduce edge crossings ----
+      const COLUMNS = [
+        { title: 'Browser', ids: ['web-spa', 'web-composables', 'web-client-lib'] },
+        { title: 'API core', ids: ['api-app', 'api-auth', 'api-org-auth'] },
+        {
+          title: 'HTTP routes',
+          ids: [
+            'api-onboard',
+            'api-invites',
+            'api-checklists',
+            'api-runs',
+            'api-tasks',
+            'api-billing',
+            'api-activity',
+          ],
+        },
+        { title: 'Engine & jobs', ids: ['api-run-steps', 'api-jobs', 'api-queue'] },
+        { title: 'Contracts & data', ids: ['api-db', 'shared-domain'] },
+        { title: 'External', ids: ['postgres', 'resend'] },
+      ]
+
+      const NW = 176,
+        NH = 54,
+        COL_GAP = 108,
+        ROW_GAP = 26,
+        PAD_X = 40,
+        PAD_Y = 64
+
+      const byId = new Map(DATA.nodes.map((n) => [n.id, n]))
+      const order = COLUMNS.map((c) => c.ids.slice())
+
+      // barycenter ordering: repeatedly reorder each column by the mean index
+      // of its neighbors in the adjacent columns, which is the standard cheap
+      // heuristic for minimizing crossings in a layered layout.
+      const colOf = new Map()
+      order.forEach((ids, ci) => ids.forEach((id) => colOf.set(id, ci)))
+      const neighbors = new Map(DATA.nodes.map((n) => [n.id, []]))
+      for (const e of DATA.edges) {
+        if (!byId.has(e.from) || !byId.has(e.to)) continue
+        neighbors.get(e.from).push(e.to)
+        neighbors.get(e.to).push(e.from)
+      }
+      function indexIn(ci, id) {
+        const i = order[ci].indexOf(id)
+        return i < 0 ? null : i
+      }
+      for (let sweep = 0; sweep < 12; sweep++) {
+        for (let ci = 0; ci < order.length; ci++) {
+          const scored = order[ci].map((id, i) => {
+            const vals = []
+            for (const nb of neighbors.get(id)) {
+              const nc = colOf.get(nb)
+              if (nc === ci) continue
+              const idx = indexIn(nc, nb)
+              if (idx != null)
+                vals.push(
+                  (idx / Math.max(1, order[nc].length - 1)) * Math.max(1, order[ci].length - 1),
+                )
+            }
+            const barycenter = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : i
+            return { id, barycenter, i }
+          })
+          scored.sort((a, b) => a.barycenter - b.barycenter || a.i - b.i)
+          order[ci] = scored.map((s) => s.id)
+        }
+      }
+
+      const pos = new Map()
+      const tallest = Math.max(...order.map((c) => c.length))
+      const stageH = PAD_Y + tallest * (NH + ROW_GAP) + PAD_Y
+      order.forEach((ids, ci) => {
+        const x = PAD_X + ci * (NW + COL_GAP)
+        const colH = ids.length * (NH + ROW_GAP) - ROW_GAP
+        const y0 = (stageH - colH) / 2
+        ids.forEach((id, ri) => pos.set(id, { x, y: y0 + ri * (NH + ROW_GAP) }))
+      })
+      const stageW = PAD_X + order.length * (NW + COL_GAP) - COL_GAP + PAD_X
+
+      // system boundaries drawn behind the columns
+      const BOUNDARIES = [
+        { title: 'Browser', cols: [0], color: '#58a6ff' },
+        { title: 'API server (Hono + workers)', cols: [1, 2, 3], color: '#3fb950' },
+        { title: 'Contracts', cols: [4], color: '#d2a8ff' },
+        { title: 'External services', cols: [5], color: '#8b949e' },
+      ]
+
+      // ---- derived relationship indexes ----
+      const upstream = new Map(DATA.nodes.map((n) => [n.id, new Set()]))
+      const downstream = new Map(DATA.nodes.map((n) => [n.id, new Set()]))
+      for (const e of DATA.edges) {
+        if (!byId.has(e.from) || !byId.has(e.to)) continue
+        downstream.get(e.from).add(e.to)
+        upstream.get(e.to).add(e.from)
+      }
+      const flowsOf = new Map(DATA.nodes.map((n) => [n.id, []]))
+      for (const f of DATA.flows) for (const s of new Set(f.steps)) flowsOf.get(s)?.push(f.id)
+      const flowById = new Map(DATA.flows.map((f) => [f.id, f]))
+
+      // ---- state ----
+      let selectedNode = null
+      let selectedFlow = null
+      let query = ''
+      const hiddenTypes = new Set()
+
+      // ---- header ----
+      document.getElementById('repo-name').textContent = REPO
+      document.getElementById('gen-time').textContent = DATA.generated_at
+      document.getElementById('gen-commit').textContent = (DATA.generated_from_commit || '').slice(
+        0,
+        12,
+      )
+      document.getElementById('gen-scope').textContent = DATA.scope.join(', ')
+      document.getElementById('gen-counts').textContent =
+        DATA.nodes.length +
+        ' nodes · ' +
+        DATA.edges.length +
+        ' edges · ' +
+        DATA.flows.length +
+        ' flows'
+
+      // ---- legend / filters ----
+      const legendEl = document.getElementById('legend')
+      for (const t of Object.keys(TYPE_COLOR)) {
+        if (!DATA.nodes.some((n) => n.role === t)) continue
+        const b = document.createElement('button')
+        b.innerHTML =
+          '<span class="swatch" style="background:' + TYPE_COLOR[t] + '"></span>' + TYPE_LABEL[t]
+        b.onclick = () => {
+          hiddenTypes.has(t) ? hiddenTypes.delete(t) : hiddenTypes.add(t)
+          b.classList.toggle('off', hiddenTypes.has(t))
+          render()
+        }
+        legendEl.appendChild(b)
+      }
+
+      const flowEl = document.getElementById('flow-buttons')
+      for (const f of DATA.flows) {
+        const b = document.createElement('button')
+        b.textContent = f.name
+        b.dataset.flow = f.id
+        b.onclick = () => {
+          selectedFlow = selectedFlow === f.id ? null : f.id
+          selectedNode = null
+          render()
+        }
+        flowEl.appendChild(b)
+      }
+
+      document.getElementById('search').oninput = (e) => {
+        query = e.target.value.trim().toLowerCase()
+        render()
+      }
+      document.getElementById('reset').onclick = () => {
+        selectedNode = null
+        selectedFlow = null
+        query = ''
+        document.getElementById('search').value = ''
+        hiddenTypes.clear()
+        ;[...legendEl.children].forEach((c) => c.classList.remove('off'))
+        view = { x: 0, y: 0, k: 1 }
+        fit()
+        render()
+      }
+
+      // ---- svg build ----
+      const svg = document.getElementById('svg')
+      const viewport = document.getElementById('viewport')
+      const defs = document.getElementById('defs')
+      for (const [type, color] of Object.entries(EDGE_COLOR)) {
+        defs.insertAdjacentHTML(
+          'beforeend',
+          '<marker id="arrow-' +
+            type +
+            '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+            '<path d="M 0 0 L 10 5 L 0 10 z" fill="' +
+            color +
+            '"/></marker>',
+        )
+      }
+
+      const gB = document.getElementById('g-boundaries')
+      for (const b of BOUNDARIES) {
+        const x0 = PAD_X + b.cols[0] * (NW + COL_GAP) - 18
+        const last = b.cols[b.cols.length - 1]
+        const x1 = PAD_X + last * (NW + COL_GAP) + NW + 18
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        g.setAttribute('class', 'boundary')
+        g.innerHTML =
+          '<rect x="' +
+          x0 +
+          '" y="26" width="' +
+          (x1 - x0) +
+          '" height="' +
+          (stageH - 52) +
+          '" style="stroke:' +
+          b.color +
+          '33"/>' +
+          '<text x="' +
+          (x0 + 12) +
+          '" y="46">' +
+          b.title +
+          '</text>'
+        gB.appendChild(g)
+      }
+
+      const gE = document.getElementById('g-edges')
+      const gEL = document.getElementById('g-edge-labels')
+      const gN = document.getElementById('g-nodes')
+
+      function anchors(a, b) {
+        const dx = b.x - a.x
+        if (dx > 0) return [{ x: a.x + NW, y: a.y + NH / 2 }, { x: b.x, y: b.y + NH / 2 }, 1]
+        if (dx < 0) return [{ x: a.x, y: a.y + NH / 2 }, { x: b.x + NW, y: b.y + NH / 2 }, -1]
+        return [{ x: a.x + NW, y: a.y + NH / 2 }, { x: b.x + NW, y: b.y + NH / 2 }, 0]
+      }
+      function pathFor(a, b) {
+        const [s, t, dir] = anchors(a, b)
+        if (dir === 0) {
+          const off = 54
+          return (
+            'M' +
+            s.x +
+            ',' +
+            s.y +
+            ' C' +
+            (s.x + off) +
+            ',' +
+            s.y +
+            ' ' +
+            (t.x + off) +
+            ',' +
+            t.y +
+            ' ' +
+            t.x +
+            ',' +
+            t.y
+          )
+        }
+        const c = Math.max(46, Math.abs(t.x - s.x) * 0.45) * dir
+        return (
+          'M' +
+          s.x +
+          ',' +
+          s.y +
+          ' C' +
+          (s.x + c) +
+          ',' +
+          s.y +
+          ' ' +
+          (t.x - c) +
+          ',' +
+          t.y +
+          ' ' +
+          t.x +
+          ',' +
+          t.y
+        )
+      }
+
+      const edgeEls = DATA.edges.map((e, i) => {
+        const a = pos.get(e.from),
+          b = pos.get(e.to)
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        p.setAttribute('class', 'edge')
+        p.setAttribute('d', pathFor(a, b))
+        p.setAttribute('stroke', EDGE_COLOR[e.type])
+        p.setAttribute('marker-end', 'url(#arrow-' + e.type + ')')
+        gE.appendChild(p)
+        const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        lbl.setAttribute('class', 'edge-label')
+        lbl.textContent = e.type
+        gEL.appendChild(lbl)
+        return { e, p, lbl, i }
+      })
+      function placeLabels() {
+        for (const { e, p, lbl } of edgeEls) {
+          const len = p.getTotalLength()
+          if (!len) continue
+          const pt = p.getPointAtLength(len / 2)
+          lbl.setAttribute('x', pt.x)
+          lbl.setAttribute('y', pt.y - 5)
+        }
+      }
+
+      const nodeEls = DATA.nodes.map((n) => {
+        const p = pos.get(n.id)
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        g.setAttribute('class', 'node')
+        g.setAttribute('transform', 'translate(' + p.x + ',' + p.y + ')')
+        const color = TYPE_COLOR[n.role] || '#8b949e'
+        const label = n.label || n.id
+        const short = n.path.replace(/^apps\/|^packages\//, '')
+        g.innerHTML =
+          '<rect width="' +
+          NW +
+          '" height="' +
+          NH +
+          '" stroke="' +
+          color +
+          '"/>' +
+          '<rect x="0" y="0" width="4" height="' +
+          NH +
+          '" fill="' +
+          color +
+          '" rx="2"/>' +
+          '<text class="n-label" x="13" y="22">' +
+          esc(label) +
+          '</text>' +
+          '<text class="n-path" x="13" y="38">' +
+          esc(short) +
+          '</text>'
+        g.onclick = (ev) => {
+          ev.stopPropagation()
+          selectedNode = selectedNode === n.id ? null : n.id
+          selectedFlow = null
+          render()
+        }
+        makeDraggable(g, n.id)
+        gN.appendChild(g)
+        return { n, g }
+      })
+
+      function esc(s) {
+        return String(s).replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        )
+      }
+
+      // ---- drag nodes ----
+      function makeDraggable(g, id) {
+        let start = null
+        g.addEventListener('pointerdown', (ev) => {
+          ev.stopPropagation()
+          start = { mx: ev.clientX, my: ev.clientY, ...pos.get(id) }
+          g.setPointerCapture(ev.pointerId)
+        })
+        g.addEventListener('pointermove', (ev) => {
+          if (!start) return
+          const p = pos.get(id)
+          p.x = start.x + (ev.clientX - start.mx) / view.k
+          p.y = start.y + (ev.clientY - start.my) / view.k
+          g.setAttribute('transform', 'translate(' + p.x + ',' + p.y + ')')
+          for (const { e, p: path } of edgeEls) {
+            if (e.from === id || e.to === id)
+              path.setAttribute('d', pathFor(pos.get(e.from), pos.get(e.to)))
+          }
+          placeLabels()
+        })
+        const end = (ev) => {
+          if (start) {
+            start = null
+            try {
+              g.releasePointerCapture(ev.pointerId)
+            } catch {}
+          }
+        }
+        g.addEventListener('pointerup', end)
+        g.addEventListener('pointercancel', end)
+      }
+
+      // ---- pan & zoom ----
+      let view = { x: 0, y: 0, k: 1 }
+      function applyView() {
+        viewport.setAttribute(
+          'transform',
+          'translate(' + view.x + ',' + view.y + ') scale(' + view.k + ')',
+        )
+      }
+      function fit() {
+        const r = svg.getBoundingClientRect()
+        const k = Math.min(r.width / stageW, r.height / stageH, 1.15) * 0.94
+        view.k = k
+        view.x = (r.width - stageW * k) / 2
+        view.y = (r.height - stageH * k) / 2
+        applyView()
+      }
+      svg.addEventListener(
+        'wheel',
+        (ev) => {
+          ev.preventDefault()
+          const r = svg.getBoundingClientRect()
+          const mx = ev.clientX - r.left,
+            my = ev.clientY - r.top
+          const f = ev.deltaY < 0 ? 1.12 : 1 / 1.12
+          const nk = Math.min(3, Math.max(0.25, view.k * f))
+          view.x = mx - ((mx - view.x) * nk) / view.k
+          view.y = my - ((my - view.y) * nk) / view.k
+          view.k = nk
+          applyView()
+        },
+        { passive: false },
+      )
+      let pan = null
+      svg.addEventListener('pointerdown', (ev) => {
+        pan = { mx: ev.clientX, my: ev.clientY, x: view.x, y: view.y }
+        svg.classList.add('panning')
+      })
+      svg.addEventListener('pointermove', (ev) => {
+        if (!pan) return
+        view.x = pan.x + (ev.clientX - pan.mx)
+        view.y = pan.y + (ev.clientY - pan.my)
+        applyView()
+      })
+      const endPan = () => {
+        pan = null
+        svg.classList.remove('panning')
+      }
+      svg.addEventListener('pointerup', endPan)
+      svg.addEventListener('pointerleave', endPan)
+      svg.addEventListener('click', (ev) => {
+        if (ev.target === svg || ev.target.closest('.boundary')) {
+          selectedNode = null
+          selectedFlow = null
+          render()
+        }
+      })
+
+      // ---- render / highlight ----
+      function matches(n) {
+        if (!query) return false
+        const hay = [
+          n.id,
+          n.path,
+          n.label,
+          n.role,
+          n.summary,
+          (n.grouped_files || []).join(' '),
+          n.tests.join(' '),
+          n.entrypoints.map((e) => e.symbol + ' ' + e.path).join(' '),
+          n.evidence.map((e) => e.symbol + ' ' + e.path).join(' '),
+          n.constraints.join(' '),
+        ]
+          .join(' ')
+          .toLowerCase()
+        return hay.includes(query)
+      }
+
+      function render() {
+        const visible = (n) => !hiddenTypes.has(n.role)
+        let hlNodes = null,
+          hlEdges = null
+
+        if (selectedFlow) {
+          const f = flowById.get(selectedFlow)
+          hlNodes = new Set(f.steps)
+          hlEdges = new Set()
+          for (let i = 0; i < f.steps.length - 1; i++) {
+            const a = f.steps[i],
+              b = f.steps[i + 1]
+            edgeEls.forEach(({ e }, idx) => {
+              if ((e.from === a && e.to === b) || (e.from === b && e.to === a)) hlEdges.add(idx)
+            })
+          }
+        } else if (selectedNode) {
+          hlNodes = new Set([
+            selectedNode,
+            ...upstream.get(selectedNode),
+            ...downstream.get(selectedNode),
+          ])
+          hlEdges = new Set()
+          edgeEls.forEach(({ e }, idx) => {
+            if (e.from === selectedNode || e.to === selectedNode) hlEdges.add(idx)
+          })
+        } else if (query) {
+          hlNodes = new Set(DATA.nodes.filter(matches).map((n) => n.id))
+          hlEdges = new Set()
+          edgeEls.forEach(({ e }, idx) => {
+            if (hlNodes.has(e.from) && hlNodes.has(e.to)) hlEdges.add(idx)
+          })
+        }
+
+        for (const { n, g } of nodeEls) {
+          g.classList.toggle('hidden', !visible(n))
+          g.classList.toggle('sel', n.id === selectedNode)
+          g.classList.toggle('up', !!selectedNode && upstream.get(selectedNode).has(n.id))
+          g.classList.toggle('down', !!selectedNode && downstream.get(selectedNode).has(n.id))
+          g.classList.toggle('dim', !!hlNodes && !hlNodes.has(n.id))
+        }
+        edgeEls.forEach(({ e, p, lbl }, idx) => {
+          const vis = visible(byId.get(e.from)) && visible(byId.get(e.to))
+          p.style.display = vis ? '' : 'none'
+          lbl.style.display = vis ? '' : 'none'
+          const on = !!hlEdges && hlEdges.has(idx)
+          p.classList.toggle('hl', on)
+          lbl.classList.toggle('hl', on)
+          p.classList.toggle('dim', !!hlEdges && !on)
+        })
+        ;[...flowEl.children].forEach((b) =>
+          b.classList.toggle('active', b.dataset.flow === selectedFlow),
+        )
+        renderPanel()
+      }
+
+      function link(id) {
+        const n = byId.get(id)
+        return (
+          '<span class="rel" data-goto="' + id + '">' + esc(n ? n.label || n.id : id) + '</span>'
+        )
+      }
+
+      function renderPanel() {
+        const el = document.getElementById('panel')
+        if (selectedFlow) {
+          const f = flowById.get(selectedFlow)
+          el.innerHTML =
+            '<h2>' +
+            esc(f.name) +
+            '</h2>' +
+            '<div class="sub">flow · ' +
+            esc(f.id) +
+            '</div>' +
+            '<h3>Trigger</h3><p>' +
+            esc(f.trigger) +
+            '</p>' +
+            '<h3>Path (' +
+            f.steps.length +
+            ' steps)</h3><ol style="padding-left:18px;margin:0">' +
+            f.steps.map((s) => '<li>' + link(s) + '</li>').join('') +
+            '</ol>' +
+            '<h3>Outcome</h3><p>' +
+            esc(f.outcome) +
+            '</p>'
+          wireLinks(el)
+          return
+        }
+        if (!selectedNode) {
+          el.innerHTML =
+            '<h2>Code map</h2>' +
+            '<div class="sub">' +
+            esc(REPO) +
+            ' @ ' +
+            esc((DATA.generated_from_commit || '').slice(0, 7)) +
+            '</div>' +
+            '<p class="hint">Click any module to see its upstream callers, downstream dependencies, tests and flows. Pick a flow above to light up its whole path.</p>' +
+            '<h3>Controls</h3><ul class="hint">' +
+            '<li><span class="kbd">click</span> a module — highlight its neighborhood</li>' +
+            '<li><span class="kbd">drag</span> a module — reposition it</li>' +
+            '<li><span class="kbd">drag</span> background — pan · <span class="kbd">wheel</span> — zoom</li>' +
+            '<li><span class="kbd">search</span> — matches ids, paths, symbols, constraints</li>' +
+            '</ul>' +
+            '<h3>Flows</h3><ul>' +
+            DATA.flows
+              .map(
+                (f) =>
+                  '<li><span class="rel" data-flow="' + f.id + '">' + esc(f.name) + '</span></li>',
+              )
+              .join('') +
+            '</ul>' +
+            '<h3>Scope</h3><ul>' +
+            DATA.scope.map((s) => '<li><code>' + esc(s) + '</code></li>').join('') +
+            '</ul>'
+          wireLinks(el)
+          return
+        }
+        const n = byId.get(selectedNode)
+        const ups = [...upstream.get(n.id)],
+          downs = [...downstream.get(n.id)]
+        const fl = flowsOf.get(n.id) || []
+        const edgesIn = DATA.edges.filter((e) => e.to === n.id)
+        const edgesOut = DATA.edges.filter((e) => e.from === n.id)
+        el.innerHTML =
+          '<span class="pill" style="background:' +
+          (TYPE_COLOR[n.role] || '#8b949e') +
+          '">' +
+          esc(TYPE_LABEL[n.role] || n.role) +
+          '</span>' +
+          '<h2>' +
+          esc(n.label || n.id) +
+          '</h2>' +
+          '<div class="sub">' +
+          esc(n.path) +
+          '</div>' +
+          (n.summary ? '<p>' + esc(n.summary) + '</p>' : '') +
+          section(
+            'Upstream callers (' + ups.length + ')',
+            ups.length
+              ? '<ul>' +
+                  edgesIn
+                    .map(
+                      (e) =>
+                        '<li>' +
+                        link(e.from) +
+                        ' <code>' +
+                        esc(e.type) +
+                        '</code><br><code>' +
+                        esc(e.evidence.path) +
+                        ':' +
+                        e.evidence.line +
+                        '</code></li>',
+                    )
+                    .join('') +
+                  '</ul>'
+              : '<p class="empty">None — nothing in scope calls into this.</p>',
+          ) +
+          section(
+            'Downstream dependencies (' + downs.length + ')',
+            downs.length
+              ? '<ul>' +
+                  edgesOut
+                    .map(
+                      (e) =>
+                        '<li>' +
+                        link(e.to) +
+                        ' <code>' +
+                        esc(e.type) +
+                        '</code><br><code>' +
+                        esc(e.evidence.path) +
+                        ':' +
+                        e.evidence.line +
+                        '</code></li>',
+                    )
+                    .join('') +
+                  '</ul>'
+              : '<p class="empty">None — this is a leaf.</p>',
+          ) +
+          section(
+            'Flows (' + fl.length + ')',
+            fl.length
+              ? '<ul>' +
+                  fl
+                    .map(
+                      (id) =>
+                        '<li><span class="rel" data-flow="' +
+                        id +
+                        '">' +
+                        esc(flowById.get(id).name) +
+                        '</span></li>',
+                    )
+                    .join('') +
+                  '</ul>'
+              : '<p class="empty">Not part of a mapped flow.</p>',
+          ) +
+          section(
+            'Tests (' + n.tests.length + ')',
+            n.tests.length
+              ? '<ul>' +
+                  n.tests.map((t) => '<li><code>' + esc(t) + '</code></li>').join('') +
+                  '</ul>'
+              : '<p class="empty">No tests reference this module directly.</p>',
+          ) +
+          section(
+            'Entrypoints',
+            '<ul>' +
+              n.entrypoints
+                .map(
+                  (e) =>
+                    '<li><code>' +
+                    esc(e.symbol) +
+                    '</code><br><code>' +
+                    esc(e.path) +
+                    ':' +
+                    e.line +
+                    '</code></li>',
+                )
+                .join('') +
+              '</ul>',
+          ) +
+          (n.grouped_files && n.grouped_files.length
+            ? section(
+                'Grouped files',
+                '<ul>' +
+                  n.grouped_files.map((f) => '<li><code>' + esc(f) + '</code></li>').join('') +
+                  '</ul>',
+              )
+            : '') +
+          section(
+            'Constraints',
+            n.constraints.length
+              ? '<ul>' + n.constraints.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>'
+              : '<p class="empty">None recorded.</p>',
+          ) +
+          section(
+            'Evidence',
+            '<ul>' +
+              n.evidence
+                .map(
+                  (e) =>
+                    '<li><code>' +
+                    esc(e.path) +
+                    ':' +
+                    e.line +
+                    '</code><br><code>' +
+                    esc(e.symbol) +
+                    '</code></li>',
+                )
+                .join('') +
+              '</ul>',
+          )
+        wireLinks(el)
+      }
+      function section(title, body) {
+        return '<h3>' + esc(title) + '</h3>' + body
+      }
+      function wireLinks(el) {
+        el.querySelectorAll('[data-goto]').forEach((s) => {
+          s.onclick = () => {
+            selectedNode = s.dataset.goto
+            selectedFlow = null
+            render()
+          }
+        })
+        el.querySelectorAll('[data-flow]').forEach((s) => {
+          s.onclick = () => {
+            selectedFlow = s.dataset.flow
+            selectedNode = null
+            render()
+          }
+        })
+      }
+
+      window.addEventListener('resize', fit)
+      fit()
+      placeLabels()
+      render()
+    </script>
+  </body>
+</html>
