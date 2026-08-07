@@ -16,6 +16,12 @@
           },
           {
             "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/codemap-commit-refresh.sh",
+            "timeout": 60
+          },
+          {
+            "type": "command",
             "if": "Bash(git push *)",
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/block-dangerous-git-gh.sh"
           },
@@ -70,8 +76,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/codemap-status.sh",
-            "timeout": 10
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/codemap-refresh.mjs --check",
+            "timeout": 30
           }
         ]
       }

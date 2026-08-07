@@ -387,8 +387,8 @@
 
     <script id="cm-data" type="application/json">
       {
-        "generated_at": "2026-08-07T17:25:02Z",
-        "generated_from_commit": "217beaccb48bee824527fd0137d5dce50879a73a",
+        "generated_at": "2026-08-07T17:53:17Z",
+        "generated_from_commit": "963db1fd468629cba7343435182b53a2f5c8191c",
         "scope": ["apps/api", "apps/web", "packages/shared"],
         "nodes": [
           {
@@ -408,9 +408,21 @@
               "apps/web/src/i18n"
             ],
             "entrypoints": [
-              { "symbol": "createApp", "path": "apps/web/src/main.ts", "line": 8 },
-              { "symbol": "router", "path": "apps/web/src/router/index.ts", "line": 1 },
-              { "symbol": "requireAuth", "path": "apps/web/src/router/guards.ts", "line": 6 }
+              {
+                "symbol": "createApp",
+                "path": "apps/web/src/main.ts",
+                "line": 8
+              },
+              {
+                "symbol": "router",
+                "path": "apps/web/src/router/index.ts",
+                "line": 1
+              },
+              {
+                "symbol": "requireAuth",
+                "path": "apps/web/src/router/guards.ts",
+                "line": 6
+              }
             ],
             "tests": ["apps/web/src/index.test.ts", "apps/web/src/router/guards.test.ts"],
             "constraints": [
@@ -423,7 +435,11 @@
                 "symbol": "createApp(App).use(createPinia()).use(router).use(VueQueryPlugin).use(i18n).mount('#app')",
                 "line": 8
               },
-              { "path": "apps/web/src/router/index.ts", "symbol": "router.beforeEach", "line": 112 }
+              {
+                "path": "apps/web/src/router/index.ts",
+                "symbol": "router.beforeEach",
+                "line": 112
+              }
             ]
           },
           {
@@ -447,7 +463,11 @@
                 "path": "apps/web/src/composables/useMyTasks.ts",
                 "line": 28
               },
-              { "symbol": "useRuns", "path": "apps/web/src/composables/useRuns.ts", "line": 24 },
+              {
+                "symbol": "useRuns",
+                "path": "apps/web/src/composables/useRuns.ts",
+                "line": 24
+              },
               {
                 "symbol": "useChecklistTemplates",
                 "path": "apps/web/src/composables/useChecklistTemplates.ts",
@@ -501,9 +521,21 @@
               "apps/web/src/lib/stepForm.ts"
             ],
             "entrypoints": [
-              { "symbol": "apiFetch", "path": "apps/web/src/lib/api.ts", "line": 46 },
-              { "symbol": "apiFetchOrNull", "path": "apps/web/src/lib/api.ts", "line": 75 },
-              { "symbol": "authClient", "path": "apps/web/src/lib/auth-client.ts", "line": 5 }
+              {
+                "symbol": "apiFetch",
+                "path": "apps/web/src/lib/api.ts",
+                "line": 46
+              },
+              {
+                "symbol": "apiFetchOrNull",
+                "path": "apps/web/src/lib/api.ts",
+                "line": 75
+              },
+              {
+                "symbol": "authClient",
+                "path": "apps/web/src/lib/auth-client.ts",
+                "line": 5
+              }
             ],
             "tests": [
               "apps/web/src/lib/api.test.ts",
@@ -547,8 +579,16 @@
               "packages/shared/src/queue.ts"
             ],
             "entrypoints": [
-              { "symbol": "computeTrialState", "path": "packages/shared/src/trial.ts", "line": 13 },
-              { "symbol": "TRIAL_LENGTH_DAYS", "path": "packages/shared/src/trial.ts", "line": 3 },
+              {
+                "symbol": "computeTrialState",
+                "path": "packages/shared/src/trial.ts",
+                "line": 13
+              },
+              {
+                "symbol": "TRIAL_LENGTH_DAYS",
+                "path": "packages/shared/src/trial.ts",
+                "line": 3
+              },
               {
                 "symbol": "computeUnlockedPhaseIds",
                 "path": "packages/shared/src/phase.ts",
@@ -559,8 +599,16 @@
                 "path": "packages/shared/src/automation.ts",
                 "line": 75
               },
-              { "symbol": "Queue", "path": "packages/shared/src/queue.ts", "line": 27 },
-              { "symbol": "signUpSchema", "path": "packages/shared/src/index.ts", "line": 56 }
+              {
+                "symbol": "Queue",
+                "path": "packages/shared/src/queue.ts",
+                "line": 27
+              },
+              {
+                "symbol": "signUpSchema",
+                "path": "packages/shared/src/index.ts",
+                "line": 56
+              }
             ],
             "tests": [
               "packages/shared/src/index.test.ts",
@@ -593,10 +641,18 @@
             "role": "api",
             "label": "API app (Hono)",
             "summary": "Hono application root: mounts every router under /api, delegates /api/auth/** to Better Auth, serves the built SPA, and on direct execution boots the queue, registers job handlers and schedules the daily trial cron.",
-            "grouped_files": ["apps/api/src/index.ts"],
+            "grouped_files": ["apps/api/src/index.ts", "apps/api/src/lib/logger.ts"],
             "entrypoints": [
-              { "symbol": "app", "path": "apps/api/src/index.ts", "line": 25 },
-              { "symbol": "TRIAL_LIFECYCLE_SCAN_CRON", "path": "apps/api/src/index.ts", "line": 23 }
+              {
+                "symbol": "app",
+                "path": "apps/api/src/index.ts",
+                "line": 25
+              },
+              {
+                "symbol": "TRIAL_LIFECYCLE_SCAN_CRON",
+                "path": "apps/api/src/index.ts",
+                "line": 23
+              }
             ],
             "tests": ["apps/api/src/index.test.ts"],
             "constraints": [
@@ -624,10 +680,26 @@
             "summary": "Better Auth instance with the Drizzle adapter and organization plugin. Owns session creation hooks, email verification, password reset, invitation email, and the shared sendAuthEmail/escapeHtml helpers used by jobs and routes.",
             "grouped_files": ["apps/api/src/auth.ts"],
             "entrypoints": [
-              { "symbol": "auth", "path": "apps/api/src/auth.ts", "line": 82 },
-              { "symbol": "handleSessionCreate", "path": "apps/api/src/auth.ts", "line": 65 },
-              { "symbol": "sendAuthEmail", "path": "apps/api/src/auth.ts", "line": 48 },
-              { "symbol": "escapeHtml", "path": "apps/api/src/auth.ts", "line": 30 }
+              {
+                "symbol": "auth",
+                "path": "apps/api/src/auth.ts",
+                "line": 82
+              },
+              {
+                "symbol": "handleSessionCreate",
+                "path": "apps/api/src/auth.ts",
+                "line": 65
+              },
+              {
+                "symbol": "sendAuthEmail",
+                "path": "apps/api/src/auth.ts",
+                "line": 48
+              },
+              {
+                "symbol": "escapeHtml",
+                "path": "apps/api/src/auth.ts",
+                "line": 30
+              }
             ],
             "tests": ["apps/api/src/auth.test.ts"],
             "constraints": [
@@ -656,9 +728,21 @@
             "summary": "Single gate for org-scoped routes: resolves the session, the caller's membership and (on mutations only) the org's trial state in one pass, then stashes OrgAuth on the Hono context. Groups the resolveOrgSession helper.",
             "grouped_files": ["apps/api/src/middleware/org-auth.ts", "apps/api/src/lib/session.ts"],
             "entrypoints": [
-              { "symbol": "orgAuth", "path": "apps/api/src/middleware/org-auth.ts", "line": 48 },
-              { "symbol": "OrgAuth", "path": "apps/api/src/middleware/org-auth.ts", "line": 16 },
-              { "symbol": "resolveOrgSession", "path": "apps/api/src/lib/session.ts", "line": 13 }
+              {
+                "symbol": "orgAuth",
+                "path": "apps/api/src/middleware/org-auth.ts",
+                "line": 48
+              },
+              {
+                "symbol": "OrgAuth",
+                "path": "apps/api/src/middleware/org-auth.ts",
+                "line": 16
+              },
+              {
+                "symbol": "resolveOrgSession",
+                "path": "apps/api/src/lib/session.ts",
+                "line": 13
+              }
             ],
             "tests": ["apps/api/src/middleware/org-auth.test.ts"],
             "constraints": [
@@ -687,7 +771,11 @@
             "summary": "Public sign-up route: creates the user and organization through Better Auth, rolling back the user row if org creation fails.",
             "grouped_files": ["apps/api/src/routes/onboard.ts"],
             "entrypoints": [
-              { "symbol": "onboardRouter", "path": "apps/api/src/routes/onboard.ts", "line": 33 }
+              {
+                "symbol": "onboardRouter",
+                "path": "apps/api/src/routes/onboard.ts",
+                "line": 33
+              }
             ],
             "tests": ["apps/api/src/routes/onboard.test.ts"],
             "constraints": [
@@ -715,7 +803,11 @@
             "summary": "Admin-only invite listing, creation and revocation, plus two public token routes for viewing and accepting an invitation.",
             "grouped_files": ["apps/api/src/routes/invites.ts"],
             "entrypoints": [
-              { "symbol": "invitesRouter", "path": "apps/api/src/routes/invites.ts", "line": 26 }
+              {
+                "symbol": "invitesRouter",
+                "path": "apps/api/src/routes/invites.ts",
+                "line": 26
+              }
             ],
             "tests": ["apps/api/src/routes/invites.test.ts"],
             "constraints": [
@@ -775,7 +867,11 @@
             "summary": "Admin routes to list, read and start runs. Creating a run snapshots a checklist template into run/runPhase/runPhaseDependency/runStep rows and then dispatches whatever automated steps are immediately unlocked.",
             "grouped_files": ["apps/api/src/routes/runs.ts"],
             "entrypoints": [
-              { "symbol": "runsRouter", "path": "apps/api/src/routes/runs.ts", "line": 27 }
+              {
+                "symbol": "runsRouter",
+                "path": "apps/api/src/routes/runs.ts",
+                "line": 27
+              }
             ],
             "tests": ["apps/api/src/routes/runs.test.ts"],
             "constraints": [
@@ -803,7 +899,11 @@
             "summary": "Non-admin routes for the assignee's own work: GET /mine lists unlocked assigned steps, POST /:id/complete completes a step and dispatches anything the completion unlocked.",
             "grouped_files": ["apps/api/src/routes/tasks.ts"],
             "entrypoints": [
-              { "symbol": "tasksRouter", "path": "apps/api/src/routes/tasks.ts", "line": 14 }
+              {
+                "symbol": "tasksRouter",
+                "path": "apps/api/src/routes/tasks.ts",
+                "line": 14
+              }
             ],
             "tests": ["apps/api/src/routes/tasks.test.ts"],
             "constraints": [
@@ -835,7 +935,11 @@
               "apps/api/src/billing/start-trial.ts"
             ],
             "entrypoints": [
-              { "symbol": "billingRouter", "path": "apps/api/src/routes/billing.ts", "line": 8 },
+              {
+                "symbol": "billingRouter",
+                "path": "apps/api/src/routes/billing.ts",
+                "line": 8
+              },
               {
                 "symbol": "startTrialIfNeeded",
                 "path": "apps/api/src/billing/start-trial.ts",
@@ -877,7 +981,11 @@
             "summary": "Admin-only read model that joins recent runs and steps into a single activity feed for the dashboard.",
             "grouped_files": ["apps/api/src/routes/activity.ts"],
             "entrypoints": [
-              { "symbol": "activityRouter", "path": "apps/api/src/routes/activity.ts", "line": 7 }
+              {
+                "symbol": "activityRouter",
+                "path": "apps/api/src/routes/activity.ts",
+                "line": 7
+              }
             ],
             "tests": ["apps/api/src/routes/activity.test.ts"],
             "constraints": ["Read-only; router-wide orgAuth({ admin: true })."],
@@ -912,7 +1020,11 @@
                 "path": "apps/api/src/lib/run-steps.ts",
                 "line": 43
               },
-              { "symbol": "completeRunStep", "path": "apps/api/src/lib/run-steps.ts", "line": 62 },
+              {
+                "symbol": "completeRunStep",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 62
+              },
               {
                 "symbol": "AUTOMATED_STEP_EXECUTE_JOB",
                 "path": "apps/api/src/lib/run-steps.ts",
@@ -1002,11 +1114,31 @@
               "apps/api/src/db/migrations"
             ],
             "entrypoints": [
-              { "symbol": "db", "path": "apps/api/src/db/index.ts", "line": 11 },
-              { "symbol": "tenantDb", "path": "apps/api/src/db/index.ts", "line": 32 },
-              { "symbol": "withTenant", "path": "apps/api/src/db/index.ts", "line": 46 },
-              { "symbol": "subscription", "path": "apps/api/src/db/schema.ts", "line": 140 },
-              { "symbol": "runStep", "path": "apps/api/src/db/schema.ts", "line": 357 }
+              {
+                "symbol": "db",
+                "path": "apps/api/src/db/index.ts",
+                "line": 11
+              },
+              {
+                "symbol": "tenantDb",
+                "path": "apps/api/src/db/index.ts",
+                "line": 32
+              },
+              {
+                "symbol": "withTenant",
+                "path": "apps/api/src/db/index.ts",
+                "line": 46
+              },
+              {
+                "symbol": "subscription",
+                "path": "apps/api/src/db/schema.ts",
+                "line": 140
+              },
+              {
+                "symbol": "runStep",
+                "path": "apps/api/src/db/schema.ts",
+                "line": 357
+              }
             ],
             "tests": [],
             "constraints": [
@@ -1041,10 +1173,26 @@
             "summary": "PgBossQueue implements the shared Queue interface over pg-boss, which stores its own job tables in the same Postgres instance. Connects as the superuser because pg-boss must create its schema.",
             "grouped_files": ["apps/api/src/queue/index.ts", "apps/api/src/queue/pg-boss-queue.ts"],
             "entrypoints": [
-              { "symbol": "queue", "path": "apps/api/src/queue/index.ts", "line": 12 },
-              { "symbol": "startQueue", "path": "apps/api/src/queue/index.ts", "line": 14 },
-              { "symbol": "stopQueue", "path": "apps/api/src/queue/index.ts", "line": 18 },
-              { "symbol": "PgBossQueue", "path": "apps/api/src/queue/pg-boss-queue.ts", "line": 8 }
+              {
+                "symbol": "queue",
+                "path": "apps/api/src/queue/index.ts",
+                "line": 12
+              },
+              {
+                "symbol": "startQueue",
+                "path": "apps/api/src/queue/index.ts",
+                "line": 14
+              },
+              {
+                "symbol": "stopQueue",
+                "path": "apps/api/src/queue/index.ts",
+                "line": 18
+              },
+              {
+                "symbol": "PgBossQueue",
+                "path": "apps/api/src/queue/pg-boss-queue.ts",
+                "line": 8
+              }
             ],
             "tests": [],
             "constraints": [
@@ -1098,7 +1246,7 @@
               {
                 "path": "apps/api/src/db/setup-tenant-role.ts",
                 "symbol": "setup-tenant-role",
-                "line": 1
+                "line": 4
               }
             ]
           },
@@ -1110,7 +1258,11 @@
             "summary": "External transactional email provider. Every outbound email in the system — verification, password reset, invitation, trial reminder, and automated email.send steps — goes through the single sendAuthEmail wrapper.",
             "grouped_files": [],
             "entrypoints": [
-              { "symbol": "sendAuthEmail", "path": "apps/api/src/auth.ts", "line": 48 }
+              {
+                "symbol": "sendAuthEmail",
+                "path": "apps/api/src/auth.ts",
+                "line": 48
+              }
             ],
             "tests": [],
             "constraints": [
@@ -1159,7 +1311,7 @@
             "evidence": {
               "path": "apps/web/src/views/BillingView.vue",
               "symbol": "@staffcomplete/shared",
-              "line": 1
+              "line": 4
             }
           },
           {
@@ -1262,7 +1414,6 @@
               "line": 14
             }
           },
-
           {
             "from": "api-app",
             "to": "api-auth",
@@ -1393,7 +1544,6 @@
               "line": 50
             }
           },
-
           {
             "from": "api-auth",
             "to": "api-billing",
@@ -1444,7 +1594,6 @@
               "line": 50
             }
           },
-
           {
             "from": "api-org-auth",
             "to": "api-auth",
@@ -1475,7 +1624,6 @@
               "line": 3
             }
           },
-
           {
             "from": "api-onboard",
             "to": "api-auth",
@@ -1506,7 +1654,6 @@
               "line": 35
             }
           },
-
           {
             "from": "api-invites",
             "to": "api-org-auth",
@@ -1537,7 +1684,6 @@
               "line": 35
             }
           },
-
           {
             "from": "api-checklists",
             "to": "api-org-auth",
@@ -1568,7 +1714,6 @@
               "line": 95
             }
           },
-
           {
             "from": "api-runs",
             "to": "api-org-auth",
@@ -1609,7 +1754,6 @@
               "line": 163
             }
           },
-
           {
             "from": "api-tasks",
             "to": "api-org-auth",
@@ -1650,7 +1794,6 @@
               "line": 3
             }
           },
-
           {
             "from": "api-billing",
             "to": "api-org-auth",
@@ -1681,7 +1824,6 @@
               "line": 2
             }
           },
-
           {
             "from": "api-activity",
             "to": "api-org-auth",
@@ -1702,7 +1844,6 @@
               "line": 17
             }
           },
-
           {
             "from": "api-run-steps",
             "to": "api-queue",
@@ -1733,7 +1874,6 @@
               "line": 2
             }
           },
-
           {
             "from": "api-jobs",
             "to": "api-run-steps",
@@ -1794,7 +1934,6 @@
               "line": 2
             }
           },
-
           {
             "from": "api-queue",
             "to": "shared-domain",

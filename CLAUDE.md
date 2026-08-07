@@ -38,13 +38,22 @@ commit — `codemap.json` (the graph, with source evidence for every claim),
 `codemap.html` (self-contained interactive viewer), `codemap.lock` (commit,
 working-tree state, and a fingerprint per top-level module).
 
-**At the start of every code-changing task**, compare the repo against the lock:
+**The map keeps itself up to date.** A `git commit` hook refreshes it and stages
+it into the commit being made, so it always lands in the same commit — and the
+same PR — as the change it describes. A session-start hook reports its state.
+To check or refresh by hand:
 
 ```sh
-./.claude/hooks/codemap-status.sh
+node .claude/hooks/codemap-refresh.mjs --check   # report only
+node .claude/hooks/codemap-refresh.mjs           # refresh in place
 ```
 
-This also runs automatically at session start.
+What auto-refreshes is only what can be _derived_: module fingerprints, the
+recorded commit and timestamp, and evidence line numbers that moved because code
+shifted. Nodes, edges and flows are never invented by a script — when the graph
+itself stops matching the tree (a new module, a moved boundary, an edge that
+vanished), the commit hook refuses to rewrite and asks you to re-author with the
+`codemap` skill. A confidently wrong map is worse than a stale one.
 
 **Before modifying a module**, use `docs/codemap/codemap.json` to answer three
 questions — the `codemap` skill has the exact `jq` for each:
@@ -58,9 +67,11 @@ questions — the `codemap` skill has the exact `jq` for each:
 that answers confidently but wrongly is worse than no map.
 
 **Whenever module boundaries, dependencies, routes, databases, queues, or major
-data flows change, update the code map in the same commit as the code.** Pure
-edits inside an existing module that change none of those — a bug fix, a
-same-shape refactor, a copy change — do not require regeneration.
+data flows change, update the code map in the same commit as the code.** The
+commit hook enforces the mechanical half of this and blocks on the half it
+cannot do for you. Pure edits inside an existing module that change none of those
+— a bug fix, a same-shape refactor, a copy change — need no re-authoring; the
+hook refreshes the derived fields and moves on.
 
 Never hand-edit one of the three files alone; they are a set. Use the `codemap`
 skill, which carries the generation rules (max 20 nodes, evidence required on

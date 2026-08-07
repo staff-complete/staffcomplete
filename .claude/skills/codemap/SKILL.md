@@ -1,6 +1,6 @@
 ---
 name: codemap
-description: Check whether docs/codemap/ is current, query it for a module's callers, dependents and tests before changing code, and regenerate codemap.html + codemap.json + codemap.lock together when it is stale or when module boundaries, dependencies, routes, databases, queues, or data flows change. Use at the start of any code-changing task and before modifying any module.
+description: Keep docs/codemap/ self-updating (a git-commit hook refreshes derived fields and stages them into the same commit), query it for a module's callers, dependents and tests before changing code, and regenerate codemap.html + codemap.json + codemap.lock together when it is stale or when module boundaries, dependencies, routes, databases, queues, or data flows change. Use at the start of any code-changing task and before modifying any module.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob
 ---
 
@@ -25,17 +25,37 @@ Three files, always generated together from one commit:
 
 ## 1. Is the map current?
 
-```sh
-./.claude/hooks/codemap-status.sh
-```
+The map is self-updating. `.claude/hooks/codemap-refresh.mjs` runs on `git commit`
+(refreshing and staging into that commit) and at session start (`--check`, report
+only). To drive it by hand:
 
-Fast (~0.06s). Prints `current`, `STALE — drifted since <commit>: <modules>`, or a
-missing-file warning. This also runs automatically at session start.
+```sh
+node .claude/hooks/codemap-refresh.mjs --check   # report only
+node .claude/hooks/codemap-refresh.mjs           # refresh in place
+```
 
 It recomputes each module's fingerprint — sha256 over sorted `<path>\0<git blob
 sha1>` records for that module's tracked files — and compares against
 `codemap.lock`. Tracked files only: a brand-new untracked file does not register
-as drift until it is added.
+as drift until it is `git add`ed.
+
+**What it will fix by itself** (derived, provable):
+
+- module fingerprints, recorded commit, timestamp, working-tree dirty flag
+- evidence line numbers that moved because code shifted — anchored on the
+  _rarest_ identifier in the symbol, and only moved when the match is
+  unambiguous, so a correct line is never "corrected" into a wrong one
+- re-injecting `codemap.json` into `codemap.html` and re-running oxfmt
+
+**What it refuses to touch** (semantic, needs judgment):
+
+- nodes, edges, flows
+
+When a source file in scope is covered by no node, an evidence symbol has
+vanished, or a path in the map no longer exists, it prints
+`NEEDS RE-AUTHORING`, changes nothing, and the commit hook asks for confirmation
+before letting the commit through. That is the signal to do a real regeneration
+with the rest of this skill.
 
 ---
 
@@ -146,7 +166,7 @@ Read the real wiring — do not infer it:
 - Every node needs: `id`, `path`, `role`, `entrypoints`, `tests`, `constraints`,
   `evidence`. Attach a real source path **and** symbol to each entrypoint and
   evidence item.
-- `role` drives the viewer's colour coding: `frontend`, `shared`, `api`, `route`,
+- `role` drives the viewer's color coding: `frontend`, `shared`, `api`, `route`,
   `worker`, `data`, `queue`, `external`.
 
 ### Edge rules
