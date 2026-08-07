@@ -30,6 +30,44 @@ Full vocabulary lives in [CONTEXT.md](CONTEXT.md) — the glossary of canonical 
 
 ---
 
+## Code map — read before changing code
+
+`docs/codemap/` is the architectural map of the repo: modules, what calls what,
+and which tests cover each one. Three files, always generated together from one
+commit — `codemap.json` (the graph, with source evidence for every claim),
+`codemap.html` (self-contained interactive viewer), `codemap.lock` (commit,
+working-tree state, and a fingerprint per top-level module).
+
+**At the start of every code-changing task**, compare the repo against the lock:
+
+```sh
+./.claude/hooks/codemap-status.sh
+```
+
+This also runs automatically at session start.
+
+**Before modifying a module**, use `docs/codemap/codemap.json` to answer three
+questions — the `codemap` skill has the exact `jq` for each:
+
+1. **What calls it?** (upstream — who breaks if the contract changes)
+2. **What does it affect?** (downstream dependencies, and the flows it sits on)
+3. **Which tests cover it?**
+
+**If the map is stale, or cannot answer those three questions, regenerate
+`codemap.html` + `codemap.json` + `codemap.lock` before changing the code.** A map
+that answers confidently but wrongly is worse than no map.
+
+**Whenever module boundaries, dependencies, routes, databases, queues, or major
+data flows change, update the code map in the same commit as the code.** Pure
+edits inside an existing module that change none of those — a bug fix, a
+same-shape refactor, a copy change — do not require regeneration.
+
+Never hand-edit one of the three files alone; they are a set. Use the `codemap`
+skill, which carries the generation rules (max 20 nodes, evidence required on
+every edge, never guess a relationship) and the verification checklist.
+
+---
+
 ## Multi-tenancy — read before touching the schema
 
 - PostgreSQL **Row-Level Security (RLS)** enforces tenant isolation at the database level — never rely on application-level filtering alone.
@@ -101,4 +139,4 @@ Pick up an issue with `gh issue develop <n> --checkout`, or the `start-issue` sk
 
 `.claude/skills/` covers most recurring workflows — prefer these over doing the equivalent steps by hand:
 
-`start-issue` · `new-feature` · `new-adr` · `new-integration` · `new-automated-action` · `new-lifecycle-event` · `new-migration` · `domain-modeling` · `ci-check` · `release-check` · `security-check`
+`start-issue` · `new-feature` · `new-adr` · `new-integration` · `new-automated-action` · `new-lifecycle-event` · `new-migration` · `domain-modeling` · `codemap` · `ci-check` · `release-check` · `security-check`
