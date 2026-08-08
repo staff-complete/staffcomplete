@@ -48,12 +48,18 @@ node .claude/hooks/codemap-refresh.mjs --check   # report only
 node .claude/hooks/codemap-refresh.mjs           # refresh in place
 ```
 
-What auto-refreshes is only what can be _derived_: module fingerprints, the
-recorded commit and timestamp, and evidence line numbers that moved because code
-shifted. Nodes, edges and flows are never invented by a script — when the graph
-itself stops matching the tree (a new module, a moved boundary, an edge that
-vanished), the commit hook refuses to rewrite and asks you to re-author with the
-`codemap` skill. A confidently wrong map is worse than a stale one.
+**It rewrites only when the map's claims change** — when the graph fingerprint
+moves (nodes, edges, flows and their evidence, hashed without generation
+metadata), when evidence line numbers shift, or when the viewer falls out of sync
+with the JSON. A module fingerprint or timestamp changing is _not_ a reason to
+rewrite: a comment or a test edit moves the fingerprint while the architecture
+stays identical, so the map is verified, reported as still accurate, and left
+alone. That keeps `docs/codemap/` out of commits it has no business in.
+
+Nodes, edges and flows are never invented by a script — when the graph itself
+stops matching the tree (a new module, a moved boundary, an edge that vanished),
+the commit hook refuses to rewrite and asks you to re-author with the `codemap`
+skill. A confidently wrong map is worse than a stale one.
 
 **Before modifying a module**, use `docs/codemap/codemap.json` to answer three
 questions — the `codemap` skill has the exact `jq` for each:

@@ -1,8 +1,8 @@
 {
   "lock_version": 1,
-  "generated_at": "2026-08-07T18:10:22Z",
-  "commit": "e9d1b6c1e636de377773a909a6f971aafc116738",
-  "commit_short": "e9d1b6c",
+  "generated_at": "2026-08-08T12:06:02Z",
+  "commit": "94c4f61908ba640ebf8c7b2a4c9188869904cfaa",
+  "commit_short": "94c4f61",
   "branch": "chore/codemap-freshness-workflow",
   "working_tree_dirty": true,
   "working_tree_note": "Refreshed against a working tree with uncommitted tracked changes; fingerprints describe the files on disk, not the commit named above.",
@@ -98,5 +98,7 @@
     "docs/codemap/codemap.lock"
   ],
   "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three.",
-  "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash."
+  "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.",
+  "graph_fingerprint": "sha256:efb538dc675b6ed4a7dec388fae20f589bca31907154fdd5686e97b464aae9c6",
+  "graph_fingerprint_note": "sha256 over the map's claims only — scope, nodes, edges, flows, unknowns — with generated_at and the commit excluded. This, not the module fingerprints, is what decides whether the map needs rewriting."
 }

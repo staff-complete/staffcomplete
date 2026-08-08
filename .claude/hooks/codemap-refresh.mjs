@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Self-updating code map.
 //
-// Run with --check to report only. Default behaviour is to refresh
+// Run with --check to report only. Default behavior is to refresh
 // docs/codemap/{codemap.json,codemap.html,codemap.lock} in place when the
 // working tree has drifted from the lock.
 //
@@ -37,7 +37,26 @@ function repoPath(...parts) {
   }
   return abs
 }
-const exists = (p) => fs.existsSync(repoPath(p))
+const exists = (p) => pathExists(repoPath(p))
+
+// All filesystem access funnels through these three wrappers. Every path
+// reaching them has already been through repoPath(), which resolves it and
+// asserts it stays inside the checkout — so the "dynamically constructed path"
+// warning static analysis raises here is answered structurally at that one
+// gate rather than at each call site. Suppressed in the same style the API
+// already uses for its reviewed sinks (see apps/api/src/jobs/execute-automated-step.ts).
+function pathExists(p) {
+  return fs.existsSync(p) // nosemgrep
+}
+function isDir(p) {
+  return fs.statSync(p).isDirectory() // nosemgrep
+}
+function readText(p) {
+  return fs.readFileSync(p, 'utf8') // nosemgrep
+}
+function writeText(p, s) {
+  fs.writeFileSync(p, s) // nosemgrep
+}
 const DIR = repoPath('docs/codemap')
 const JSON_PATH = repoPath('docs/codemap/codemap.json')
 const HTML_PATH = repoPath('docs/codemap/codemap.html')
@@ -58,8 +77,8 @@ try {
 } catch {
   process.exit(0)
 }
-if (!fs.existsSync(LOCK_PATH) || !fs.existsSync(JSON_PATH) || !fs.existsSync(HTML_PATH)) {
-  if (fs.existsSync(DIR)) {
+if (!pathExists(LOCK_PATH) || !pathExists(JSON_PATH) || !pathExists(HTML_PATH)) {
+  if (pathExists(DIR)) {
     out(
       'Code map: docs/codemap/ is incomplete (need codemap.json, codemap.html and codemap.lock). Generate all three with the `codemap` skill — this cannot be bootstrapped mechanically.',
     )
@@ -69,8 +88,8 @@ if (!fs.existsSync(LOCK_PATH) || !fs.existsSync(JSON_PATH) || !fs.existsSync(HTM
 
 let lock, map
 try {
-  lock = JSON.parse(fs.readFileSync(LOCK_PATH, 'utf8'))
-  map = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'))
+  lock = JSON.parse(readText(LOCK_PATH))
+  map = JSON.parse(readText(JSON_PATH))
 } catch (err) {
   out(
     'Code map: could not parse codemap.json or codemap.lock (' +
@@ -119,10 +138,7 @@ const srcCache = new Map()
 function readSrc(p) {
   const abs = repoPath(p)
   if (!srcCache.has(abs)) {
-    srcCache.set(
-      abs,
-      fs.existsSync(abs) && fs.statSync(abs).isFile() ? fs.readFileSync(abs, 'utf8') : null,
-    )
+    srcCache.set(abs, pathExists(abs) && !isDir(abs) ? readText(abs) : null)
   }
   return srcCache.get(abs)
 }
@@ -141,18 +157,18 @@ function locate(p, symbol, recordedLine) {
   if (src === null) return { ok: true, line: null } // directory node — nothing to locate
   const lines = src.split('\n')
   const needle = norm(symbol)
-  const toks = [...new Set(symbol.match(/[A-Za-z_$][A-Za-z0-9_$]*/g) || [])].filter(
+  const tokens = [...new Set(symbol.match(/[A-Za-z_$][A-Za-z0-9_$]*/g) || [])].filter(
     (t) => t.length >= 2,
   )
 
   const found =
-    norm(src).includes(needle) || (toks.length > 0 && toks.every((t) => src.includes(t)))
+    norm(src).includes(needle) || (tokens.length > 0 && tokens.every((t) => src.includes(t)))
   if (!found) return { ok: false }
 
   // rarest identifier = most distinctive anchor
   let anchor = null
   let rarest = Infinity
-  for (const t of toks) {
+  for (const t of tokens) {
     const n = lines.filter((l) => l.includes(t)).length
     if (n > 0 && n < rarest) {
       rarest = n
@@ -244,18 +260,56 @@ if (uncovered.length) {
 }
 
 // ---- decide ------------------------------------------------------------
-// A commit-hash mismatch is NOT drift, and must never trigger a write.
+// Only a change to what the map *claims* justifies rewriting it.
 //
-// This hook runs *before* the commit exists, so the newest SHA it can record is
-// the parent of the commit being made. Treating that as staleness meant every
-// commit rewrote the map, which made the next commit stale again — an endless
-// loop that touched docs/codemap/ in every commit forever.
+// Neither of these is a claim, and neither may trigger a write on its own:
 //
-// Content is the only thing that can be stale. The recorded commit is
-// informational, refreshed opportunistically whenever content genuinely
-// changes, and expected to lag by one commit.
-const commitLagsBehind = lock.commit !== head
-const nothingToDo = !drifted.length && !lineFixes.length
+//   Module fingerprints. A fingerprint moves when any byte in the module moves
+//   — a comment, a whitespace fix, a test. The architecture it describes is
+//   usually identical, so writing on fingerprint drift meant docs/codemap/
+//   appeared in commits that changed nothing about the map.
+//
+//   The commit hash. This hook runs *before* the commit exists, so the newest
+//   SHA it can record is the parent of the commit being made. Treating that as
+//   staleness meant every commit rewrote the map, leaving it stale again for
+//   the next one — an endless loop.
+//
+// What counts as a real change: the graph fingerprint (nodes, edges, flows and
+// their evidence, hashed with generation metadata excluded), evidence lines
+// that moved, or the viewer's embedded copy falling out of sync with the JSON.
+// Fingerprints and commit are then refreshed as passengers on that write, never
+// as the reason for it.
+function graphFingerprint(m) {
+  return (
+    'sha256:' +
+    createHash('sha256')
+      .update(
+        JSON.stringify({
+          scope: m.scope,
+          nodes: m.nodes,
+          edges: m.edges,
+          flows: m.flows,
+          unknowns: m.unknowns ?? [],
+        }),
+      )
+      .digest('hex')
+  )
+}
+const graphNow = graphFingerprint(map)
+const graphChanged = lock.graph_fingerprint !== graphNow
+const htmlOutOfSync = (() => {
+  const m = readText(HTML_PATH).match(
+    /<script id="cm-data" type="application\/json">([\s\S]*?)<\/script>/,
+  )
+  if (!m) return false // reported separately during apply
+  try {
+    return JSON.stringify(JSON.parse(m[1].replace(/<\\\//g, '</'))) !== JSON.stringify(map)
+  } catch {
+    return true
+  }
+})()
+
+const writeNeeded = lineFixes.length > 0 || graphChanged || htmlOutOfSync
 
 if (problems.length) {
   out(
@@ -269,21 +323,27 @@ if (problems.length) {
   process.exit(0)
 }
 
-if (nothingToDo) {
-  out(
-    `Code map: current as of ${lock.commit.slice(0, 7)}. Before modifying a module, use docs/codemap/codemap.json to answer: what calls it, what it affects, which tests cover it.`,
-  )
+if (!writeNeeded) {
+  if (drifted.length) {
+    out(
+      `Code map: verified current. ${drifted.map((m) => m.id).join(', ')} changed since it was written, but every node, edge, evidence reference and covered file still checks out — the map's claims are unaffected, so nothing was rewritten.`,
+    )
+  } else {
+    out(
+      `Code map: current as of ${lock.commit.slice(0, 7)}. Before modifying a module, use docs/codemap/codemap.json to answer: what calls it, what it affects, which tests cover it.`,
+    )
+  }
   process.exit(0)
 }
 
 const summary = []
-if (drifted.length) summary.push(`fingerprints: ${drifted.map((m) => m.id).join(', ')}`)
+if (graphChanged) summary.push('graph content')
 if (lineFixes.length) summary.push(`${lineFixes.length} evidence line(s)`)
-if (commitLagsBehind) summary.push(`commit → ${head.slice(0, 7)}`)
+if (htmlOutOfSync) summary.push('viewer out of sync with JSON')
 
 if (CHECK_ONLY) {
   out(
-    `Code map: refreshable (${summary.join('; ')}). Run .claude/hooks/codemap-refresh.mjs to apply.`,
+    `Code map: needs updating (${summary.join('; ')}). Run .claude/hooks/codemap-refresh.mjs to apply.`,
   )
   process.exit(0)
 }
@@ -307,6 +367,9 @@ lock.working_tree_note = trackedDirty
 lock.previous_lock_found = true
 lock.previous_lock_note =
   'Auto-refreshed in place by .claude/hooks/codemap-refresh.mjs — derived fields only (fingerprints, commit, timestamp, evidence line numbers). Nodes, edges and flows were verified against the tree and left untouched.'
+lock.graph_fingerprint = graphFingerprint(map)
+lock.graph_fingerprint_note =
+  "sha256 over the map's claims only — scope, nodes, edges, flows, unknowns — with generated_at and the commit excluded. This, not the module fingerprints, is what decides whether the map needs rewriting."
 lock.commit_note =
   'Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.'
 for (const m of lock.modules) {
@@ -323,11 +386,11 @@ if (lock.counts) {
 }
 
 const jsonText = JSON.stringify(map, null, 2) + '\n'
-fs.writeFileSync(JSON_PATH, jsonText)
-fs.writeFileSync(LOCK_PATH, JSON.stringify(lock, null, 2) + '\n')
+writeText(JSON_PATH, jsonText)
+writeText(LOCK_PATH, JSON.stringify(lock, null, 2) + '\n')
 
 // keep the viewer's embedded copy byte-identical to the file
-let html = fs.readFileSync(HTML_PATH, 'utf8')
+let html = readText(HTML_PATH)
 const re = /(<script id="cm-data" type="application\/json">)([\s\S]*?)(<\/script>)/
 if (!re.test(html)) {
   out(
@@ -339,7 +402,7 @@ html = html.replace(
   re,
   (_m, a, _b, c) => a + '\n' + jsonText.trim().replace(/<\//g, '<\\/') + '\n' + c,
 )
-fs.writeFileSync(HTML_PATH, html)
+writeText(HTML_PATH, html)
 
 // match the repo's formatter so `pnpm format:check` stays green
 try {
@@ -353,10 +416,10 @@ try {
     },
   )
   // oxfmt may reflow the JSON — re-inject so the two copies still match
-  const reflowed = fs.readFileSync(JSON_PATH, 'utf8').trim()
-  let h2 = fs.readFileSync(HTML_PATH, 'utf8')
+  const reflowed = readText(JSON_PATH).trim()
+  let h2 = readText(HTML_PATH)
   h2 = h2.replace(re, (_m, a, _b, c) => a + '\n' + reflowed.replace(/<\//g, '<\\/') + '\n' + c)
-  fs.writeFileSync(HTML_PATH, h2)
+  writeText(HTML_PATH, h2)
 } catch {}
 
 out(`Code map: auto-updated (${summary.join('; ')}).`)

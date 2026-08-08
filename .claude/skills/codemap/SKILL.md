@@ -34,20 +34,44 @@ node .claude/hooks/codemap-refresh.mjs --check   # report only
 node .claude/hooks/codemap-refresh.mjs           # refresh in place
 ```
 
-It recomputes each module's fingerprint — sha256 over sorted `<path>\0<git blob
-sha1>` records for that module's tracked files — and compares against
-`codemap.lock`. Tracked files only: a brand-new untracked file does not register
-as drift until it is `git add`ed.
+### What counts as "changed"
 
-**What it will fix by itself** (derived, provable):
+**The map is rewritten only when its claims change** — never merely because
+files moved underneath it. Three things, and only these, trigger a write:
 
+- the **graph fingerprint** differs — sha256 over `scope`, `nodes`, `edges`,
+  `flows` and `unknowns`, with `generated_at` and the commit excluded, so it
+  moves only when the map actually says something different
+- **evidence line numbers** moved because code shifted
+- the **viewer's embedded copy** fell out of sync with `codemap.json`
+
+Deliberately _not_ triggers, because neither changes what the map claims:
+
+- **module fingerprints.** A fingerprint moves when any byte in the module moves
+  — a comment, a whitespace fix, a test. Writing on that put `docs/codemap/` in
+  commits that changed nothing about the architecture. Drift is reported
+  (`verified current — <module> changed … the map's claims are unaffected`) and
+  nothing is written.
+- **the recorded commit and timestamp.** The commit hook runs _before_ the
+  commit exists, so the newest SHA it can record is the parent of the commit it
+  is being staged into. Treating that as staleness rewrote the map on every
+  commit, which left it stale for the next one — an infinite loop. The commit is
+  informational and lags by one; freshness is judged by content alone.
+
+Module fingerprints and the commit are still refreshed — as passengers on a
+write that happened for a real reason, never as the reason for it.
+
+### What it fixes vs. what it refuses
+
+**Fixed automatically** (derived, provable):
+
+- evidence line numbers — anchored on the _rarest_ identifier in the symbol, and
+  only moved when the match is unambiguous, so a correct line is never
+  "corrected" into a wrong one
 - module fingerprints, recorded commit, timestamp, working-tree dirty flag
-- evidence line numbers that moved because code shifted — anchored on the
-  _rarest_ identifier in the symbol, and only moved when the match is
-  unambiguous, so a correct line is never "corrected" into a wrong one
 - re-injecting `codemap.json` into `codemap.html` and re-running oxfmt
 
-**What it refuses to touch** (semantic, needs judgment):
+**Never invented** (semantic, needs judgment):
 
 - nodes, edges, flows
 
@@ -56,6 +80,9 @@ vanished, or a path in the map no longer exists, it prints
 `NEEDS RE-AUTHORING`, changes nothing, and the commit hook asks for confirmation
 before letting the commit through. That is the signal to do a real regeneration
 with the rest of this skill.
+
+Fingerprints use tracked files only: a brand-new file does not register until it
+is `git add`ed.
 
 ---
 
