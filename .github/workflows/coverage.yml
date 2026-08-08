@@ -18,6 +18,14 @@ on:
   # Safe to dispatch: this workflow only runs tests and uploads a report — it
   # does not release or deploy.
   workflow_dispatch:
+    inputs:
+      ref:
+        description: >-
+          Commit SHA or ref to measure. The coverage reporter derives the commit
+          it uploads against from the checkout, so this backfills coverage for
+          that exact commit. Leave empty to use the selected branch.
+        required: false
+        type: string
 
 jobs:
   coverage:
@@ -25,6 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Only ever set on a manual backfill. Empty on workflow_call, which
+          # leaves actions/checkout on its default ref so the PR and release
+          # paths behave exactly as before.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
