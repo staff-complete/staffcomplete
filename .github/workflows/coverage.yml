@@ -1,10 +1,23 @@
 name: Coverage
 
 on:
+  # Called by ci.yml on pull requests and by release.yml on push to main, so
+  # every PR head and every main commit normally gets coverage uploaded.
   workflow_call:
     secrets:
       CODACY_PROJECT_TOKEN:
         required: true
+  # Manual backfill for a ref whose coverage never uploaded. Codacy computes
+  # "Coverage Variation" by comparing a PR against its base commit, so a main
+  # commit with no coverage report leaves that check unable to compute — it
+  # never posts, and because it is a required status check every subsequent PR
+  # is blocked with no way to push the fix (a merge is what would upload the
+  # missing coverage). That deadlock is exactly what happened when 217beac
+  # merged during the Actions outage of 2026-08-04..07, when release.yml never
+  # ran. Dispatching this against main re-uploads coverage and clears it.
+  # Safe to dispatch: this workflow only runs tests and uploads a report — it
+  # does not release or deploy.
+  workflow_dispatch:
 
 jobs:
   coverage:
