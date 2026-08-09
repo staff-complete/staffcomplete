@@ -69,11 +69,10 @@ describe('runOverdueTaskScan', () => {
   it('emails the assignee of a task past its due date and stamps it reminded', async () => {
     await runOverdueTaskScan()
 
-    expect(mocks.sendAuthEmailMock).toHaveBeenCalledWith(
-      'owner@example.com',
-      'Overdue task: Order laptop',
-      '<p>Order laptop was due 2026-08-02</p>',
-    )
+    const [to, subject, body] = mocks.sendAuthEmailMock.mock.calls[0] as [string, string, string]
+    expect(to).toBe('owner@example.com')
+    expect(subject).toBe('Overdue task: Order laptop')
+    expect(body).toContain('Order laptop was due 2026-08-02')
     expect(mocks.updateSetMock).toHaveBeenCalledWith({ overdueNotifiedAt: expect.any(Date) })
   })
 

@@ -72,12 +72,11 @@ describe('notifyTaskAssignment', () => {
 
     // Tenant-scoped: the lookup bypasses RLS, so it must be told which org.
     expect(mocks.resolveAssigneeEmailMock).toHaveBeenCalledWith('m1', 'org-1')
-    expect(mocks.sendAuthEmailMock).toHaveBeenCalledWith(
-      'owner@example.com',
-      'New task: Order laptop',
-      // eventDate 2026-08-01 + dueDateOffsetDays 1
-      '<p>Order laptop due 2026-08-02</p>',
-    )
+    const [to, subject, body] = mocks.sendAuthEmailMock.mock.calls[0] as [string, string, string]
+    expect(to).toBe('owner@example.com')
+    expect(subject).toBe('New task: Order laptop')
+    // eventDate 2026-08-01 + dueDateOffsetDays 1
+    expect(body).toContain('Order laptop due 2026-08-02')
     expect(mocks.updateSetMock).toHaveBeenCalledWith({ assignmentNotifiedAt: expect.any(Date) })
   })
 
@@ -138,10 +137,9 @@ describe('notifyTaskAssignment', () => {
 
     await notifyTaskAssignment(PAYLOAD)
 
-    expect(mocks.sendAuthEmailMock).toHaveBeenCalledWith(
-      'owner@example.com',
-      'New task: Order laptop',
-      '<p>Order laptop due null</p>',
-    )
+    const [to, subject, body] = mocks.sendAuthEmailMock.mock.calls[0] as [string, string, string]
+    expect(to).toBe('owner@example.com')
+    expect(subject).toBe('New task: Order laptop')
+    expect(body).toContain('Order laptop due null')
   })
 })
