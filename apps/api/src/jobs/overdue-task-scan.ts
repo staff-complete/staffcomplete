@@ -106,6 +106,10 @@ async function remindAssignee(
     taskTitle: candidate.title,
     dueDate,
   })
+  // Same false positive as notify-task-assignment.ts: an email body rather
+  // than a DOM, with buildOverdueEmail escaping every user-authored field it
+  // interpolates, and plain-text `to`/`subject` that must not be encoded.
+  // eslint-disable-next-line xss/no-mixed-html
   const result = await sendAuthEmail(to, subject, html)
   if (result.error) {
     throw new Error(`overdue email failed for run step: ${result.error.message}`)

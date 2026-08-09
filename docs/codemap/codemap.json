@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-09T17:24:24Z",
-  "generated_from_commit": "db0cbf164b0947c0f677bba5310196b6554658ba",
+  "generated_at": "2026-08-09T18:08:45Z",
+  "generated_from_commit": "20127649c4ec711821acdd911fb27893a6a07e1d",
   "scope": ["apps/api", "apps/web", "packages/shared"],
   "nodes": [
     {
@@ -757,12 +757,12 @@
         {
           "path": "apps/api/src/jobs/notify-task-assignment.ts",
           "symbol": "tx.update(runStep).set({ assignmentNotifiedAt: new Date() }).where(eq(runStep.id, runStepId)),",
-          "line": 82
+          "line": 90
         },
         {
           "path": "apps/api/src/jobs/overdue-task-scan.ts",
           "symbol": ".set({ overdueNotifiedAt: new Date() })",
-          "line": 120
+          "line": 124
         },
         {
           "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
@@ -1687,7 +1687,7 @@
       "evidence": {
         "path": "apps/api/src/jobs/notify-task-assignment.ts",
         "symbol": "const result = await sendAuthEmail(to, subject, html)",
-        "line": 72
+        "line": 80
       }
     },
     {
@@ -1697,7 +1697,7 @@
       "evidence": {
         "path": "apps/api/src/jobs/overdue-task-scan.ts",
         "symbol": "const result = await sendAuthEmail(to, subject, html)",
-        "line": 109
+        "line": 113
       }
     },
     {
@@ -1717,7 +1717,7 @@
       "evidence": {
         "path": "apps/api/src/jobs/overdue-task-scan.ts",
         "symbol": ".set({ overdueNotifiedAt: new Date() })",
-        "line": 120
+        "line": 124
       }
     },
     {

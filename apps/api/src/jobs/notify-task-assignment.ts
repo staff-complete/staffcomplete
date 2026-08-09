@@ -69,6 +69,14 @@ export async function notifyTaskAssignment(payload: NotifyTaskAssignmentPayload)
     dueDate: computeDueDate(prepared.run.eventDate, prepared.step.dueDateOffsetDays),
   })
 
+  // xss/no-mixed-html reads an `html` variable passed to a function it does
+  // not recognize as a browser-XSS sink, and suggests DOMPurify (a DOM
+  // sanitizer). There is no DOM here: this is an email body sent through
+  // Resend, and buildAssignmentEmail already escapes every user-authored
+  // field it interpolates. The rule additionally wants `to` and `subject`
+  // encoded — both are plain text, where escaping would corrupt the address
+  // and leave visible entities in the subject line.
+  // eslint-disable-next-line xss/no-mixed-html
   const result = await sendAuthEmail(to, subject, html)
   if (result.error) {
     // Thrown, not logged-and-returned: a Resend outage or bad API key is the

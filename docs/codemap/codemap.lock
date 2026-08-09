@@ -1,8 +1,8 @@
 {
   "lock_version": 1,
-  "generated_at": "2026-08-09T17:24:24Z",
-  "commit": "db0cbf164b0947c0f677bba5310196b6554658ba",
-  "commit_short": "db0cbf1",
+  "generated_at": "2026-08-09T18:08:45Z",
+  "commit": "20127649c4ec711821acdd911fb27893a6a07e1d",
+  "commit_short": "2012764",
   "branch": "feat/28-notify-task-owner-via-email",
   "working_tree_dirty": true,
   "working_tree_note": "Refreshed against a working tree with uncommitted tracked changes; fingerprints describe the files on disk, not the commit named above.",
@@ -37,7 +37,7 @@
       "id": "apps/api",
       "path": "apps/api",
       "tracked_files": 81,
-      "fingerprint": "sha256:b4b815ad96bcff8d0a8592f2c70c1d3632df111a2b69f19b69338913c3d26e02",
+      "fingerprint": "sha256:69109a66b4822ee30ff292e7f689d2786a7d2eef1e1dc7c0da663e27122aaecd",
       "nodes": [
         "api-app",
         "api-auth",
@@ -99,6 +99,6 @@
   ],
   "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three.",
   "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.",
-  "graph_fingerprint": "sha256:51d516b4c962992504a1accef656f7923df52c56c9072df362e259551665b737",
+  "graph_fingerprint": "sha256:697e5dd2b7fc12badcd484b3e2203b0c47f22e74e0c5f0f3b083ccca125319f3",
   "graph_fingerprint_note": "sha256 over the map's claims only — scope, nodes, edges, flows, unknowns — with generated_at and the commit excluded. This, not the module fingerprints, is what decides whether the map needs rewriting."
 }
