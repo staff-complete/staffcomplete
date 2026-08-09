@@ -8,7 +8,11 @@ import {
 } from '@staffcomplete/shared'
 import { withTenant } from '../db/index.js'
 import { run, runPhase, runPhaseDependency, runStep } from '../db/schema.js'
-import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'
+import {
+  completeRunStep,
+  dispatchAutomatedSteps,
+  dispatchTaskNotifications,
+} from '../lib/run-steps.js'
 import { orgAuth } from '../middleware/org-auth.js'
 
 export const tasksRouter = new Hono()
@@ -174,8 +178,11 @@ tasksRouter.post('/:id/complete', async (c) => {
   }
 
   // Dispatched after the transaction above has committed, not from inside
-  // it — see lib/run-steps.ts.
+  // it — see lib/run-steps.ts. Completing this step may have unlocked a
+  // phase containing manual tasks too, so their assignees get told at the
+  // same point the automated steps get run.
   await dispatchAutomatedSteps(organizationId, result.stepsToDispatch)
+  await dispatchTaskNotifications(organizationId, result.tasksToNotify)
 
   return c.json(serializeTask(result.updatedStep, result.updatedRun, false))
 })

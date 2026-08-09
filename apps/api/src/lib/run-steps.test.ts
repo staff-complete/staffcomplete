@@ -28,8 +28,12 @@ function tx() {
 
 const {
   AUTOMATED_STEP_EXECUTE_JOB,
+  TASK_ASSIGNMENT_NOTIFY_JOB,
   completeRunStep,
   dispatchAutomatedSteps,
+  dispatchTaskNotifications,
+  loadNotifiableTasks,
+  selectManualStepsToNotify,
   selectStepsToDispatch,
 } = await import('./run-steps.js')
 
@@ -85,6 +89,132 @@ describe('selectStepsToDispatch', () => {
     expect(selectStepsToDispatch(phases, dependencies, steps)).toEqual([
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
     ])
+  })
+})
+
+describe('selectManualStepsToNotify', () => {
+  const phases = [{ id: 'p1' }, { id: 'p2' }]
+  const dependencies = [{ phaseId: 'p2', dependsOnPhaseId: 'p1' }]
+
+  function task(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 's1',
+      phaseId: 'p1',
+      type: 'manual',
+      status: 'pending',
+      assigneeId: 'm1',
+      assignmentNotifiedAt: null,
+      ...overrides,
+    }
+  }
+
+  it('includes an assigned, pending manual task in an unlocked phase', () => {
+    expect(selectManualStepsToNotify(phases, dependencies, [task()])).toEqual([task()])
+  })
+
+  it('excludes automated steps — they run themselves, nobody to tell', () => {
+    const steps = [task({ id: 's1' }), task({ id: 's2', type: 'automated', assigneeId: null })]
+    expect(selectManualStepsToNotify(phases, dependencies, steps)).toEqual([task({ id: 's1' })])
+  })
+
+  it('excludes an unassigned task — there is no one to email', () => {
+    expect(selectManualStepsToNotify(phases, dependencies, [task({ assigneeId: null })])).toEqual(
+      [],
+    )
+  })
+
+  it('excludes a task whose assignee was already emailed', () => {
+    const notified = task({ assignmentNotifiedAt: new Date('2026-08-01T09:00:00Z') })
+    expect(selectManualStepsToNotify(phases, dependencies, [notified])).toEqual([])
+  })
+
+  it('excludes an already-completed task', () => {
+    expect(
+      selectManualStepsToNotify(phases, dependencies, [task({ status: 'completed' })]),
+    ).toEqual([])
+  })
+
+  // The core of the design: a task behind an incomplete dependency can't be
+  // completed in the UI, so its assignee is not told about it yet.
+  it('excludes a task in a still-locked phase', () => {
+    const blocked = task({ id: 's2', phaseId: 'p2' })
+    const steps = [task({ id: 's1', phaseId: 'p1' }), blocked]
+    expect(selectManualStepsToNotify(phases, dependencies, steps)).toEqual([
+      task({ id: 's1', phaseId: 'p1' }),
+    ])
+  })
+
+  it('includes that same task once the phase it waited on is fully complete', () => {
+    const steps = [
+      task({ id: 's1', phaseId: 'p1', status: 'completed' }),
+      task({ id: 's2', phaseId: 'p2' }),
+    ]
+    expect(selectManualStepsToNotify(phases, dependencies, steps)).toEqual([
+      task({ id: 's2', phaseId: 'p2' }),
+    ])
+  })
+})
+
+describe('dispatchTaskNotifications', () => {
+  it('enqueues one notification job per task, keyed for dedup', async () => {
+    await dispatchTaskNotifications('org-1', [{ id: 's1' }, { id: 's2' }])
+
+    expect(mocks.enqueueMock).toHaveBeenCalledTimes(2)
+    expect(mocks.enqueueMock).toHaveBeenCalledWith(
+      { name: TASK_ASSIGNMENT_NOTIFY_JOB, data: { runStepId: 's1', organizationId: 'org-1' } },
+      { singletonKey: 's1', retryLimit: 5, retryBackoff: true },
+    )
+  })
+
+  // The two queues share the run-step id as their singletonKey; pg-boss
+  // scopes that key per queue, so they must not be the same queue name.
+  it('uses a different queue from automated step execution', () => {
+    expect(TASK_ASSIGNMENT_NOTIFY_JOB).not.toBe(AUTOMATED_STEP_EXECUTE_JOB)
+  })
+
+  it('enqueues nothing for an empty list', async () => {
+    await dispatchTaskNotifications('org-1', [])
+    expect(mocks.enqueueMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('loadNotifiableTasks', () => {
+  it('applies the same rule against a run read back from the database', async () => {
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+    mocks.runPhaseDependencyFindManyMock.mockResolvedValue([
+      { phaseId: 'p2', dependsOnPhaseId: 'p1' },
+    ])
+    mocks.runStepFindManyMock.mockResolvedValue([
+      {
+        id: 's1',
+        phaseId: 'p1',
+        type: 'manual',
+        status: 'pending',
+        assigneeId: 'm1',
+        assignmentNotifiedAt: null,
+      },
+      // Locked behind p1, so not reported even though it is assigned.
+      {
+        id: 's2',
+        phaseId: 'p2',
+        type: 'manual',
+        status: 'pending',
+        assigneeId: 'm2',
+        assignmentNotifiedAt: null,
+      },
+    ])
+
+    const tasks = await loadNotifiableTasks(tx() as never, 'r1')
+
+    expect(tasks).toEqual([expect.objectContaining({ id: 's1' })])
+  })
+
+  it('skips the dependency query for a run with no phases', async () => {
+    mocks.runPhaseFindManyMock.mockResolvedValue([])
+    mocks.runStepFindManyMock.mockResolvedValue([])
+
+    await expect(loadNotifiableTasks(tx() as never, 'r1')).resolves.toEqual([])
+    expect(mocks.runPhaseDependencyFindManyMock).not.toHaveBeenCalled()
   })
 })
 
@@ -182,6 +312,41 @@ describe('completeRunStep', () => {
     expect(result.stepsToDispatch).toEqual([
       { id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' },
     ])
+  })
+
+  it('reports a newly-unlocked manual task alongside the automated steps', async () => {
+    mocks.updateReturningMock
+      .mockResolvedValueOnce([{ id: 's1', runId: 'r1', status: 'completed' }])
+      .mockResolvedValueOnce([{ id: 'r1', status: 'in_progress' }])
+    mocks.runStepFindManyMock.mockResolvedValue([
+      {
+        id: 's1',
+        phaseId: 'p1',
+        type: 'manual',
+        status: 'completed',
+        assigneeId: 'm1',
+        assignmentNotifiedAt: new Date('2026-08-01T09:00:00Z'),
+      },
+      {
+        id: 's2',
+        phaseId: 'p2',
+        type: 'manual',
+        status: 'pending',
+        assigneeId: 'm2',
+        assignmentNotifiedAt: null,
+      },
+    ])
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+    mocks.runPhaseDependencyFindManyMock.mockResolvedValue([
+      { phaseId: 'p2', dependsOnPhaseId: 'p1' },
+    ])
+
+    const result = await completeRunStep(tx() as never, 's1')
+
+    // Completing the last step of p1 unlocks p2, making m2's task actionable
+    // — and the step just completed is not re-announced to m1.
+    expect(result.stepsToDispatch).toEqual([])
+    expect(result.tasksToNotify).toEqual([expect.objectContaining({ id: 's2', assigneeId: 'm2' })])
   })
 
   it('sets run.status to completed when the step completed was the last one left', async () => {

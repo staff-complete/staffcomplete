@@ -1,9 +1,9 @@
 {
   "lock_version": 1,
-  "generated_at": "2026-08-08T12:06:02Z",
-  "commit": "94c4f61908ba640ebf8c7b2a4c9188869904cfaa",
-  "commit_short": "94c4f61",
-  "branch": "chore/codemap-freshness-workflow",
+  "generated_at": "2026-08-09T17:24:24Z",
+  "commit": "db0cbf164b0947c0f677bba5310196b6554658ba",
+  "commit_short": "db0cbf1",
+  "branch": "feat/28-notify-task-owner-via-email",
   "working_tree_dirty": true,
   "working_tree_note": "Refreshed against a working tree with uncommitted tracked changes; fingerprints describe the files on disk, not the commit named above.",
   "previous_lock_found": true,
@@ -36,8 +36,8 @@
     {
       "id": "apps/api",
       "path": "apps/api",
-      "tracked_files": 73,
-      "fingerprint": "sha256:42f0fae6d70699940e5e97c8597d5e0c564188e93a3e560e5ae0109f7809cebf",
+      "tracked_files": 81,
+      "fingerprint": "sha256:b4b815ad96bcff8d0a8592f2c70c1d3632df111a2b69f19b69338913c3d26e02",
       "nodes": [
         "api-app",
         "api-auth",
@@ -88,7 +88,7 @@
   ],
   "counts": {
     "nodes": 20,
-    "edges": 69,
+    "edges": 77,
     "flows": 5,
     "unknown_relationships": 0
   },
@@ -99,6 +99,6 @@
   ],
   "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three.",
   "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.",
-  "graph_fingerprint": "sha256:efb538dc675b6ed4a7dec388fae20f589bca31907154fdd5686e97b464aae9c6",
+  "graph_fingerprint": "sha256:51d516b4c962992504a1accef656f7923df52c56c9072df362e259551665b737",
   "graph_fingerprint_note": "sha256 over the map's claims only — scope, nodes, edges, flows, unknowns — with generated_at and the commit excluded. This, not the module fingerprints, is what decides whether the map needs rewriting."
 }

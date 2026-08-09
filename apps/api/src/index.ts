@@ -5,8 +5,11 @@ import { Hono } from 'hono'
 import { auth } from './auth.js'
 import { executeAutomatedStep } from './jobs/execute-automated-step.js'
 import type { ExecuteAutomatedStepPayload } from './jobs/execute-automated-step.js'
+import { notifyTaskAssignment } from './jobs/notify-task-assignment.js'
+import type { NotifyTaskAssignmentPayload } from './jobs/notify-task-assignment.js'
+import { runOverdueTaskScan } from './jobs/overdue-task-scan.js'
 import { runTrialLifecycleScan } from './jobs/trial-lifecycle-scan.js'
-import { AUTOMATED_STEP_EXECUTE_JOB } from './lib/run-steps.js'
+import { AUTOMATED_STEP_EXECUTE_JOB, TASK_ASSIGNMENT_NOTIFY_JOB } from './lib/run-steps.js'
 import { queue, startQueue, stopQueue } from './queue/index.js'
 import { activityRouter } from './routes/activity.js'
 import { billingRouter } from './routes/billing.js'
@@ -21,6 +24,12 @@ import { checklistsRouter } from './routes/checklists.js'
 // and ADR-0015. 13:00 UTC avoids landing the reminder email in the middle
 // of any single timezone's night for most of the customer base.
 const TRIAL_LIFECYCLE_SCAN_CRON = '0 13 * * *'
+
+// Daily sweep emailing assignees whose tasks have passed their due date —
+// see apps/api/src/jobs/overdue-task-scan.ts. 08:00 UTC puts it at the top
+// of the working day across Europe, where an overdue task is something you
+// still have a day to fix, and keeps it off the trial scan's slot.
+const OVERDUE_TASK_SCAN_CRON = '0 8 * * *'
 
 const app = new Hono()
 
@@ -47,8 +56,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await startQueue()
   queue.process('trial-lifecycle-scan', () => runTrialLifecycleScan())
   await queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)
+  queue.process('overdue-task-scan', () => runOverdueTaskScan())
+  await queue.schedule('overdue-task-scan', OVERDUE_TASK_SCAN_CRON)
   queue.process<ExecuteAutomatedStepPayload>(AUTOMATED_STEP_EXECUTE_JOB, (job) =>
     executeAutomatedStep(job.data),
+  )
+  queue.process<NotifyTaskAssignmentPayload>(TASK_ASSIGNMENT_NOTIFY_JOB, (job) =>
+    notifyTaskAssignment(job.data),
   )
 
   const shutdown = async () => {

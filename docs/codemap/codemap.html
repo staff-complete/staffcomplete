@@ -387,8 +387,8 @@
 
     <script id="cm-data" type="application/json">
       {
-        "generated_at": "2026-08-08T12:06:02Z",
-        "generated_from_commit": "94c4f61908ba640ebf8c7b2a4c9188869904cfaa",
+        "generated_at": "2026-08-09T17:24:24Z",
+        "generated_from_commit": "db0cbf164b0947c0f677bba5310196b6554658ba",
         "scope": ["apps/api", "apps/web", "packages/shared"],
         "nodes": [
           {
@@ -646,12 +646,12 @@
               {
                 "symbol": "app",
                 "path": "apps/api/src/index.ts",
-                "line": 25
+                "line": 34
               },
               {
                 "symbol": "TRIAL_LIFECYCLE_SCAN_CRON",
                 "path": "apps/api/src/index.ts",
-                "line": 23
+                "line": 26
               }
             ],
             "tests": ["apps/api/src/index.test.ts"],
@@ -663,12 +663,12 @@
               {
                 "path": "apps/api/src/index.ts",
                 "symbol": "app.route('/api/runs', runsRouter)",
-                "line": 35
+                "line": 44
               },
               {
                 "path": "apps/api/src/index.ts",
                 "symbol": "queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)",
-                "line": 49
+                "line": 58
               }
             ]
           },
@@ -870,7 +870,7 @@
               {
                 "symbol": "runsRouter",
                 "path": "apps/api/src/routes/runs.ts",
-                "line": 27
+                "line": 33
               }
             ],
             "tests": ["apps/api/src/routes/runs.test.ts"],
@@ -882,12 +882,12 @@
               {
                 "path": "apps/api/src/routes/runs.ts",
                 "symbol": "runsRouter.post('/', zValidator('json', createRunSchema), ...)",
-                "line": 163
+                "line": 169
               },
               {
                 "path": "apps/api/src/routes/runs.ts",
                 "symbol": "await dispatchAutomatedSteps(",
-                "line": 318
+                "line": 324
               }
             ]
           },
@@ -902,7 +902,7 @@
               {
                 "symbol": "tasksRouter",
                 "path": "apps/api/src/routes/tasks.ts",
-                "line": 14
+                "line": 18
               }
             ],
             "tests": ["apps/api/src/routes/tasks.test.ts"],
@@ -915,12 +915,12 @@
               {
                 "path": "apps/api/src/routes/tasks.ts",
                 "symbol": "tasksRouter.use('*', orgAuth())",
-                "line": 17
+                "line": 21
               },
               {
                 "path": "apps/api/src/routes/tasks.ts",
                 "symbol": "await dispatchAutomatedSteps(organizationId, result.stepsToDispatch)",
-                "line": 178
+                "line": 184
               }
             ]
           },
@@ -1007,46 +1007,78 @@
             "path": "apps/api/src/lib/run-steps.ts",
             "role": "worker",
             "label": "Run-step engine",
-            "summary": "The orchestration core shared by routes and jobs: selects which automated steps are dispatchable, enqueues them, and completes a step while re-deriving run status and the next unlocked phase. Groups the assignee validator.",
+            "summary": "The orchestration core shared by routes and jobs: selects which automated steps are dispatchable and which manual tasks have just become actionable, enqueues both, and completes a step while re-deriving run status and the next unlocked phase. Groups the assignee validator.",
             "grouped_files": ["apps/api/src/lib/run-steps.ts", "apps/api/src/lib/assignee.ts"],
             "entrypoints": [
               {
                 "symbol": "selectStepsToDispatch",
                 "path": "apps/api/src/lib/run-steps.ts",
-                "line": 23
+                "line": 35
+              },
+              {
+                "symbol": "selectManualStepsToNotify",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 62
+              },
+              {
+                "symbol": "loadNotifiableTasks",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 103
               },
               {
                 "symbol": "dispatchAutomatedSteps",
                 "path": "apps/api/src/lib/run-steps.ts",
-                "line": 8
+                "line": 84
+              },
+              {
+                "symbol": "dispatchTaskNotifications",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 134
               },
               {
                 "symbol": "completeRunStep",
                 "path": "apps/api/src/lib/run-steps.ts",
-                "line": 62
+                "line": 154
               },
               {
                 "symbol": "AUTOMATED_STEP_EXECUTE_JOB",
                 "path": "apps/api/src/lib/run-steps.ts",
                 "line": 10
+              },
+              {
+                "symbol": "TASK_ASSIGNMENT_NOTIFY_JOB",
+                "path": "apps/api/src/lib/run-steps.ts",
+                "line": 17
               }
             ],
             "tests": ["apps/api/src/lib/run-steps.test.ts"],
             "constraints": [
-              "dispatchAutomatedSteps must only be called after the producing transaction commits — enqueuing inside it risks queuing work for a write that rolls back.",
-              "singletonKey on the step id dedups racing completions so a step cannot be double-enqueued or double-sent.",
-              "completeRunStep does not enqueue; it returns steps for the caller to dispatch."
+              "dispatchAutomatedSteps and dispatchTaskNotifications must only be called after the producing transaction commits — enqueuing inside it risks queuing work for a write that rolls back.",
+              "singletonKey on the step id dedups racing completions so a step cannot be double-enqueued or double-sent. The two queues are named differently because pg-boss scopes singletonKey per queue and both use the step id.",
+              "completeRunStep does not enqueue; it returns steps for the caller to dispatch.",
+              "A manual task is announced only once its phase is unlocked — a locked step cannot be completed in the UI, so mailing its assignee would be an alert they cannot act on.",
+              "selectManualStepsToNotify skips steps with assignmentNotifiedAt already set, so a later cascade re-selecting the same step cannot re-announce it."
             ],
             "evidence": [
               {
                 "path": "apps/api/src/lib/run-steps.ts",
-                "symbol": "queue.enqueue({ name: AUTOMATED_STEP_EXECUTE_JOB, data: { runStepId: step.id, organizationId } }, { singletonKey: step.id, retryLimit: 5, retryBackoff: true })",
-                "line": 50
+                "symbol": "export const TASK_ASSIGNMENT_NOTIFY_JOB",
+                "line": 17
+              },
+              {
+                "path": "apps/api/src/lib/run-steps.ts",
+                "symbol": "queue.enqueue(",
+                "line": 90
               },
               {
                 "path": "apps/api/src/lib/run-steps.ts",
                 "symbol": "const stepsToDispatch = selectStepsToDispatch(phases, dependencies, siblingSteps)",
-                "line": 100
+                "line": 200
+              },
+              {
+                "path": "apps/api/src/lib/run-steps.ts",
+                "symbol": "const tasksToNotify = selectManualStepsToNotify(phases, dependencies, siblingSteps)",
+                "line": 201
               }
             ]
           },
@@ -1055,42 +1087,80 @@
             "path": "apps/api/src/jobs",
             "role": "worker",
             "label": "Background jobs",
-            "summary": "Two pg-boss handlers: execute-automated-step runs a step's action (currently email.send) then completes and cascades it; trial-lifecycle-scan is the daily cross-tenant sweep that sends 3-day reminders and flips expired trials.",
+            "summary": "Four pg-boss handlers: execute-automated-step runs a step's action (currently email.send) then completes and cascades it; notify-task-assignment emails a manual task's assignee once it becomes actionable; overdue-task-scan is the daily sweep reminding assignees whose tasks passed their due date; trial-lifecycle-scan is the daily cross-tenant sweep that sends 3-day reminders and flips expired trials. Groups lib/task-notifications.ts, which resolves the recipient address and builds both task emails.",
             "grouped_files": [
               "apps/api/src/jobs/execute-automated-step.ts",
-              "apps/api/src/jobs/trial-lifecycle-scan.ts"
+              "apps/api/src/jobs/notify-task-assignment.ts",
+              "apps/api/src/jobs/overdue-task-scan.ts",
+              "apps/api/src/jobs/trial-lifecycle-scan.ts",
+              "apps/api/src/lib/task-notifications.ts"
             ],
             "entrypoints": [
               {
                 "symbol": "executeAutomatedStep",
                 "path": "apps/api/src/jobs/execute-automated-step.ts",
-                "line": 28
+                "line": 32
+              },
+              {
+                "symbol": "notifyTaskAssignment",
+                "path": "apps/api/src/jobs/notify-task-assignment.ts",
+                "line": 21
+              },
+              {
+                "symbol": "runOverdueTaskScan",
+                "path": "apps/api/src/jobs/overdue-task-scan.ts",
+                "line": 15
               },
               {
                 "symbol": "runTrialLifecycleScan",
                 "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
                 "line": 18
+              },
+              {
+                "symbol": "resolveAssigneeEmail",
+                "path": "apps/api/src/lib/task-notifications.ts",
+                "line": 44
+              },
+              {
+                "symbol": "buildAssignmentEmail",
+                "path": "apps/api/src/lib/task-notifications.ts",
+                "line": 77
               }
             ],
             "tests": [
               "apps/api/src/jobs/execute-automated-step.test.ts",
-              "apps/api/src/jobs/trial-lifecycle-scan.test.ts"
+              "apps/api/src/jobs/notify-task-assignment.test.ts",
+              "apps/api/src/jobs/overdue-task-scan.test.ts",
+              "apps/api/src/jobs/trial-lifecycle-scan.test.ts",
+              "apps/api/src/lib/task-notifications.test.ts"
             ],
             "constraints": [
               "The Resend call happens outside any transaction; reads and the completion write are two separate short transactions.",
               "Transient send failures throw so pg-boss retries; data-integrity failures log and return without retrying.",
-              "trial-lifecycle-scan is cross-tenant by design and uses the superuser db connection, not withTenant (ADR-0012, ADR-0015).",
-              "One org's failure must not abort the rest of the scan."
+              "trial-lifecycle-scan and overdue-task-scan are cross-tenant by design and use the superuser db connection, not withTenant (ADR-0012, ADR-0015).",
+              "One org's (or one task's) failure must not abort the rest of a scan.",
+              "assignmentNotifiedAt and overdueNotifiedAt are written only after their send succeeds, so a crash or a repeat run cannot double-send; a failed send leaves them null so the retry re-sends.",
+              "A task whose assignee no longer resolves to an email is dropped rather than retried — the member is gone and retrying cannot bring them back."
             ],
             "evidence": [
               {
                 "path": "apps/api/src/jobs/execute-automated-step.ts",
-                "symbol": "const { stepsToDispatch } = await withTenant(organizationId, (tx) => completeRunStep(tx, runStepId))",
-                "line": 78
+                "symbol": "const { stepsToDispatch, tasksToNotify } = await withTenant(organizationId, (tx) =>",
+                "line": 82
+              },
+              {
+                "path": "apps/api/src/jobs/notify-task-assignment.ts",
+                "symbol": "tx.update(runStep).set({ assignmentNotifiedAt: new Date() }).where(eq(runStep.id, runStepId)),",
+                "line": 82
+              },
+              {
+                "path": "apps/api/src/jobs/overdue-task-scan.ts",
+                "symbol": ".set({ overdueNotifiedAt: new Date() })",
+                "line": 120
               },
               {
                 "path": "apps/api/src/jobs/trial-lifecycle-scan.ts",
-                "symbol": "await db.update(subscription).set({ status: 'expired' })",
+                "symbol": "db.update(subscription).set({ status: 'expired' })",
                 "line": 48
               },
               {
@@ -1255,7 +1325,7 @@
             "path": "apps/api/src/auth.ts",
             "role": "external",
             "label": "Resend (email)",
-            "summary": "External transactional email provider. Every outbound email in the system — verification, password reset, invitation, trial reminder, and automated email.send steps — goes through the single sendAuthEmail wrapper.",
+            "summary": "External transactional email provider. Every outbound email in the system — verification, password reset, invitation, trial reminder, automated email.send steps, and manual task assignment/overdue notifications — goes through the single sendAuthEmail wrapper.",
             "grouped_files": [],
             "entrypoints": [
               {
@@ -1431,7 +1501,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "app.route('/api/onboard', onboardRouter)",
-              "line": 31
+              "line": 40
             }
           },
           {
@@ -1441,7 +1511,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "app.route('/api/invites', invitesRouter)",
-              "line": 32
+              "line": 41
             }
           },
           {
@@ -1451,7 +1521,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "app.route('/api/billing', billingRouter)",
-              "line": 33
+              "line": 42
             }
           },
           {
@@ -1461,7 +1531,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "app.route('/api/checklists', checklistsRouter)",
-              "line": 34
+              "line": 43
             }
           },
           {
@@ -1471,7 +1541,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "app.route('/api/runs', runsRouter)",
-              "line": 35
+              "line": 44
             }
           },
           {
@@ -1481,7 +1551,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "app.route('/api/tasks', tasksRouter)",
-              "line": 36
+              "line": 45
             }
           },
           {
@@ -1491,7 +1561,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "app.route('/api/activity', activityRouter)",
-              "line": 37
+              "line": 46
             }
           },
           {
@@ -1500,8 +1570,8 @@
             "type": "imports",
             "evidence": {
               "path": "apps/api/src/index.ts",
-              "symbol": "import { executeAutomatedStep } from './jobs/execute-automated-step.js'",
-              "line": 6
+              "symbol": "import { notifyTaskAssignment } from './jobs/notify-task-assignment.js'",
+              "line": 8
             }
           },
           {
@@ -1510,8 +1580,8 @@
             "type": "imports",
             "evidence": {
               "path": "apps/api/src/index.ts",
-              "symbol": "import { AUTOMATED_STEP_EXECUTE_JOB } from './lib/run-steps.js'",
-              "line": 9
+              "symbol": "import { AUTOMATED_STEP_EXECUTE_JOB, TASK_ASSIGNMENT_NOTIFY_JOB } from './lib/run-steps.js'",
+              "line": 12
             }
           },
           {
@@ -1521,7 +1591,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "import { queue, startQueue, stopQueue } from './queue/index.js'",
-              "line": 10
+              "line": 13
             }
           },
           {
@@ -1531,7 +1601,7 @@
             "evidence": {
               "path": "apps/api/src/index.ts",
               "symbol": "await queue.schedule('trial-lifecycle-scan', TRIAL_LIFECYCLE_SCAN_CRON)",
-              "line": 49
+              "line": 58
             }
           },
           {
@@ -1540,8 +1610,8 @@
             "type": "subscribes",
             "evidence": {
               "path": "apps/api/src/index.ts",
-              "symbol": "queue.process<ExecuteAutomatedStepPayload>(AUTOMATED_STEP_EXECUTE_JOB, (job) => executeAutomatedStep(job.data))",
-              "line": 50
+              "symbol": "queue.process<ExecuteAutomatedStepPayload>(AUTOMATED_STEP_EXECUTE_JOB, (job) =>",
+              "line": 61
             }
           },
           {
@@ -1721,7 +1791,7 @@
             "evidence": {
               "path": "apps/api/src/routes/runs.ts",
               "symbol": "runsRouter.use('*', orgAuth({ admin: true }))",
-              "line": 29
+              "line": 35
             }
           },
           {
@@ -1730,8 +1800,8 @@
             "type": "imports",
             "evidence": {
               "path": "apps/api/src/routes/runs.ts",
-              "symbol": "import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'",
-              "line": 24
+              "symbol": "} from '../lib/run-steps.js'",
+              "line": 30
             }
           },
           {
@@ -1741,7 +1811,7 @@
             "evidence": {
               "path": "apps/api/src/routes/runs.ts",
               "symbol": "await withTenant(organizationId, async (tx) => ...)",
-              "line": 169
+              "line": 175
             }
           },
           {
@@ -1751,7 +1821,7 @@
             "evidence": {
               "path": "apps/api/src/routes/runs.ts",
               "symbol": "createRunSchema",
-              "line": 163
+              "line": 7
             }
           },
           {
@@ -1761,7 +1831,7 @@
             "evidence": {
               "path": "apps/api/src/routes/tasks.ts",
               "symbol": "tasksRouter.use('*', orgAuth())",
-              "line": 17
+              "line": 21
             }
           },
           {
@@ -1770,8 +1840,8 @@
             "type": "imports",
             "evidence": {
               "path": "apps/api/src/routes/tasks.ts",
-              "symbol": "import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'",
-              "line": 11
+              "symbol": "} from '../lib/run-steps.js'",
+              "line": 15
             }
           },
           {
@@ -1781,7 +1851,7 @@
             "evidence": {
               "path": "apps/api/src/routes/tasks.ts",
               "symbol": "await withTenant(organizationId, async (tx) => ...)",
-              "line": 122
+              "line": 126
             }
           },
           {
@@ -1791,7 +1861,7 @@
             "evidence": {
               "path": "apps/api/src/routes/tasks.ts",
               "symbol": "computeUnlockedPhaseIds",
-              "line": 3
+              "line": 5
             }
           },
           {
@@ -1850,8 +1920,8 @@
             "type": "publishes",
             "evidence": {
               "path": "apps/api/src/lib/run-steps.ts",
-              "symbol": "queue.enqueue({ name: AUTOMATED_STEP_EXECUTE_JOB, ... }, { singletonKey: step.id, retryLimit: 5, retryBackoff: true })",
-              "line": 51
+              "symbol": "{ name: AUTOMATED_STEP_EXECUTE_JOB, data: { runStepId: step.id, organizationId } },",
+              "line": 91
             }
           },
           {
@@ -1860,8 +1930,8 @@
             "type": "writes",
             "evidence": {
               "path": "apps/api/src/lib/run-steps.ts",
-              "symbol": "tx.update(runStep).set({ status: 'completed', completedAt: new Date() })",
-              "line": 72
+              "symbol": ".update(runStep)",
+              "line": 164
             }
           },
           {
@@ -1880,8 +1950,8 @@
             "type": "imports",
             "evidence": {
               "path": "apps/api/src/jobs/execute-automated-step.ts",
-              "symbol": "import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'",
-              "line": 11
+              "symbol": "} from '../lib/run-steps.js'",
+              "line": 15
             }
           },
           {
@@ -1921,7 +1991,7 @@
             "evidence": {
               "path": "apps/api/src/jobs/execute-automated-step.ts",
               "symbol": "result = await sendAuthEmail(to, subject, html)",
-              "line": 113
+              "line": 118
             }
           },
           {
@@ -1930,8 +2000,8 @@
             "type": "imports",
             "evidence": {
               "path": "apps/api/src/jobs/execute-automated-step.ts",
-              "symbol": "import { isAutomatedActionKey, parseAutomatedActionConfig, substituteAutomationTokens } from '@staffcomplete/shared'",
-              "line": 2
+              "symbol": "} from '@staffcomplete/shared'",
+              "line": 6
             }
           },
           {
@@ -1973,6 +2043,86 @@
               "symbol": "tenantDb.transaction(async (tx) => { await tx.execute(rawSql`select set_config('app.organization_id', ...)`) })",
               "line": 50
             }
+          },
+          {
+            "from": "api-run-steps",
+            "to": "api-queue",
+            "type": "publishes",
+            "evidence": {
+              "path": "apps/api/src/lib/run-steps.ts",
+              "symbol": "{ name: TASK_ASSIGNMENT_NOTIFY_JOB, data: { runStepId: step.id, organizationId } },",
+              "line": 141
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-queue",
+            "type": "subscribes",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "queue.process<NotifyTaskAssignmentPayload>(TASK_ASSIGNMENT_NOTIFY_JOB, (job) =>",
+              "line": 64
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-queue",
+            "type": "subscribes",
+            "evidence": {
+              "path": "apps/api/src/index.ts",
+              "symbol": "await queue.schedule('overdue-task-scan', OVERDUE_TASK_SCAN_CRON)",
+              "line": 60
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "resend",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/api/src/jobs/notify-task-assignment.ts",
+              "symbol": "const result = await sendAuthEmail(to, subject, html)",
+              "line": 72
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "resend",
+            "type": "calls",
+            "evidence": {
+              "path": "apps/api/src/jobs/overdue-task-scan.ts",
+              "symbol": "const result = await sendAuthEmail(to, subject, html)",
+              "line": 109
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-db",
+            "type": "reads",
+            "evidence": {
+              "path": "apps/api/src/jobs/overdue-task-scan.ts",
+              "symbol": ".from(runStep)",
+              "line": 34
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "api-db",
+            "type": "writes",
+            "evidence": {
+              "path": "apps/api/src/jobs/overdue-task-scan.ts",
+              "symbol": ".set({ overdueNotifiedAt: new Date() })",
+              "line": 120
+            }
+          },
+          {
+            "from": "api-jobs",
+            "to": "shared-domain",
+            "type": "imports",
+            "evidence": {
+              "path": "apps/api/src/jobs/overdue-task-scan.ts",
+              "symbol": "import { computeDueDate, isTaskOverdue } from '@staffcomplete/shared'",
+              "line": 2
+            }
           }
         ],
         "flows": [
@@ -1995,7 +2145,7 @@
           },
           {
             "id": "flow-start-run",
-            "name": "Start a run → dispatch automated steps → send email",
+            "name": "Start a run → dispatch automated steps, notify assignees",
             "trigger": "POST /api/runs (admin) with a checklist template id",
             "steps": [
               "web-spa",
@@ -2010,11 +2160,11 @@
               "api-jobs",
               "resend"
             ],
-            "outcome": "The template is snapshotted into run, runPhase, runPhaseDependency and runStep rows inside one tenant transaction. After it commits, every automated step in an unlocked phase is enqueued (singletonKey = step id, retryLimit 5); the execute-automated-step handler sends the email via Resend, completes the step, and cascades into any newly unlocked steps."
+            "outcome": "The template is snapshotted into run, runPhase, runPhaseDependency and runStep rows inside one tenant transaction. After it commits, every automated step in an unlocked phase is enqueued (singletonKey = step id, retryLimit 5) and the execute-automated-step handler sends its email via Resend, completes the step and cascades; in the same post-commit pass, every assigned manual task in those unlocked phases is enqueued on the task-assignment-notify queue, and its handler emails the assignee and stamps assignmentNotifiedAt. Manual tasks in phases still locked behind a dependency wait until a completion unlocks them."
           },
           {
             "id": "flow-complete-task",
-            "name": "Complete a task → unlock next phase → cascade",
+            "name": "Complete a task → unlock next phase → cascade and notify",
             "trigger": "POST /api/tasks/:id/complete by the assigned member",
             "steps": [
               "web-spa",
@@ -2026,16 +2176,17 @@
               "api-run-steps",
               "api-db",
               "api-queue",
-              "api-jobs"
+              "api-jobs",
+              "resend"
             ],
-            "outcome": "completeRunStep marks the step completed, re-derives run.status (completed when every sibling step is), and computes which automated steps the completion just unlocked. Those are dispatched only after the transaction commits, so the next phase's automation begins."
+            "outcome": "completeRunStep marks the step completed, re-derives run.status (completed when every sibling step is), and computes both what the completion unlocked: automated steps to dispatch and manual tasks whose assignees have not been told yet. Both are enqueued only after the transaction commits, so the next phase's automation begins and its assignees are emailed."
           },
           {
             "id": "flow-trial-lifecycle",
-            "name": "Daily trial lifecycle scan",
-            "trigger": "pg-boss cron '0 13 * * *' on the trial-lifecycle-scan queue",
+            "name": "Daily cron scans — trials and overdue tasks",
+            "trigger": "pg-boss cron '0 13 * * *' on the trial-lifecycle-scan queue, and '0 8 * * *' on the overdue-task-scan queue",
             "steps": ["api-queue", "api-app", "api-jobs", "api-db", "postgres", "resend"],
-            "outcome": "Every trialing subscription is checked cross-tenant on the superuser connection: expired ones flip to status 'expired'; ones within 3 days of expiry get a reminder email to all admins/owners, with trialReminderSentAt written immediately after each send so a crash or second run cannot double-send."
+            "outcome": "Both sweeps run cross-tenant on the superuser connection. trial-lifecycle-scan flips expired subscriptions to status 'expired' and emails admins/owners within 3 days of expiry, writing trialReminderSentAt immediately after each send. overdue-task-scan selects assigned, pending manual tasks that have already been announced (assignmentNotifiedAt set, so they are known to be actionable) and not yet reminded, derives each due date from run.eventDate + the step's offset, and emails the assignee once, writing overdueNotifiedAt immediately after. In both, a per-item try/catch keeps one failure from aborting the rest."
           },
           {
             "id": "flow-trial-enforcement",

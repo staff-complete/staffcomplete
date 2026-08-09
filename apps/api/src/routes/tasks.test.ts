@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   subscriptionFindFirstMock: vi.fn(),
   completeRunStepMock: vi.fn(),
   dispatchAutomatedStepsMock: vi.fn(),
+  dispatchTaskNotificationsMock: vi.fn(),
 }))
 
 function tx() {
@@ -38,6 +39,7 @@ vi.mock('../auth.js', () => ({
 vi.mock('../lib/run-steps.js', () => ({
   completeRunStep: mocks.completeRunStepMock,
   dispatchAutomatedSteps: mocks.dispatchAutomatedStepsMock,
+  dispatchTaskNotifications: mocks.dispatchTaskNotificationsMock,
 }))
 
 const { tasksRouter } = await import('./tasks.js')
@@ -82,6 +84,7 @@ beforeEach(() => {
   })
   mocks.completeRunStepMock.mockReset()
   mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
+  mocks.dispatchTaskNotificationsMock.mockReset().mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -283,6 +286,7 @@ describe('POST /api/tasks/:id/complete', () => {
         status: 'in_progress',
       },
       stepsToDispatch: [],
+      tasksToNotify: [],
     })
 
     const res = await post('/rs1/complete')
@@ -326,6 +330,7 @@ describe('POST /api/tasks/:id/complete', () => {
         status: 'completed',
       },
       stepsToDispatch: [],
+      tasksToNotify: [],
     })
 
     const res = await post('/rs1/complete')
@@ -363,6 +368,7 @@ describe('POST /api/tasks/:id/complete', () => {
         status: 'in_progress',
       },
       stepsToDispatch: [dispatchable],
+      tasksToNotify: [],
     })
 
     const res = await post('/rs1/complete')
@@ -372,5 +378,50 @@ describe('POST /api/tasks/:id/complete', () => {
     // status, not just the dispatch call.
     expect(res.status).toBe(200)
     expect(mocks.dispatchAutomatedStepsMock).toHaveBeenCalledWith(ORG_ID, [dispatchable])
+  })
+
+  it('emails assignees of manual tasks the completion just unlocked', async () => {
+    memberSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 'rs1',
+      runId: 'r1',
+      phaseId: 'p1',
+      assigneeId: MEMBER_ID,
+      title: 'Order laptop',
+      dueDateOffsetDays: 1,
+    })
+    mocks.runPhaseFindManyMock.mockResolvedValue([{ id: 'p1', position: 0 }])
+    mocks.runStepFindManyMock.mockResolvedValueOnce([{ phaseId: 'p1', status: 'pending' }])
+    const notifiable = {
+      id: 'rs3',
+      phaseId: 'p2',
+      type: 'manual',
+      status: 'pending',
+      assigneeId: 'member-2',
+      assignmentNotifiedAt: null,
+    }
+    mocks.completeRunStepMock.mockResolvedValue({
+      updatedStep: {
+        id: 'rs1',
+        runId: 'r1',
+        title: 'Order laptop',
+        status: 'completed',
+        dueDateOffsetDays: 1,
+      },
+      updatedRun: {
+        id: 'r1',
+        type: 'onboarding',
+        employeeName: 'Jane Doe',
+        eventDate: '2026-08-01',
+        status: 'in_progress',
+      },
+      stepsToDispatch: [],
+      tasksToNotify: [notifiable],
+    })
+
+    const res = await post('/rs1/complete')
+
+    expect(res.status).toBe(200)
+    expect(mocks.dispatchTaskNotificationsMock).toHaveBeenCalledWith(ORG_ID, [notifiable])
   })
 })

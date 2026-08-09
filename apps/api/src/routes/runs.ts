@@ -21,7 +21,13 @@ import {
   checklistTemplateStep,
 } from '../db/schema.js'
 import { assertValidAssignee } from '../lib/assignee.js'
-import { dispatchAutomatedSteps, selectStepsToDispatch } from '../lib/run-steps.js'
+import {
+  dispatchAutomatedSteps,
+  dispatchTaskNotifications,
+  loadNotifiableTasks,
+  selectManualStepsToNotify,
+  selectStepsToDispatch,
+} from '../lib/run-steps.js'
 import { orgAuth } from '../middleware/org-auth.js'
 
 export const runsRouter = new Hono()
@@ -319,6 +325,14 @@ runsRouter.post('/', zValidator('json', createRunSchema), async (c) => {
     organizationId,
     selectStepsToDispatch(createdPhases, createdDependencies, createdSteps),
   )
+  // Manual tasks in those same root phases are actionable from the moment
+  // the run starts, so their assignees are emailed now. Tasks in phases
+  // still locked behind a dependency wait until completing an earlier step
+  // unlocks them (see tasks.ts and jobs/execute-automated-step.ts).
+  await dispatchTaskNotifications(
+    organizationId,
+    selectManualStepsToNotify(createdPhases, createdDependencies, createdSteps),
+  )
 
   return c.json(
     {
@@ -379,9 +393,13 @@ runsRouter.patch('/:id/steps/:stepId', zValidator('json', reassignRunStepSchema)
       return 'STEP_COMPLETED' as const
     }
 
+    // Clearing assignmentNotifiedAt re-arms the assignment email for whoever
+    // just inherited the task — the previous assignee's notification says
+    // nothing to the new one. Handing a step to nobody (assigneeId: null)
+    // notifies nobody: selectManualStepsToNotify skips unassigned steps.
     const [row] = await tx
       .update(runStep)
-      .set({ assigneeId })
+      .set({ assigneeId, assignmentNotifiedAt: null })
       .where(eq(runStep.id, stepId))
       .returning()
     return row
@@ -396,6 +414,15 @@ runsRouter.patch('/:id/steps/:stepId', zValidator('json', reassignRunStepSchema)
   if (!updated) {
     return c.json({ code: 'NOT_FOUND', message: 'Step not found.' }, 404)
   }
+
+  // Post-commit, and scoped to the one step that actually changed hands —
+  // loadNotifiableTasks reports every un-notified actionable task on the run,
+  // but the others aren't this request's business.
+  const notifiable = await withTenant(organizationId, (tx) => loadNotifiableTasks(tx, runId))
+  await dispatchTaskNotifications(
+    organizationId,
+    notifiable.filter((task) => task.id === stepId),
+  )
 
   return c.json({ id: updated.id, assigneeId: updated.assigneeId })
 })

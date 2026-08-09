@@ -383,6 +383,15 @@ export const runStep = pgTable(
     // needs a real completion timestamp — createdAt is when the run started,
     // not when the step finished).
     completedAt: timestamp('completedAt'),
+    // Send-once guards for the two task notification emails (issue #28),
+    // manual steps only. Null means "never notified" — the same role
+    // subscription.trialReminderSentAt plays for the trial scan, and for the
+    // same reason: pg-boss singletonKey only refuses a job that is currently
+    // queued or active, so it stops a concurrent double-enqueue but not a
+    // re-send from a later completeRunStep cascade that re-selects this step.
+    // Deciding "already emailed" needs persisted state, not queue state.
+    assignmentNotifiedAt: timestamp('assignmentNotifiedAt'),
+    overdueNotifiedAt: timestamp('overdueNotifiedAt'),
   },
   (table) => [tenantIsolationPolicy('run_step', table.organizationId)],
 ).enableRLS()

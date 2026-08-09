@@ -8,7 +8,11 @@ import type { EmailSendConfig } from '@staffcomplete/shared'
 import { escapeHtml, sendAuthEmail } from '../auth.js'
 import { withTenant } from '../db/index.js'
 import { run, runStep } from '../db/schema.js'
-import { completeRunStep, dispatchAutomatedSteps } from '../lib/run-steps.js'
+import {
+  completeRunStep,
+  dispatchAutomatedSteps,
+  dispatchTaskNotifications,
+} from '../lib/run-steps.js'
 import { componentLogger } from '../lib/logger.js'
 
 const log = componentLogger('execute-automated-step')
@@ -75,10 +79,11 @@ export async function executeAutomatedStep(payload: ExecuteAutomatedStepPayload)
     await sendEmailAction(prepared.config as EmailSendConfig, prepared.run)
   }
 
-  const { stepsToDispatch } = await withTenant(organizationId, (tx) =>
+  const { stepsToDispatch, tasksToNotify } = await withTenant(organizationId, (tx) =>
     completeRunStep(tx, runStepId),
   )
   await dispatchAutomatedSteps(organizationId, stepsToDispatch)
+  await dispatchTaskNotifications(organizationId, tasksToNotify)
 }
 
 async function sendEmailAction(

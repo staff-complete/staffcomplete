@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   updateWhereMock: vi.fn(),
   updateReturningMock: vi.fn(),
   dispatchAutomatedStepsMock: vi.fn(),
+  dispatchTaskNotificationsMock: vi.fn(),
+  loadNotifiableTasksMock: vi.fn(),
 }))
 
 function tx() {
@@ -54,7 +56,16 @@ vi.mock('../auth.js', () => ({
 
 vi.mock('../lib/run-steps.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/run-steps.js')>()
-  return { ...actual, dispatchAutomatedSteps: mocks.dispatchAutomatedStepsMock }
+  // selectManualStepsToNotify stays real — run creation runs it over rows
+  // held in memory, and which of those tasks get announced is exactly what
+  // the tests below assert. Only the enqueue side and the reassignment path's
+  // extra round-trip are stubbed.
+  return {
+    ...actual,
+    dispatchAutomatedSteps: mocks.dispatchAutomatedStepsMock,
+    dispatchTaskNotifications: mocks.dispatchTaskNotificationsMock,
+    loadNotifiableTasks: mocks.loadNotifiableTasksMock,
+  }
 })
 
 const { runsRouter } = await import('./runs.js')
@@ -130,6 +141,8 @@ beforeEach(() => {
   mocks.updateWhereMock.mockReset().mockReturnValue({ returning: mocks.updateReturningMock })
   mocks.updateReturningMock.mockReset()
   mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
+  mocks.dispatchTaskNotificationsMock.mockReset().mockResolvedValue(undefined)
+  mocks.loadNotifiableTasksMock.mockReset().mockResolvedValue([])
 })
 
 afterEach(() => {
@@ -513,6 +526,7 @@ describe('POST /api/runs', () => {
             assigneeId: 'm1',
             dueDateOffsetDays: 1,
             status: 'pending',
+            assignmentNotifiedAt: null,
             position: 0,
           },
           {
@@ -523,6 +537,7 @@ describe('POST /api/runs', () => {
             assigneeId: null,
             dueDateOffsetDays: null,
             status: 'pending',
+            assignmentNotifiedAt: null,
             action: 'email.send',
             config: {
               to: '[employeeEmail]',
@@ -589,6 +604,15 @@ describe('POST /api/runs', () => {
     ]
     expect(dispatchedOrgId).toBe(ADMIN_ORG_ID)
     expect(dispatchedSteps).toEqual([expect.objectContaining({ id: 'rs2' })])
+
+    // rs1 (manual, assigned to m1) sits in that same unlocked phase, so its
+    // assignee is emailed at run start. rs2 is automated — nobody to tell.
+    const [notifiedOrgId, notifiedTasks] = mocks.dispatchTaskNotificationsMock.mock.calls[0] as [
+      string,
+      Array<{ id: string }>,
+    ]
+    expect(notifiedOrgId).toBe(ADMIN_ORG_ID)
+    expect(notifiedTasks).toEqual([expect.objectContaining({ id: 'rs1' })])
   })
 
   it("copies the template's phase dependencies onto the run's own phase copies", async () => {
@@ -735,7 +759,51 @@ describe('PATCH /api/runs/:id/steps/:stepId', () => {
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ id: 's1', assigneeId: 'm2' })
-    expect(mocks.updateSetMock).toHaveBeenCalledWith({ assigneeId: 'm2' })
+    // assignmentNotifiedAt is cleared alongside the handover so the new
+    // assignee gets their own email — the old one's says nothing to them.
+    expect(mocks.updateSetMock).toHaveBeenCalledWith({
+      assigneeId: 'm2',
+      assignmentNotifiedAt: null,
+    })
+  })
+
+  it('emails the new assignee, and only about the step that changed hands', async () => {
+    adminSession()
+    mocks.memberFindFirstMock.mockResolvedValueOnce({ role: 'admin', organizationId: ADMIN_ORG_ID })
+    mocks.memberFindFirstMock.mockResolvedValueOnce({ id: 'm2', organizationId: ADMIN_ORG_ID })
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      runId: 'r1',
+      type: 'manual',
+      status: 'pending',
+    })
+    mocks.updateReturningMock.mockResolvedValue([{ id: 's1', assigneeId: 'm2' }])
+    // The run has another un-notified actionable task; reassigning s1 is not
+    // a reason to announce it.
+    mocks.loadNotifiableTasksMock.mockResolvedValue([{ id: 's1' }, { id: 's-other' }])
+
+    const res = await patchJson('/r1/steps/s1', { assigneeId: 'm2' })
+
+    expect(res.status).toBe(200)
+    expect(mocks.dispatchTaskNotificationsMock).toHaveBeenCalledWith(ADMIN_ORG_ID, [{ id: 's1' }])
+  })
+
+  it('tells nobody when a step is handed back to unassigned', async () => {
+    adminSession()
+    mocks.runStepFindFirstMock.mockResolvedValue({
+      id: 's1',
+      runId: 'r1',
+      type: 'manual',
+      status: 'pending',
+    })
+    mocks.updateReturningMock.mockResolvedValue([{ id: 's1', assigneeId: null }])
+    // An unassigned step never survives selectManualStepsToNotify, so the
+    // real loader would report nothing for it.
+    mocks.loadNotifiableTasksMock.mockResolvedValue([])
+
+    await patchJson('/r1/steps/s1', { assigneeId: null })
+
+    expect(mocks.dispatchTaskNotificationsMock).toHaveBeenCalledWith(ADMIN_ORG_ID, [])
   })
 
   it('clears the assignee back to unassigned', async () => {

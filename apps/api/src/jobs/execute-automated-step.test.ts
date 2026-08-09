@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   sendAuthEmailMock: vi.fn(),
   completeRunStepMock: vi.fn(),
   dispatchAutomatedStepsMock: vi.fn(),
+  dispatchTaskNotificationsMock: vi.fn(),
 }))
 
 function tx() {
@@ -59,6 +60,7 @@ vi.mock('../auth.js', () => ({
 vi.mock('../lib/run-steps.js', () => ({
   completeRunStep: mocks.completeRunStepMock,
   dispatchAutomatedSteps: mocks.dispatchAutomatedStepsMock,
+  dispatchTaskNotifications: mocks.dispatchTaskNotificationsMock,
 }))
 
 const { executeAutomatedStep } = await import('./execute-automated-step.js')
@@ -87,8 +89,11 @@ beforeEach(() => {
   mocks.runStepFindFirstMock.mockReset()
   mocks.runFindFirstMock.mockReset().mockResolvedValue(RUN)
   mocks.sendAuthEmailMock.mockReset().mockResolvedValue({ data: { id: 'email-1' }, error: null })
-  mocks.completeRunStepMock.mockReset().mockResolvedValue({ stepsToDispatch: [] })
+  mocks.completeRunStepMock
+    .mockReset()
+    .mockResolvedValue({ stepsToDispatch: [], tasksToNotify: [] })
   mocks.dispatchAutomatedStepsMock.mockReset().mockResolvedValue(undefined)
+  mocks.dispatchTaskNotificationsMock.mockReset().mockResolvedValue(undefined)
 })
 
 describe('executeAutomatedStep', () => {
@@ -96,6 +101,7 @@ describe('executeAutomatedStep', () => {
     mocks.runStepFindFirstMock.mockResolvedValue(EMAIL_STEP)
     mocks.completeRunStepMock.mockResolvedValue({
       stepsToDispatch: [{ id: 's2', phaseId: 'p2', type: 'automated', status: 'pending' }],
+      tasksToNotify: [],
     })
 
     await executeAutomatedStep(PAYLOAD)
