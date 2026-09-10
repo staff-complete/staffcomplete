@@ -8,6 +8,12 @@ words and not their synonyms. This file is a glossary — no implementation deta
 
 Maintained with the `domain-modeling` skill.
 
+**The vocabulary below outlives the code.** The platform that implemented it was archived
+before the first customer (ADR-0023); today the repository builds only the early-access
+landing page. These terms stay canonical — they are what the product means, and what it will
+be built back to. Terms whose implementation went with the archive are marked
+`_Status_: archived`.
+
 ## Organizations and people
 
 **Organization**:
@@ -38,16 +44,29 @@ The person a run is about — a new hire being onboarded or someone leaving. Emp
 subjects of the process, not users of the product: they have no login and no membership.
 _Avoid_: staff member, hire, worker
 
+## Early access
+
+**Early Access Request**:
+Someone asking to be let in before the product is open — an email address, optionally a
+company name, and nothing else. Not a User and not a Member: the person has no login and
+belongs to no organization until there is a product to belong to.
+_Avoid_: signup, sign-up, lead, waitlist entry, subscriber
+_In code_: `earlyAccessRequestSchema` in `packages/shared`. "Sign up" is deliberately not
+used — that was the name of the account-creation flow that was archived, and reusing it
+would name two different things.
+
 ## Subscription
 
 **Trial**:
 The 30-day period an organization gets on first login, after which it must subscribe to keep
 creating templates and runs.
 _Avoid_: free tier, evaluation
+_Status_: archived — there is no login, and the landing page must not advertise a trial.
 
 **Subscription**:
 An organization's paid standing: trialing, active, expired, or canceled.
 _Avoid_: plan (the plan is one field of it), billing account
+_Status_: archived — nothing charges anyone, and the page carries no pricing.
 
 ## Checklists and runs
 
@@ -55,8 +74,8 @@ _Avoid_: plan (the plan is one field of it), billing account
 A reusable checklist an organization builds up-front, for either onboarding or offboarding,
 and launches runs from.
 _Avoid_: workflow, workflow template, playbook, process
-_In code_: the SQL tables are still named `workflow_template*`, mapped to the current name
-by Drizzle. Nothing above the schema uses the old word.
+_In code_: the `workflow_template*` SQL table names went to the archive with the schema; no
+identifier in this repository carries the old word any more.
 
 **Phase**:
 A named stage within a template or run. Steps in a phase can happen in parallel; a phase opens
@@ -91,8 +110,8 @@ The connection to one external SaaS tool — Slack, Google Workspace, GitHub —
 actions reach the outside world through. One integration per tool, however many actions use
 it. An Automated Action is what the checklist asks for; the Integration is what performs it.
 _Avoid_: connector, plugin, provider
-_Status_: none built yet. The only external service called today is the email provider, from
-the auth module.
+_Status_: none built yet. The only external service called today is the email provider that
+delivers Early Access Requests, and it is not reached through an integration.
 
 **Automation Token**:
 A placeholder such as `[employeeName]` written into an automated action's configuration and
@@ -141,7 +160,7 @@ code or docs knows it is not a concept.
 
 **Workflow** — never a domain term. What exists is the Checklist Template (the definition),
 the Run (one execution of it), and the Automated Action (what a machine-run step performs).
-Retired from the code in full; only the `workflow_template*` SQL table names still carry it,
-and ADRs written before the change (0017, 0018, 0019) still use it throughout — they are
-immutable and were left as written. If a workflow _engine_ is built later, that is
-infrastructure and gets named then — the word is not held in reserve.
+Retired from the code in full; the `workflow_template*` SQL table names that were its last
+foothold went to the archive with the schema. ADRs written before the change (0017, 0018, 0019) still use it throughout — they are immutable and were left as written. If a workflow
+_engine_ is built later, that is infrastructure and gets named then — the word is not held
+in reserve.

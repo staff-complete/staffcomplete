@@ -70,7 +70,8 @@
     "cutover",
     "ipcountry",
     "remoteip",
-    "signups"
+    "signups",
+    "waitlist"
   ],
   "ignoreRegExpList": ["[\\u0400-\\u04FF]+", "[\\u0590-\\u05FF]+"]
 }

@@ -10,57 +10,48 @@ A SaaS platform for automating the full employee lifecycle across company system
 
 ---
 
-## What this project does
+## Status: early access
+
+**This repository currently builds one thing — the early-access landing page at
+[staffcomplete.io](https://staffcomplete.io).** The platform described below is
+the product we intend to build; it is not running here.
+
+A first version of it was built and then removed before the first customer,
+because a platform with no users costs money and attention to keep alive and
+returns neither. It is preserved in full at the `v0-full-app` tag and the
+`archive/full-app` branch, and the reasoning is recorded in
+[ADR-0023](docs/decisions/). The page collects early-access requests until
+there is someone to build for.
+
+---
+
+## What the product will do
 
 - Employee onboarding
 - Role and permission changes
 - Offboarding and access removal
 - Cross-system provisioning (Google Workspace, Slack, GitHub, and other integrated tools)
 
-## Key Features
-
-### Onboarding Automation
-
-- Create accounts in company tools
-- Assign roles and permissions
-- Provision access automatically
-
-### Role Management
-
-- Update permissions across systems
-- Handle team or department changes
-- Maintain sync across integrations
-
-### Offboarding Automation
-
-- Revoke all system access
-- Disable accounts
-- Ensure secure cleanup of company data access
+Every employee state change should automatically reflect across all company
+systems — safely, consistently, and with a full audit trail. The vocabulary for
+all of it is in [CONTEXT.md](CONTEXT.md).
 
 ---
 
-## System Architecture
+## What is in this repository today
 
-| Layer      | Choice                                                       |
-| ---------- | ------------------------------------------------------------ |
-| Frontend   | Vue 3 + Tailwind + Pinia + TanStack Query                    |
-| Backend    | Hono + tRPC + Zod                                            |
-| Database   | PostgreSQL + Drizzle, tenant-isolated via Row-Level Security |
-| Job queue  | pg-boss                                                      |
-| Auth       | Better Auth                                                  |
-| Deployment | Docker + Kamal on Hetzner                                    |
+| Layer    | Choice                                                   |
+| -------- | -------------------------------------------------------- |
+| Frontend | Vue 3 + Tailwind v4, built by Vite to static files       |
+| Backend  | One Cloudflare Pages Function (`POST /api/early-access`) |
+| Storage  | None. A signup is delivered as email via Resend          |
+| Hosting  | Cloudflare Pages, free tier, deployed from `main`        |
 
-Full rationale for each choice — including alternatives considered — is recorded in [docs/decisions/](docs/decisions/README.md) (ADRs).
-
-**Data flow:** a lifecycle event (onboarding / role change / offboarding) is raised → queued by the job queue (pg-boss) → dispatched to per-system integration handlers (Google Workspace, Slack, GitHub, …) → every step is recorded for audit.
-
-## Design Principles
-
-- Event-driven, integration-first architecture
-- Secure by default: least-privilege access, automatic revocation on offboarding, no hardcoded credentials
-- Full audit trail of every lifecycle action
-- Idempotent automation — safe to retry
-- Multi-tenant, isolated at the database level (PostgreSQL RLS)
+There is no database, API server, job queue or authentication. The archived
+platform's stack — Hono, tRPC, Drizzle, PostgreSQL with row-level security,
+pg-boss, Better Auth, Kamal on Hetzner — and the rationale for each choice is
+recorded in [docs/decisions/](docs/decisions/README.md) (ADRs). Read ADR-0023
+first: it says which of the earlier decisions still bind.
 
 ---
 
@@ -78,14 +69,21 @@ All other tooling (Node.js, pnpm, etc.) is provided inside the devcontainer.
 1. Clone the repository
 2. Open in VS Code — it will prompt to reopen in the devcontainer
 3. The devcontainer runs `pnpm install` automatically on creation
-4. Start the API: `pnpm --filter api dev`
-5. Start the frontend: `pnpm --filter web dev`
+4. Start the landing page: `pnpm --filter web dev`
+
+The Pages Function does not run under Vite. It is covered by unit tests
+(`pnpm test`), and every pull request gets a Cloudflare preview deployment
+where the form works end to end.
 
 ---
 
 ## Contributing
 
-Contributions go through feature-branch PRs against `main`, following [Conventional Commits](https://www.conventionalcommits.org/). For exact branch naming, commit scopes, commit-signing setup, and CI commands, see [CLAUDE.md](CLAUDE.md) — the single source of truth for repo workflow, kept in sync with the skills in `.claude/skills/`.
+Contributions go through feature-branch PRs against `main`, following
+[Conventional Commits](https://www.conventionalcommits.org/). For exact branch
+naming, commit scopes, commit-signing setup, and CI commands, see
+[CLAUDE.md](CLAUDE.md) — the single source of truth for repo workflow, kept in
+sync with the skills in `.claude/skills/`.
 
 ## License
 
