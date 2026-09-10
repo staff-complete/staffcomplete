@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { earlyAccessSignupSchema } from './index.js'
+import { earlyAccessRequestSchema } from './index.js'
 
-describe('earlyAccessSignupSchema', () => {
+describe('earlyAccessRequestSchema', () => {
   it('accepts an email on its own', () => {
-    const result = earlyAccessSignupSchema.safeParse({ email: 'ada@example.com' })
+    const result = earlyAccessRequestSchema.safeParse({ email: 'ada@example.com' })
 
     expect(result.success).toBe(true)
     expect(result.data?.company).toBeUndefined()
   })
 
   it('trims surrounding whitespace', () => {
-    const result = earlyAccessSignupSchema.parse({
+    const result = earlyAccessRequestSchema.parse({
       email: '  ada@example.com  ',
       company: '  Analytical Engines  ',
     })
@@ -19,14 +19,14 @@ describe('earlyAccessSignupSchema', () => {
   })
 
   it('rejects a malformed email', () => {
-    const result = earlyAccessSignupSchema.safeParse({ email: 'ada@' })
+    const result = earlyAccessRequestSchema.safeParse({ email: 'ada@' })
 
     expect(result.success).toBe(false)
     expect(result.error?.issues[0]?.message).toBe('Valid work email required')
   })
 
   it('rejects an email over the length limit', () => {
-    const result = earlyAccessSignupSchema.safeParse({
+    const result = earlyAccessRequestSchema.safeParse({
       email: `${'a'.repeat(250)}@example.com`,
     })
 
@@ -35,7 +35,7 @@ describe('earlyAccessSignupSchema', () => {
   })
 
   it('rejects a company name over the length limit', () => {
-    const result = earlyAccessSignupSchema.safeParse({
+    const result = earlyAccessRequestSchema.safeParse({
       email: 'ada@example.com',
       company: 'a'.repeat(101),
     })

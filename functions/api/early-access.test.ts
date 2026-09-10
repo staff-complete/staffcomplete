@@ -43,7 +43,7 @@ afterEach(() => {
 })
 
 describe('onRequestPost', () => {
-  it('emails the signup and reports success', async () => {
+  it('emails the request and reports success', async () => {
     const response = await onRequestPost({
       request: postRequest({ email: 'ada@example.com' }),
       env,
@@ -91,7 +91,7 @@ describe('onRequestPost', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('silently drops a submission that filled the honeypot', async () => {
+  it('silently drops a request that filled the honeypot', async () => {
     const response = await onRequestPost({
       request: postRequest({ email: 'ada@example.com', website: 'http://spam.example' }),
       env,
@@ -142,7 +142,7 @@ describe('onRequestPost', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1)
     })
 
-    it('emails the signup once Turnstile verifies it', async () => {
+    it('emails the request once Turnstile verifies it', async () => {
       fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ success: true })))
 
       const response = await onRequestPost({

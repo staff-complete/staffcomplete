@@ -1,8 +1,8 @@
 {
   "lock_version": 1,
-  "generated_at": "2026-09-10T17:39:21Z",
-  "commit": "1035c1b1b432f0a24c6becaa810ca287e4e9b1c9",
-  "commit_short": "1035c1b",
+  "generated_at": "2026-09-10T17:43:22Z",
+  "commit": "1e52a79ba720add8addf4c3f062fad5b88c19315",
+  "commit_short": "1e52a79",
   "branch": "feat/early-access-landing",
   "working_tree_dirty": true,
   "working_tree_note": "Refreshed against a working tree with uncommitted tracked changes; fingerprints describe the files on disk, not the commit named above.",
@@ -37,7 +37,7 @@
       "id": "apps/web",
       "path": "apps/web",
       "tracked_files": 27,
-      "fingerprint": "sha256:843edda7afd6dd9391b667635090220390de6e43885de9163eaed0fe89eda28d",
+      "fingerprint": "sha256:1485afc8d889e147b84006bbeb1d0fa8568f1e55c30aa75d93a0aaec57398b30",
       "nodes": [
         "web-entry",
         "web-chrome",
@@ -49,7 +49,7 @@
       "id": "packages/shared",
       "path": "packages/shared",
       "tracked_files": 6,
-      "fingerprint": "sha256:894c1f6f4dd0dbb8d7458beb23d1a343cf32b7fa45a115ceeb7c6a696719edc3",
+      "fingerprint": "sha256:b5f5c7064e4ef6cffcc994fc8a396de133b96e63dcefb2469f2026ccba19468b",
       "nodes": [
         "shared-early-access"
       ]
@@ -58,7 +58,7 @@
       "id": "functions",
       "path": "functions",
       "tracked_files": 5,
-      "fingerprint": "sha256:445309c8bc65f1d2153aac87e1a7bfaf68644cc07d695af46a9ceca072d9f128",
+      "fingerprint": "sha256:51ea8b2e4c41d0f8a15e611ef75595b226b36562d95ddce64126469870a43405",
       "nodes": [
         "fn-early-access"
       ]
@@ -87,6 +87,6 @@
   ],
   "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three.",
   "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.",
-  "graph_fingerprint": "sha256:6eaf55144618ea3e0a41960f0b024ee66b7a4400b65c87fb34e151e0499544bc",
+  "graph_fingerprint": "sha256:14fd434ab3a743b6eb49dd34a1a75fe14be347868623a90ca259c24c5e61945c",
   "graph_fingerprint_note": "sha256 over the map's claims only — scope, nodes, edges, flows, unknowns — with generated_at and the commit excluded. This, not the module fingerprints, is what decides whether the map needs rewriting."
 }

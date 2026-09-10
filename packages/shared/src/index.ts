@@ -8,10 +8,11 @@ const MAX_EMAIL_LENGTH = 254
 const MAX_COMPANY_LENGTH = 100
 
 /**
- * An early-access request. Shared by the landing form and the Pages Function
- * that turns it into a notification email — there is no database behind it.
+ * A request to be let into the early-access programme. Shared by the landing
+ * form and the Pages Function that turns it into a notification email — there
+ * is no database behind it.
  */
-export const earlyAccessSignupSchema = z.object({
+export const earlyAccessRequestSchema = z.object({
   email: z
     .string()
     .trim()
@@ -20,4 +21,4 @@ export const earlyAccessSignupSchema = z.object({
   company: z.string().trim().max(MAX_COMPANY_LENGTH, 'Company name is too long').optional(),
 })
 
-export type EarlyAccessSignup = z.infer<typeof earlyAccessSignupSchema>
+export type EarlyAccessRequest = z.infer<typeof earlyAccessRequestSchema>

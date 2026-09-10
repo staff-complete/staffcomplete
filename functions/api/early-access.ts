@@ -1,4 +1,4 @@
-import { earlyAccessSignupSchema } from '@staffcomplete/shared'
+import { earlyAccessRequestSchema } from '@staffcomplete/shared'
 
 interface Env {
   /** Resend API key. Without it the endpoint has nowhere to deliver a signup. */
@@ -66,7 +66,7 @@ export async function onRequestPost({ request, env }: RequestContext): Promise<R
     }
   }
 
-  const parsed = earlyAccessSignupSchema.safeParse(payload)
+  const parsed = earlyAccessRequestSchema.safeParse(payload)
   if (!parsed.success) {
     return json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' }, 400)
   }

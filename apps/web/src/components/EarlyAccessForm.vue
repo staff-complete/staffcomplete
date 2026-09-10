@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, useTemplateRef } from 'vue'
-import { earlyAccessSignupSchema } from '@staffcomplete/shared'
+import { earlyAccessRequestSchema } from '@staffcomplete/shared'
 
 type FormState = 'idle' | 'submitting' | 'done'
 
@@ -41,7 +41,7 @@ onMounted(() => {
 })
 
 async function submit() {
-  const parsed = earlyAccessSignupSchema.safeParse({
+  const parsed = earlyAccessRequestSchema.safeParse({
     email: email.value,
     company: company.value === '' ? undefined : company.value,
   })
