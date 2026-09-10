@@ -1,1 +1,0 @@
-ALTER TABLE "run_step" ADD COLUMN "completedAt" timestamp;

@@ -1,30 +1,23 @@
 <script setup lang="ts">
 import AppLogo from './AppLogo.vue'
 
-// Set via a Docker build arg (Dockerfile's ARG VITE_APP_VERSION) sourced from
-// the just-created release tag in the deploy workflow — unset in local dev.
+// Set at build time by the Pages build (VITE_APP_VERSION) — unset in local dev.
 const appVersion = import.meta.env.VITE_APP_VERSION || 'dev'
 
-const columns = [
-  {
-    label: 'Product',
-    links: ['Features', 'Integrations', 'Pricing', 'Changelog'],
-  },
-  {
-    label: 'Company',
-    links: ['About', 'Blog', 'Careers', 'Security'],
-  },
-  {
-    label: 'Legal',
-    links: ['Privacy', 'Terms', 'Cookie policy', 'SOC 2'],
-  },
+// Only links that go somewhere real. The product pages, blog and legal pages
+// the full footer used to promise do not exist yet.
+const links = [
+  { label: 'How it works', href: '#how' },
+  { label: 'Features', href: '#features' },
+  { label: 'Integrations', href: '#integrations' },
+  { label: 'Early access', href: '#early-access' },
 ]
 </script>
 
 <template>
   <footer class="bg-brand-dark pt-16 pb-10 px-10 border-t border-white/[0.05]">
     <div class="max-w-[1160px] mx-auto">
-      <div class="grid grid-cols-[2fr_1fr_1fr_1fr] gap-12 mb-[52px]">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-10 mb-[52px]">
         <div>
           <div class="mb-4">
             <AppLogo dark size="sm" />
@@ -33,20 +26,18 @@ const columns = [
             Automate the full employee lifecycle across all your company systems.
           </p>
         </div>
-        <div v-for="col in columns" :key="col.label">
-          <div class="text-[10.5px] font-bold tracking-[0.18em] uppercase text-white/30 mb-5">
-            {{ col.label }}
+        <div class="flex flex-col gap-3">
+          <div class="text-[10.5px] font-bold tracking-[0.18em] uppercase text-white/30 mb-2">
+            StaffComplete
           </div>
-          <div class="flex flex-col gap-3">
-            <a
-              v-for="link in col.links"
-              :key="link"
-              href="#"
-              class="text-[13px] text-white/50 font-medium"
-            >
-              {{ link }}
-            </a>
-          </div>
+          <a
+            v-for="link in links"
+            :key="link.href"
+            :href="link.href"
+            class="text-[13px] text-white/50 font-medium"
+          >
+            {{ link.label }}
+          </a>
         </div>
       </div>
       <div class="pt-7 border-t border-white/[0.07] flex items-center justify-between">

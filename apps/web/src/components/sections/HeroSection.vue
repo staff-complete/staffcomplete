@@ -48,12 +48,12 @@
           </p>
 
           <div class="flex items-center gap-3.5">
-            <RouterLink
-              to="/sign-up"
+            <a
+              href="#early-access"
               class="text-sm font-bold text-white bg-brand-teal px-7 py-3.5 rounded-[10px] tracking-[-0.01em]"
             >
-              Start free trial
-            </RouterLink>
+              Request early access
+            </a>
             <a
               href="#how"
               class="text-sm font-semibold flex items-center gap-1.5"
@@ -79,24 +79,10 @@
             </a>
           </div>
 
-          <!-- social proof -->
-          <div class="flex items-center gap-3">
-            <div class="flex" aria-hidden="true">
-              <div
-                v-for="(avatar, i) in avatars"
-                :key="avatar.initials"
-                class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-brand-dark"
-                :class="[avatar.bg, avatar.text]"
-                :style="{
-                  marginRight: i < avatars.length - 1 ? '-8px' : '0',
-                  zIndex: avatars.length - i,
-                }"
-              >
-                {{ avatar.initials }}
-              </div>
-            </div>
+          <div class="flex items-center gap-2.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-light block flex-shrink-0"></span>
             <span class="text-xs font-medium" style="color: rgba(255, 255, 255, 0.35)">
-              Trusted by 200+ HR teams in early access
+              In private early access — we are onboarding our first teams now.
             </span>
           </div>
         </div>
@@ -214,12 +200,6 @@
 </template>
 
 <script setup lang="ts">
-const avatars = [
-  { initials: 'A', bg: 'bg-brand-light', text: 'text-brand-dark' },
-  { initials: 'M', bg: 'bg-[#0f766e]', text: 'text-white' },
-  { initials: 'K', bg: 'bg-[#134e4a]', text: 'text-white' },
-]
-
 const stages = [
   { label: 'Hire', sub: 'Day 1', highlight: false },
   { label: 'Manage', sub: 'Ongoing', highlight: true },

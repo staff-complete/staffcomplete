@@ -20,8 +20,8 @@ const integrations = [
     <div class="max-w-[1160px] mx-auto text-center">
       <SectionHeader
         eyebrow="Integrations"
-        heading="Works with your entire stack"
-        subtext="Connect in one click. No professional services. No waiting."
+        heading="Built to work with your entire stack"
+        subtext="These are the systems we are wiring up first. Tell us which ones your team lives in and we will start there."
         subtextMaxWidth="400px"
         heading-class="text-[36px]"
       />
@@ -44,7 +44,7 @@ const integrations = [
           class="flex items-center gap-2.5 bg-brand-surface rounded-xl px-5 py-3"
           style="border: 1.5px dashed #b2d8d4"
         >
-          <span class="text-[13px] font-semibold text-brand-teal">+ 30 more</span>
+          <span class="text-[13px] font-semibold text-brand-teal">Tell us what else</span>
         </div>
       </div>
     </div>

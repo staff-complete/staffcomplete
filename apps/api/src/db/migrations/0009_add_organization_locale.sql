@@ -1,1 +1,0 @@
-ALTER TABLE "organization" ADD COLUMN "locale" text DEFAULT 'en' NOT NULL;

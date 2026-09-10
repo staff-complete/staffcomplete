@@ -1,68 +1,23 @@
 import { z } from 'zod'
 
-export {
-  DEFAULT_LOCALE,
-  isRtlLocale,
-  localeSchema,
-  SUPPORTED_LOCALES,
-  textDirection,
-} from './locale.js'
-export type { Locale } from './locale.js'
-export type { EnqueueOptions, Job, JobHandler, Queue } from './queue.js'
-export { computeUnlockedPhaseIds, isStepLocked, wouldCreateCycle } from './phase.js'
-export type { PhaseDependencyEdge, PhaseNode, PhaseScopedStep } from './phase.js'
-export {
-  automatedActionKeys,
-  automatedActionKeySchema,
-  getAutomatedAction,
-  isAutomatedActionKey,
-  parseAutomatedActionConfig,
-  substituteAutomationTokens,
-} from './automation.js'
-export type { AutomatedActionKey, AutomationTokenValues, EmailSendConfig } from './automation.js'
-export { createRunSchema, reassignRunStepSchema } from './run.js'
-export type { CreateRunInput, ReassignRunStepInput } from './run.js'
-export { computeDueDate, isTaskOverdue } from './task.js'
-export { computeTrialState, TRIAL_LENGTH_DAYS } from './trial.js'
-export type { TrialState } from './trial.js'
-export {
-  createAutomatedStepSchema,
-  createManualStepSchema,
-  createPhaseSchema,
-  createStepSchema,
-  createChecklistTemplateSchema,
-  reorderPhasesSchema,
-  reorderStepsSchema,
-  setPhaseDependenciesSchema,
-  stepTypeSchema,
-  updatePhaseSchema,
-  updateStepSchema,
-  updateChecklistTemplateSchema,
-  checklistTypeSchema,
-} from './checklist.js'
-export type {
-  CreateAutomatedStepInput,
-  CreateManualStepInput,
-  CreatePhaseInput,
-  CreateStepInput,
-  CreateChecklistTemplateInput,
-  ReorderPhasesInput,
-  ReorderStepsInput,
-  SetPhaseDependenciesInput,
-  UpdatePhaseInput,
-  UpdateStepInput,
-  UpdateChecklistTemplateInput,
-} from './checklist.js'
+/**
+ * Longest values we accept. 254 is the maximum length of an email address;
+ * the company cap is arbitrary but keeps a paste accident out of the inbox.
+ */
+const MAX_EMAIL_LENGTH = 254
+const MAX_COMPANY_LENGTH = 100
 
-export const signUpSchema = z.object({
-  name: z.string().min(2, 'Full name must be at least 2 characters'),
-  email: z.string().email('Valid work email required'),
-  password: z
+/**
+ * An early-access request. Shared by the landing form and the Pages Function
+ * that turns it into a notification email — there is no database behind it.
+ */
+export const earlyAccessSignupSchema = z.object({
+  email: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Must contain at least one number'),
-  company: z.string().min(2, 'Company name must be at least 2 characters'),
+    .trim()
+    .max(MAX_EMAIL_LENGTH, 'Email is too long')
+    .email('Valid work email required'),
+  company: z.string().trim().max(MAX_COMPANY_LENGTH, 'Company name is too long').optional(),
 })
 
-export type SignUpInput = z.infer<typeof signUpSchema>
+export type EarlyAccessSignup = z.infer<typeof earlyAccessSignupSchema>

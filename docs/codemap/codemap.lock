@@ -1,17 +1,17 @@
 {
   "lock_version": 1,
-  "generated_at": "2026-08-09T18:08:45Z",
-  "commit": "20127649c4ec711821acdd911fb27893a6a07e1d",
-  "commit_short": "2012764",
-  "branch": "feat/28-notify-task-owner-via-email",
+  "generated_at": "2026-09-10T17:39:21Z",
+  "commit": "1035c1b1b432f0a24c6becaa810ca287e4e9b1c9",
+  "commit_short": "1035c1b",
+  "branch": "feat/early-access-landing",
   "working_tree_dirty": true,
   "working_tree_note": "Refreshed against a working tree with uncommitted tracked changes; fingerprints describe the files on disk, not the commit named above.",
   "previous_lock_found": true,
   "previous_lock_note": "Auto-refreshed in place by .claude/hooks/codemap-refresh.mjs — derived fields only (fingerprints, commit, timestamp, evidence line numbers). Nodes, edges and flows were verified against the tree and left untouched.",
   "scanned_scope": [
-    "apps/api",
     "apps/web",
-    "packages/shared"
+    "packages/shared",
+    "functions"
   ],
   "excluded_directories": [
     "node_modules",
@@ -34,62 +34,50 @@
   },
   "modules": [
     {
-      "id": "apps/api",
-      "path": "apps/api",
-      "tracked_files": 81,
-      "fingerprint": "sha256:69109a66b4822ee30ff292e7f689d2786a7d2eef1e1dc7c0da663e27122aaecd",
-      "nodes": [
-        "api-app",
-        "api-auth",
-        "api-org-auth",
-        "api-onboard",
-        "api-invites",
-        "api-checklists",
-        "api-runs",
-        "api-tasks",
-        "api-billing",
-        "api-activity",
-        "api-run-steps",
-        "api-jobs",
-        "api-db",
-        "api-queue"
-      ]
-    },
-    {
       "id": "apps/web",
       "path": "apps/web",
-      "tracked_files": 90,
-      "fingerprint": "sha256:9546b08548670d4675c3725182d20bf1c03a952aabe49171aeee5819cddf8244",
+      "tracked_files": 27,
+      "fingerprint": "sha256:843edda7afd6dd9391b667635090220390de6e43885de9163eaed0fe89eda28d",
       "nodes": [
-        "web-spa",
-        "web-composables",
-        "web-client-lib"
+        "web-entry",
+        "web-chrome",
+        "web-sections",
+        "web-early-access-form"
       ]
     },
     {
       "id": "packages/shared",
       "path": "packages/shared",
-      "tracked_files": 19,
-      "fingerprint": "sha256:5b6b260e2bfa85ea3d499a3451b95e0d887c7cdddd61d0dc03b6acf0f5a7d698",
+      "tracked_files": 6,
+      "fingerprint": "sha256:894c1f6f4dd0dbb8d7458beb23d1a343cf32b7fa45a115ceeb7c6a696719edc3",
       "nodes": [
-        "shared-domain"
+        "shared-early-access"
+      ]
+    },
+    {
+      "id": "functions",
+      "path": "functions",
+      "tracked_files": 5,
+      "fingerprint": "sha256:445309c8bc65f1d2153aac87e1a7bfaf68644cc07d695af46a9ceca072d9f128",
+      "nodes": [
+        "fn-early-access"
       ]
     }
   ],
   "external_nodes": [
     {
-      "id": "postgres",
-      "reason": "Not a tracked module; represented from connection evidence in apps/api/src/db/index.ts and apps/api/src/queue/index.ts."
+      "id": "resend",
+      "reason": "Not a tracked module; represented from the API call site in functions/api/early-access.ts."
     },
     {
-      "id": "resend",
-      "reason": "Not a tracked module; represented from the SDK call site in apps/api/src/auth.ts."
+      "id": "turnstile",
+      "reason": "Not a tracked module; represented from the siteverify call site in functions/api/early-access.ts and the widget render in apps/web/src/components/EarlyAccessForm.vue."
     }
   ],
   "counts": {
-    "nodes": 20,
-    "edges": 77,
-    "flows": 5,
+    "nodes": 8,
+    "edges": 11,
+    "flows": 4,
     "unknown_relationships": 0
   },
   "artifacts": [
@@ -99,6 +87,6 @@
   ],
   "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three.",
   "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.",
-  "graph_fingerprint": "sha256:697e5dd2b7fc12badcd484b3e2203b0c47f22e74e0c5f0f3b083ccca125319f3",
+  "graph_fingerprint": "sha256:6eaf55144618ea3e0a41960f0b024ee66b7a4400b65c87fb34e151e0499544bc",
   "graph_fingerprint_note": "sha256 over the map's claims only — scope, nodes, edges, flows, unknowns — with generated_at and the commit excluded. This, not the module fingerprints, is what decides whether the map needs rewriting."
 }

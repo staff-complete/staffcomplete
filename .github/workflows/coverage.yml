@@ -47,16 +47,18 @@ jobs:
       - run: pnpm test:coverage
       - name: Rewrite coverage source paths to be repo-root-relative
         # vitest writes SF: entries relative to each package's own root
-        # (e.g. `SF:src/auth.ts`), not the monorepo root — Codacy matches
-        # coverage against real repo paths, so apps/api/coverage/lcov.info,
-        # apps/web/coverage/lcov.info, and packages/shared/coverage/lcov.info
-        # all report against a nonexistent top-level `src/`, and their
-        # identically-named files (e.g. every package has a src/index.ts)
-        # would collide if uploaded as-is.
+        # (e.g. `SF:src/index.ts`), not the monorepo root — Codacy matches
+        # coverage against real repo paths, so every package reports against a
+        # nonexistent top-level `src/`, and their identically-named files
+        # would collide if uploaded as-is. Packages with no test files never
+        # write a report at all, hence the existence check.
         run: |
-          sed -i 's|^SF:|SF:apps/api/|' apps/api/coverage/lcov.info
-          sed -i 's|^SF:|SF:apps/web/|' apps/web/coverage/lcov.info
-          sed -i 's|^SF:|SF:packages/shared/|' packages/shared/coverage/lcov.info
+          for pkg in apps/web functions packages/shared; do
+            report="$pkg/coverage/lcov.info"
+            if [ -f "$report" ]; then
+              sed -i "s|^SF:|SF:$pkg/|" "$report"
+            fi
+          done
       - name: Upload coverage to Codacy
         uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1
         with:
