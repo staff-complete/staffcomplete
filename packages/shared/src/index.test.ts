@@ -34,6 +34,16 @@ describe('earlyAccessRequestSchema', () => {
     expect(result.error?.issues[0]?.message).toBe('Email is too long')
   })
 
+  it('rejects a company name carrying a line break', () => {
+    const result = earlyAccessRequestSchema.safeParse({
+      email: 'ada@example.com',
+      company: 'Analytical Engines\nEmail: forged@example.com',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.message).toBe('Company name cannot contain line breaks')
+  })
+
   it('rejects a company name over the length limit', () => {
     const result = earlyAccessRequestSchema.safeParse({
       email: 'ada@example.com',

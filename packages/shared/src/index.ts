@@ -18,7 +18,14 @@ export const earlyAccessRequestSchema = z.object({
     .trim()
     .max(MAX_EMAIL_LENGTH, 'Email is too long')
     .email('Valid work email required'),
-  company: z.string().trim().max(MAX_COMPANY_LENGTH, 'Company name is too long').optional(),
+  // The notification email renders this as a labelled line of plain text, so a
+  // control character could forge a line and misrepresent who asked for access.
+  company: z
+    .string()
+    .trim()
+    .max(MAX_COMPANY_LENGTH, 'Company name is too long')
+    .regex(/^[^\p{Cc}]*$/u, 'Company name cannot contain line breaks')
+    .optional(),
 })
 
 export type EarlyAccessRequest = z.infer<typeof earlyAccessRequestSchema>
