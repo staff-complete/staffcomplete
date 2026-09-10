@@ -1,6 +1,6 @@
 # ADR-0002: Frontend Stack
 
-- **Status:** partially superseded by [ADR-0021](0021-plain-tailwind-ui-components.md) (UI component library only)
+- **Status:** partially superseded by [ADR-0021](0021-plain-tailwind-ui-components.md) (UI component library) and [ADR-0023](0023-early-access-landing-until-first-customer.md) (router, Pinia, TanStack Query, i18n — removed with the application shell)
 - **Date:** 2026-06-27
 
 ## Context

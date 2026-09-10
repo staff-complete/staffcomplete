@@ -1,11 +1,11 @@
 {
   "lock_version": 1,
-  "generated_at": "2026-09-10T17:43:22Z",
-  "commit": "1e52a79ba720add8addf4c3f062fad5b88c19315",
-  "commit_short": "1e52a79",
-  "branch": "feat/early-access-landing",
-  "working_tree_dirty": true,
-  "working_tree_note": "Refreshed against a working tree with uncommitted tracked changes; fingerprints describe the files on disk, not the commit named above.",
+  "generated_at": "2026-09-10T18:26:52Z",
+  "commit": "a0047ab177e7163cd17ac938b19555d5ecf67eb8",
+  "commit_short": "a0047ab",
+  "branch": "main",
+  "working_tree_dirty": false,
+  "working_tree_note": "No tracked file had uncommitted modifications at refresh time, so the fingerprints describe the commit named above exactly.",
   "previous_lock_found": true,
   "previous_lock_note": "Auto-refreshed in place by .claude/hooks/codemap-refresh.mjs — derived fields only (fingerprints, commit, timestamp, evidence line numbers). Nodes, edges and flows were verified against the tree and left untouched.",
   "scanned_scope": [
@@ -49,7 +49,7 @@
       "id": "packages/shared",
       "path": "packages/shared",
       "tracked_files": 6,
-      "fingerprint": "sha256:b5f5c7064e4ef6cffcc994fc8a396de133b96e63dcefb2469f2026ccba19468b",
+      "fingerprint": "sha256:322e7c90aa1ac8e6e04a4c8571cde64c413ca44a017861644751db2cb6d2ba9a",
       "nodes": [
         "shared-early-access"
       ]
@@ -58,7 +58,7 @@
       "id": "functions",
       "path": "functions",
       "tracked_files": 5,
-      "fingerprint": "sha256:51ea8b2e4c41d0f8a15e611ef75595b226b36562d95ddce64126469870a43405",
+      "fingerprint": "sha256:24bcfc206de1b29f60c5d5182f6a7621a8d0c394dcb83767faf0cda88caf5b45",
       "nodes": [
         "fn-early-access"
       ]
@@ -87,6 +87,6 @@
   ],
   "regeneration_note": "These three files are generated together from the repo state named by `commit`. Never hand-edit one alone; regenerate all three.",
   "commit_note": "Written by the pre-commit hook, so this is the parent of the commit that carries it — it lags by one and is informational. Freshness is judged by module fingerprints, never by this hash.",
-  "graph_fingerprint": "sha256:14fd434ab3a743b6eb49dd34a1a75fe14be347868623a90ca259c24c5e61945c",
+  "graph_fingerprint": "sha256:6747386d40ee9386231727c0caed9f6307208e7bbe74fd771b04deda902b2729",
   "graph_fingerprint_note": "sha256 over the map's claims only — scope, nodes, edges, flows, unknowns — with generated_at and the commit excluded. This, not the module fingerprints, is what decides whether the map needs rewriting."
 }

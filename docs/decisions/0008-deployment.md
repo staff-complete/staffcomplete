@@ -1,6 +1,6 @@
 # ADR-0008: Deployment and Infrastructure
 
-- **Status:** accepted
+- **Status:** superseded by [ADR-0023](0023-early-access-landing-until-first-customer.md)
 - **Date:** 2026-06-27
 
 ## Context

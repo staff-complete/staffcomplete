@@ -20,7 +20,7 @@ A first version of it was built and then removed before the first customer,
 because a platform with no users costs money and attention to keep alive and
 returns neither. It is preserved in full at the `v0-full-app` tag and the
 `archive/full-app` branch, and the reasoning is recorded in
-[ADR-0023](docs/decisions/). The page collects early-access requests until
+[ADR-0023](docs/decisions/0023-early-access-landing-until-first-customer.md). The page collects early-access requests until
 there is someone to build for.
 
 ---
