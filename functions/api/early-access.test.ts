@@ -4,6 +4,10 @@ import { onRequestPost } from './early-access.js'
 const env = {
   RESEND_API_KEY: 'test-key',
   EARLY_ACCESS_TO: 'founder@staffcomplete.io',
+  // Codacy's xss/no-mixed-html reads the angle brackets of an RFC 5322
+  // display-name address as raw HTML. This is a Resend `from` header, not
+  // markup bound into a DOM, and it mirrors what production actually holds.
+  // eslint-disable-next-line xss/no-mixed-html
   EARLY_ACCESS_FROM: 'Early Access <early-access@staffcomplete.io>',
 }
 
@@ -25,9 +29,10 @@ function resendAccepts() {
 
 /** The arguments of one recorded fetch call, which the mock always receives. */
 function callArgs(mock: ReturnType<typeof resendAccepts>, index: number) {
-  const call = mock.mock.calls[index]
+  const call = mock.mock.calls.at(index)
   if (!call) throw new Error(`expected a fetch call at index ${index}`)
-  return { url: call[0], body: JSON.parse((call[1]?.body as string) ?? '{}') }
+  const body = call[1]?.body
+  return { url: call[0], body: JSON.parse(typeof body === 'string' ? body : '{}') }
 }
 
 let fetchMock: ReturnType<typeof resendAccepts>
