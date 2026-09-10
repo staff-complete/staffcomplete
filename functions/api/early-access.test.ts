@@ -107,6 +107,17 @@ describe('onRequestPost', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('trims whitespace off the API key before authenticating', async () => {
+    await onRequestPost({
+      request: postRequest({ email: 'ada@example.com' }),
+      env: { ...env, RESEND_API_KEY: '  test-key\n' },
+    })
+
+    const call = fetchMock.mock.calls.at(0)
+    const headers = call?.[1]?.headers as Record<string, string>
+    expect(headers.authorization).toBe('Bearer test-key')
+  })
+
   it('reports a failure when Resend rejects the send', async () => {
     fetchMock.mockResolvedValueOnce(new Response('rate limited', { status: 429 }))
     vi.spyOn(console, 'error').mockImplementation(() => {})

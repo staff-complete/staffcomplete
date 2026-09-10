@@ -79,10 +79,15 @@ export async function onRequestPost({ request, env }: RequestContext): Promise<R
     `Country:   ${request.headers.get('cf-ipcountry') ?? '—'}`,
   ]
 
+  // Pasting a key through a dashboard field is the usual way a trailing
+  // newline gets into it, and Resend answers that the same way it answers a
+  // genuinely wrong key.
+  const apiKey = env.RESEND_API_KEY?.trim() ?? ''
+
   const sent = await fetch(RESEND_SEND_URL, {
     method: 'POST',
     headers: {
-      authorization: `Bearer ${env.RESEND_API_KEY}`,
+      authorization: `Bearer ${apiKey}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
@@ -95,9 +100,14 @@ export async function onRequestPost({ request, env }: RequestContext): Promise<R
   })
 
   if (!sent.ok) {
+    // Resend answers 401 identically whether the key is wrong or missing —
+    // an absent binding sends "Bearer undefined" — so record which it was.
+    // The value itself is never logged.
     console.error('resend rejected an early-access notification', {
       status: sent.status,
       body: await sent.text(),
+      apiKeyConfigured: apiKey !== '',
+      apiKeyLength: apiKey.length,
     })
     return json({ error: 'Could not record your request. Please try again shortly.' }, 502)
   }
